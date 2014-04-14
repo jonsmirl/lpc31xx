@@ -321,7 +321,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
         freqs.cpu = 0;
         freqs.old = cpu_cur.pll / 1000;
         freqs.new = cpu_new.pll / 1000;
-        cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+        cpufreq_freq_transition_begin(policy, &freqs);
     }
 
     #ifdef CONFIG_CPU_FREQ_DVFS
@@ -338,7 +338,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
                 freqs.cpu = 0;
                 freqs.old = freqs.new;
                 freqs.new = cpu_cur.pll / 1000;
-                cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+                cpufreq_freq_transition_end(policy, &freqs, 1);
             }
             return -EINVAL;
         }
@@ -364,7 +364,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
             freqs.cpu = 0;
             freqs.old = freqs.new;
             freqs.new = cpu_cur.pll / 1000;
-            cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+            cpufreq_freq_transition_end(policy, &freqs, 1);
         }
 
         return -EINVAL;
@@ -386,7 +386,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
 
     /* notify everyone we've done this */
     if (policy) {
-        cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+        cpufreq_freq_transition_end(policy, &freqs, 0);
     }
 
     CPUFREQ_DBG("%s: finished\n", __func__);
@@ -725,7 +725,7 @@ static int __init sun4i_cpufreq_initcall(void)
     /* register cpu frequency driver */
     ret = cpufreq_register_driver(&sun4i_cpufreq_driver);
     /* register cpu frequency table to cpufreq core */
-    cpufreq_frequency_table_get_attr(sun4i_freq_tbl, 0);
+    cpufreq_table_validate_and_show(NULL, sun4i_freq_tbl);
     /* update policy for boot cpu */
     cpufreq_update_policy(0);
 
