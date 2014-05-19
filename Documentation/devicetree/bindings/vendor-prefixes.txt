@@ -132,6 +132,7 @@ voipac	Voipac Technologies s.r.o.
 winbond Winbond Electronics corp.
 wlf	Wolfson Microelectronics
 wm	Wondermedia Technologies, Inc.
+x-powers	X-Powers
 xes	Extreme Engineering Solutions (X-ES)
 xlnx	Xilinx
 zyxel	ZyXEL Communications Corp.
