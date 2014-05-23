@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/acpi.h>
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/pm_runtime.h>
 
 #include <asm/byteorder.h>
@@ -59,6 +60,7 @@ struct dw8250_data {
 	int			last_mcr;
 	int			line;
 	struct clk		*clk;
+	struct reset_control	*rst;
 	struct uart_8250_dma	dma;
 };
 
@@ -259,6 +261,8 @@ static int dw8250_probe_of(struct uart_port *p,
 	if (!of_property_read_u32(np, "reg-shift", &val))
 		p->regshift = val;
 
+	data->rst = devm_reset_control_get_optional(p->dev, NULL);
+
 	/* clock got configured through clk api, all done */
 	if (p->uartclk)
 		return 0;
@@ -362,6 +366,9 @@ static int dw8250_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	if (!IS_ERR_OR_NULL(data->rst))
+		reset_control_deassert(data->rst);
+
 	data->line = serial8250_register_8250_port(&uart);
 	if (data->line < 0)
 		return data->line;
@@ -381,6 +388,9 @@ static int dw8250_remove(struct platform_device *pdev)
 	pm_runtime_get_sync(&pdev->dev);
 
 	serial8250_unregister_port(data->line);
+
+	if (!IS_ERR_OR_NULL(data->rst))
+		reset_control_assert(data->rst);
 
 	if (!IS_ERR(data->clk))
 		clk_disable_unprepare(data->clk);
