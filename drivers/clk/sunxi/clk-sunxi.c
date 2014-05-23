@@ -686,6 +686,12 @@ static const struct div_data sun4i_apb0_data __initconst = {
 	.width	= 2,
 };
 
+static const struct div_data sun6i_a31_ahb1_pll6_data __initconst = {
+	.shift	= 6,
+	.pow	= 0,
+	.width	= 2,
+};
+
 static const struct div_data sun6i_a31_apb2_div_data __initconst = {
 	.shift	= 0,
 	.pow	= 0,
@@ -1128,6 +1134,7 @@ static const struct of_device_id clk_div_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-axi-clk", .data = &sun4i_axi_data,},
 	{.compatible = "allwinner,sun4i-a10-ahb-clk", .data = &sun4i_ahb_data,},
 	{.compatible = "allwinner,sun4i-a10-apb0-clk", .data = &sun4i_apb0_data,},
+	{.compatible = "allwinner,sun6i-a31-ahb1-pll6-clk", .data = &sun6i_a31_ahb1_pll6_data,},
 	{.compatible = "allwinner,sun6i-a31-apb2-div-clk", .data = &sun6i_a31_apb2_div_data,},
 	{}
 };
