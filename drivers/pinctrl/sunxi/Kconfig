@@ -33,4 +33,8 @@ config PINCTRL_SUN7I_A20
 	def_bool PINCTRL_SUNXI || MACH_SUN7I
 	select PINCTRL_SUNXI_COMMON
 
+config PINCTRL_SUN8I_A23
+	bool
+	select PINCTRL_SUNXI
+
 endif
