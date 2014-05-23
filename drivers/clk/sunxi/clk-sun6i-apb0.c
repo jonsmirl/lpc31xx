@@ -11,6 +11,7 @@
 #include <linux/clk-provider.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 
 /*
@@ -28,6 +29,21 @@ static const struct clk_div_table sun6i_a31_apb0_divs[] = {
 	{ /* sentinel */ },
 };
 
+/* The A23 APB0 clock has a standard power of 2 divisor */
+static const struct clk_div_table sun8i_a23_apb0_divs[] = {
+	{ .val = 0, .div = 1, },
+	{ .val = 1, .div = 2, },
+	{ .val = 2, .div = 4, },
+	{ .val = 3, .div = 8, },
+	{ /* sentinel */ },
+};
+
+const struct of_device_id sun6i_a31_apb0_clk_dt_ids[] = {
+	{ .compatible = "allwinner,sun6i-a31-apb0-clk", .data = &sun6i_a31_apb0_divs },
+	{ .compatible = "allwinner,sun8i-a23-apb0-clk", .data = &sun8i_a23_apb0_divs },
+	{ /* sentinel */ }
+};
+
 static int sun6i_a31_apb0_clk_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -36,11 +52,16 @@ static int sun6i_a31_apb0_clk_probe(struct platform_device *pdev)
 	struct resource *r;
 	void __iomem *reg;
 	struct clk *clk;
+	const struct of_device_id *device;
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	reg = devm_ioremap_resource(&pdev->dev, r);
 	if (IS_ERR(reg))
 		return PTR_ERR(reg);
+
+	device = of_match_device(sun6i_a31_apb0_clk_dt_ids, &pdev->dev);
+	if (!device)
+		return -EINVAL;
 
 	clk_parent = of_clk_get_parent_name(np, 0);
 	if (!clk_parent)
@@ -49,18 +70,13 @@ static int sun6i_a31_apb0_clk_probe(struct platform_device *pdev)
 	of_property_read_string(np, "clock-output-names", &clk_name);
 
 	clk = clk_register_divider_table(&pdev->dev, clk_name, clk_parent,
-					 0, reg, 0, 2, 0, sun6i_a31_apb0_divs,
+					 0, reg, 0, 2, 0, device->data,
 					 NULL);
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
 
 	return of_clk_add_provider(np, of_clk_src_simple_get, clk);
 }
-
-const struct of_device_id sun6i_a31_apb0_clk_dt_ids[] = {
-	{ .compatible = "allwinner,sun6i-a31-apb0-clk" },
-	{ /* sentinel */ }
-};
 
 static struct platform_driver sun6i_a31_apb0_clk_driver = {
 	.driver = {
