@@ -33,6 +33,11 @@ static const struct regmap_range axp20x_writeable_ranges[] = {
 	regmap_reg_range(AXP20X_DCDC_MODE, AXP20X_FG_RES),
 };
 
+static const struct regmap_range axp22x_writeable_ranges[] = {
+	regmap_reg_range(AXP20X_DATACACHE(0), AXP20X_IRQ5_STATE),
+	regmap_reg_range(AXP20X_DCDC_MODE, AXP22X_BATLOW_THRES1),
+};
+
 static const struct regmap_range axp20x_volatile_ranges[] = {
 	regmap_reg_range(AXP20X_IRQ1_EN, AXP20X_IRQ5_STATE),
 };
@@ -40,6 +45,11 @@ static const struct regmap_range axp20x_volatile_ranges[] = {
 static const struct regmap_access_table axp20x_writeable_table = {
 	.yes_ranges	= axp20x_writeable_ranges,
 	.n_yes_ranges	= ARRAY_SIZE(axp20x_writeable_ranges),
+};
+
+static const struct regmap_access_table axp22x_writeable_table = {
+	.yes_ranges	= axp22x_writeable_ranges,
+	.n_yes_ranges	= ARRAY_SIZE(axp22x_writeable_ranges),
 };
 
 static const struct regmap_access_table axp20x_volatile_table = {
@@ -67,6 +77,15 @@ static const struct regmap_config axp20x_regmap_config = {
 	.wr_table	= &axp20x_writeable_table,
 	.volatile_table	= &axp20x_volatile_table,
 	.max_register	= AXP20X_FG_RES,
+	.cache_type	= REGCACHE_RBTREE,
+};
+
+static const struct regmap_config axp22x_regmap_config = {
+	.reg_bits	= 8,
+	.val_bits	= 8,
+	.wr_table	= &axp22x_writeable_table,
+	.volatile_table	= &axp20x_volatile_table,
+	.max_register	= AXP22X_BATLOW_THRES1,
 	.cache_type	= REGCACHE_RBTREE,
 };
 
@@ -116,6 +135,7 @@ static const struct regmap_irq axp20x_regmap_irqs[] = {
 static const struct of_device_id axp20x_of_match[] = {
 	{ .compatible = "x-powers,axp202", .data = (void *) AXP202_ID },
 	{ .compatible = "x-powers,axp209", .data = (void *) AXP209_ID },
+	{ .compatible = "x-powers,axp221", .data = (void *) AXP221_ID },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, axp20x_of_match);
@@ -149,6 +169,21 @@ static const char * axp20x_supplies[] = {
 	"ldo5in",
 };
 
+static const char *axp22x_supplies[] = {
+	"vbus",
+	"acin",
+	"vin1",
+	"vin2",
+	"vin3",
+	"vin4",
+	"vin5",
+	"aldoin",
+	"dldoin",
+	"eldoin",
+	"ldoioin",
+	"rtcldoin",
+};
+
 static struct mfd_cell axp20x_cells[] = {
 	{
 		.name			= "axp20x-pek",
@@ -158,6 +193,14 @@ static struct mfd_cell axp20x_cells[] = {
 		.name			= "axp20x-regulator",
 		.parent_supplies	= axp20x_supplies,
 		.num_parent_supplies	= ARRAY_SIZE(axp20x_supplies),
+	},
+};
+
+static struct mfd_cell axp22x_cells[] = {
+	{
+		.name			= "axp20x-regulator",
+		.parent_supplies	= axp22x_supplies,
+		.num_parent_supplies	= ARRAY_SIZE(axp22x_supplies),
 	},
 };
 
@@ -190,7 +233,12 @@ static int axp20x_i2c_probe(struct i2c_client *i2c,
 	axp20x->dev = &i2c->dev;
 	dev_set_drvdata(axp20x->dev, axp20x);
 
-	axp20x->regmap = devm_regmap_init_i2c(i2c, &axp20x_regmap_config);
+	if (axp20x->variant == AXP221_ID)
+		axp20x->regmap = devm_regmap_init_i2c(i2c,
+						      &axp22x_regmap_config);
+	else
+		axp20x->regmap = devm_regmap_init_i2c(i2c,
+						      &axp20x_regmap_config);
 	if (IS_ERR(axp20x->regmap)) {
 		ret = PTR_ERR(axp20x->regmap);
 		dev_err(&i2c->dev, "regmap init failed: %d\n", ret);
@@ -206,8 +254,12 @@ static int axp20x_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
-	ret = mfd_add_devices(axp20x->dev, -1, axp20x_cells,
-			      ARRAY_SIZE(axp20x_cells), NULL, 0, NULL);
+	if (axp20x->variant == AXP221_ID)
+		ret = mfd_add_devices(axp20x->dev, -1, axp22x_cells,
+				      ARRAY_SIZE(axp20x_cells), NULL, 0, NULL);
+	else
+		ret = mfd_add_devices(axp20x->dev, -1, axp20x_cells,
+				      ARRAY_SIZE(axp20x_cells), NULL, 0, NULL);
 
 	if (ret) {
 		dev_err(&i2c->dev, "failed to add MFD devices: %d\n", ret);
