@@ -224,6 +224,8 @@ static int dw8250_probe_of(struct uart_port *p,
 			   struct dw8250_data *data)
 {
 	struct device_node	*np = p->dev->of_node;
+	struct uart_8250_port	*up = container_of(p, struct uart_8250_port,
+						   port);
 	u32			val;
 	bool has_ucv = true;
 
