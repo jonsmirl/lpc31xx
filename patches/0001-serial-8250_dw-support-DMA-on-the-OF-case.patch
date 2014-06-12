@@ -1,5 +1,5 @@
 Bottom: a6bcbfe54661a23aed6b07319bff463f74896af8
-Top:    e0d5eb3f0f271556b1a309117b8ae03ef16f1b4b
+Top:    0178788c64d41698eb948088c861d6e10342ea7b
 Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
 Date:   2014-06-08 23:51:56 -0300
 
@@ -18,7 +18,7 @@ Signed-off-by: Emilio López <emilio@elopez.com.ar>
 ---
 
 diff --git a/drivers/tty/serial/8250/8250_dw.c b/drivers/tty/serial/8250/8250_dw.c
-index d0c6d080..1d4f62e 100644
+index d0c6d080..c2f48a5 100644
 --- a/drivers/tty/serial/8250/8250_dw.c
 +++ b/drivers/tty/serial/8250/8250_dw.c
 @@ -224,6 +224,8 @@ static int dw8250_probe_of(struct uart_port *p,
@@ -29,3 +29,20 @@ index d0c6d080..1d4f62e 100644
 +						   port);
  	u32			val;
  	bool has_ucv = true;
+ 
+@@ -256,12 +258,13 @@ static int dw8250_probe_of(struct uart_port *p,
+ 		}
+ 	}
+ 	if (has_ucv)
+-		dw8250_setup_port(container_of(p, struct uart_8250_port, port));
++		dw8250_setup_port(up);
+ 
+ 	if (!of_property_read_u32(np, "reg-shift", &val))
+ 		p->regshift = val;
+ 
+-	data->rst = devm_reset_control_get_optional(p->dev, NULL);
++	if (of_get_property(np, "dmas", NULL))
++		up->dma = &data->dma;	data->rst = devm_reset_control_get_optional(p->dev, NULL);
+ 
+ 	/* clock got configured through clk api, all done */
+ 	if (p->uartclk)
