@@ -1,7 +1,8 @@
 Version: 1
-Previous: eadf1d2232f4eecb99c9262e31c654fb6d74cdf7
-Head: 8e277307efd0ee1055848f7c0dca2a344684cf42
+Previous: 4b2e9fcea63fa06aaf0773d140f732466459cfd4
+Head: 3bbacf499d8a63f3aca7c5320e05ae0749816beb
 Applied:
   0001-serial-8250_dw-support-DMA-on-the-OF-case.patch: 8e277307efd0ee1055848f7c0dca2a344684cf42
+  refresh-temp: 3bbacf499d8a63f3aca7c5320e05ae0749816beb
 Unapplied:
 Hidden:
