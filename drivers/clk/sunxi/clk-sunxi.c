@@ -212,6 +212,29 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
 }
 
 /**
+ * sun7i_get_pll2_factors()
+ * parent_rate is always 24Mhz
+ */
+
+static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
+				   u8 *n, u8 *k, u8 *m, u8 *p)
+{
+	/* we were called to round the frequency, we can now return */
+	if (n == NULL)
+		return;
+	
+	if (*freq == 22579200) {
+		*n = 79;
+		*m = 21;  /* Pre */
+		*k = 4;   /* Post */
+	} else  {
+		*n = 86;
+		*m = 21;  /* Pre */
+		*k = 4;   /* Post */
+	}
+}
+
+/**
  * sun4i_get_pll5_factors() - calculates n, k factors for PLL5
  * PLL5 rate is calculated as follows
  * rate = parent_rate * n * (k + 1)
@@ -482,6 +505,15 @@ static struct clk_factors_config sun8i_a23_pll1_config = {
 	.n_from_one = 1,
 };
 
+static struct clk_factors_config sun7i_pll2_config = {
+	.nshift = 8,
+	.nwidth = 7,
+	.kshift = 26,
+	.kwidth = 4,
+	.mshift = 0,
+	.mwidth = 5,
+};
+
 static struct clk_factors_config sun4i_pll5_config = {
 	.nshift = 8,
 	.nwidth = 5,
@@ -536,6 +568,12 @@ static const struct factors_data sun8i_a23_pll1_data __initconst = {
 	.enable = 31,
 	.table = &sun8i_a23_pll1_config,
 	.getter = sun8i_a23_get_pll1_factors,
+};
+
+static const struct factors_data sun7i_a20_pll2_data __initconst = {
+	.enable = 31,
+	.table = &sun7i_pll2_config,
+	.getter = sun7i_get_pll2_factors,
 };
 
 static const struct factors_data sun7i_a20_pll4_data __initconst = {
@@ -1201,6 +1239,7 @@ static const struct of_device_id clk_factors_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-pll1-clk", .data = &sun4i_pll1_data,},
 	{.compatible = "allwinner,sun6i-a31-pll1-clk", .data = &sun6i_a31_pll1_data,},
 	{.compatible = "allwinner,sun8i-a23-pll1-clk", .data = &sun8i_a23_pll1_data,},
+	{.compatible = "allwinner,sun7i-a20-pll2-clk", .data = &sun7i_a20_pll2_data,},
 	{.compatible = "allwinner,sun7i-a20-pll4-clk", .data = &sun7i_a20_pll4_data,},
 	{.compatible = "allwinner,sun4i-a10-apb1-clk", .data = &sun4i_apb1_data,},
 	{.compatible = "allwinner,sun4i-a10-mod0-clk", .data = &sun4i_mod0_data,},
