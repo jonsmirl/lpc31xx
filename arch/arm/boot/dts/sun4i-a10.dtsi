@@ -585,6 +585,13 @@
 				allwinner,pull = <0>;
 			};
 
+			spi0_pins_a: spi0@0 {
+				allwinner,pins = "PI10", "PI11", "PI12", "PI13";
+				allwinner,function = "spi0";
+				allwinner,drive = <0>;
+				allwinner,pull = <0>;
+			};
+
 			emac_pins_a: emac0@0 {
 				allwinner,pins = "PA0", "PA1", "PA2",
 						"PA3", "PA4", "PA5", "PA6",
