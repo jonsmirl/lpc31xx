@@ -1,0 +1,86 @@
+Bottom: bd324713cdc681e6d486ab7e7f253e99b4f78db6
+Top:    a291516e3edb9774c71c409d040619777b802b05
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-06-08 23:53:54 -0300
+
+From c4903aae78bbb24c0076bf4bd9cd05df9b15fb75 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 6/6] ARM: sun7i: add DMA properties to UARTs
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index 4124491..263eb79 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -851,6 +851,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 16>;
++			dmas = <&dma 0 8>, <&dma 0 8>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -861,6 +863,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 17>;
++			dmas = <&dma 0 9>, <&dma 0 9>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -871,6 +875,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 18>;
++			dmas = <&dma 0 10>, <&dma 0 10>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -881,6 +887,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 19>;
++			dmas = <&dma 0 11>, <&dma 0 11>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -891,6 +899,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 20>;
++			dmas = <&dma 0 12>, <&dma 0 12>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -901,6 +911,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 21>;
++			dmas = <&dma 0 13>, <&dma 0 13>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -911,6 +923,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 22>;
++			dmas = <&dma 0 14>, <&dma 0 14>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -921,6 +935,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 23>;
++			dmas = <&dma 0 15>, <&dma 0 15>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};

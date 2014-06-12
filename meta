@@ -1,10 +1,11 @@
 Version: 1
-Previous: d47ec0bdffe1eac6ecdeffbaad7ad8603f2ec336
-Head: 3946f5ba9bbc912d928ffcdf199c2d6a016170cc
+Previous: c108e9e2bcad5d6bca396de6ccebe964a89637f6
+Head: 7d9f8420e55a796279263420cbe9a4089c495a09
 Applied:
   0001-serial-8250_dw-support-DMA-on-the-OF-case.patch: 7badd852fb033fe8b2d04181021338d49244fc16
   0002-spi-sun4i-add-DMA-support.patch: 27df0715e75e7c0e2d6af7b947c4664eb5b5a866
   0003-ARM-sunxi-Add-DMA-engine-node-to-sun7i.patch: 4a11526eded85a343060332308055b0198edc537
   0004-ARM-sun7i-enable-DMA-on-SPI.patch: 3946f5ba9bbc912d928ffcdf199c2d6a016170cc
+  0006-ARM-sun7i-add-DMA-properties-to-UARTs.patch: 7d9f8420e55a796279263420cbe9a4089c495a09
 Unapplied:
 Hidden:
