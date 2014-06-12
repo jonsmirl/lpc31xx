@@ -1,0 +1,30 @@
+Bottom: dd4133aa900e2aa2268ebfb70e44193b8985f03c
+Top:    fd2f25ca302f714b37b68532663effca5c2007b6
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-05-19 14:23:37 -0300
+
+From 5cb78c0564a8a0dbeec3661b5f244950e2ad0d63 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 3/6] ARM: sunxi: Add DMA engine node to sun7i
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index 19b1ced..6db4208 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -423,6 +423,14 @@
+ 			interrupts = <0 0 4>;
+ 		};
+ 
++	        dma: dma-controller@01c02000 {
++	                compatible = "allwinner,sun4i-a10-dma";
++	                reg = <0x01c02000 0x1000>;
++	                interrupts = <0 27 4>;
++	                clocks = <&ahb_gates 6>;
++			#dma-cells = <2>;
++	        };
++
+ 		spi0: spi@01c05000 {
+ 			compatible = "allwinner,sun4i-a10-spi";
+ 			reg = <0x01c05000 0x1000>;
