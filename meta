@@ -1,7 +1,8 @@
 Version: 1
-Previous: 96a0b3bf1c35e2c734abe17e9278f39ba92764c7
-Head: 7badd852fb033fe8b2d04181021338d49244fc16
+Previous: 5b1b7b0a5c48f1ca303d0771396bfa5690ac94f0
+Head: 27df0715e75e7c0e2d6af7b947c4664eb5b5a866
 Applied:
   0001-serial-8250_dw-support-DMA-on-the-OF-case.patch: 7badd852fb033fe8b2d04181021338d49244fc16
+  0002-spi-sun4i-add-DMA-support.patch: 27df0715e75e7c0e2d6af7b947c4664eb5b5a866
 Unapplied:
 Hidden:
