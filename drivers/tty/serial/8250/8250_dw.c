@@ -224,6 +224,8 @@ static int dw8250_probe_of(struct uart_port *p,
 			   struct dw8250_data *data)
 {
 	struct device_node	*np = p->dev->of_node;
+	struct uart_8250_port	*up = container_of(p, struct uart_8250_port,
+						   port);
 	u32			val;
 	bool has_ucv = true;
 
@@ -256,10 +258,13 @@ static int dw8250_probe_of(struct uart_port *p,
 		}
 	}
 	if (has_ucv)
-		dw8250_setup_port(container_of(p, struct uart_8250_port, port));
+		dw8250_setup_port(up);
 
 	if (!of_property_read_u32(np, "reg-shift", &val))
 		p->regshift = val;
+
+	if (of_get_property(np, "dmas", NULL))
+		up->dma = &data->dma;
 
 	data->rst = devm_reset_control_get_optional(p->dev, NULL);
 
