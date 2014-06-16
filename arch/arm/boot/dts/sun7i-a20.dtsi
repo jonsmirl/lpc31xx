@@ -866,7 +866,7 @@
 		
 		spdif@1c21000 {
 			compatible = "allwinner,sun7i-a20-spdif";
-			reg = <0x01C21000 0x20>;
+			reg = <0x01C21000 0x40>;
 			interrupts = <0 13 4>;
 			clocks = <&pll2>, <&apb0_gates 1>, <&spdif_clk>;
 			clock-names = "pll2", "apb", "spdif";
@@ -877,7 +877,7 @@
 
 		ac97@1c21400 {
 			compatible = "allwinner,sun7i-a20-ac97";
-			reg = <0x01C21400 0x20>;
+			reg = <0x01C21400 0x40>;
 			interrupts = <0 14 4>;
 			clocks = <&pll2>, <&apb0_gates 2>, <&ac97_clk>;
 			clock-names = "pll2", "apb", "ac97";
@@ -888,7 +888,7 @@
 
 		i2s0: i2s@1c22000 {
 			compatible = "allwinner,sun7i-a20-i2s";
-			reg = <0x01C22000 0x20>;
+			reg = <0x01C22000 0x40>;
 			interrupts = <0 16 4>;
 			clocks = <&pll2>, <&apb0_gates 3>, <&i2s0_clk>;
 			clock-names = "pll2", "apb", "i2s";
@@ -899,7 +899,7 @@
 
 		i2s1: i2s@1c22400 {
 			compatible = "allwinner,sun7i-a20-i2s";
-			reg = <0x01C22400 0x20>;
+			reg = <0x01C22400 0x40>;
 			interrupts = <0 87 4>;
 			clocks = <&pll2>, <&apb0_gates 4>, <&i2s1_clk>;
 			clock-names = "pll2", "apb", "i2s";
@@ -910,7 +910,7 @@
 
 		i2s2: i2s@1c24400 {
 			compatible = "allwinner,sun7i-a20-i2s";
-			reg = <0x01C24400 0x20>;
+			reg = <0x01C24400 0x40>;
 			interrupts = <0 90 4>;
 			clocks = <&pll2>, <&apb0_gates 8>, <&i2s2_clk>;
 			clock-names = "pll2", "apb", "i2s";
@@ -921,7 +921,7 @@
 
 		codec@1c22c00 {
 			compatible = "allwinner,sun7i-a20-codec";
-			reg = <0x01C22c00 0x20>;
+			reg = <0x01C22c00 0x40>;
 			interrupts = <0 30 4>;
 			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk>;
 			clock-names = "pll2", "apb", "codec";

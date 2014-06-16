@@ -1,5 +1,5 @@
 /*
- *   Driver for CODEC on M1 soundcard
+ *   Driver for CODEC on Allwinner CPUs
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License.
  *
@@ -55,23 +55,23 @@ typedef struct codec_board_info {
 	spinlock_t lock;
 } codec_board_info_t;
 
-/* JDS
- static struct sunxi_dma_params sunxi_codec_pcm_stereo_play = {
- .client.name	= "CODEC PCM Stereo PLAY",
- #if defined CONFIG_ARCH_SUN4I || defined CONFIG_ARCH_SUN5I
- .channel	= DMACH_NADDA_PLAY,
- #endif
- .dma_addr	= CODEC_BASSADDRESS + SUNXI_DAC_TXDATA,//发送数据地址
- };
- 
- static struct sunxi_dma_params sunxi_codec_pcm_stereo_capture = {
- .client.name	= "CODEC PCM Stereo CAPTURE",
- #if defined CONFIG_ARCH_SUN4I || defined CONFIG_ARCH_SUN5I
- .channel	= DMACH_NADDA_CAPTURE,  //only support half full
- #endif	
- .dma_addr	= CODEC_BASSADDRESS + SUNXI_ADC_RXDATA,//接收数据地址
- };
- */
+#ifdef JDS
+static struct sunxi_dma_params sunxi_codec_pcm_stereo_play = {
+	.client.name = "CODEC PCM Stereo PLAY",
+#if defined CONFIG_ARCH_SUN4I || defined CONFIG_ARCH_SUN5I
+	.channel = DMACH_NADDA_PLAY,
+#endif
+	.dma_addr = CODEC_BASSADDRESS + SUNXI_DAC_TXDATA, //发送数据地址
+};
+
+static struct sunxi_dma_params sunxi_codec_pcm_stereo_capture = {
+	.client.name = "CODEC PCM Stereo CAPTURE",
+#if defined CONFIG_ARCH_SUN4I || defined CONFIG_ARCH_SUN5I
+	.channel = DMACH_NADDA_CAPTURE, //only support half full
+#endif	
+	.dma_addr = CODEC_BASSADDRESS + SUNXI_ADC_RXDATA, //接收数据地址
+};
+#endif
 
 struct sunxi_playback_runtime_data {
 	spinlock_t lock;
@@ -183,9 +183,8 @@ int codec_wrreg_bits(unsigned short reg, unsigned int mask, unsigned int value)
 	change = old != new;
 
 	if (change) {
-codec_wrreg	(reg,new);
-}
-
+		codec_wrreg(reg,new);
+	}
 	return change;
 }
 
@@ -1507,29 +1506,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	db = kzalloc(sizeof(*db), GFP_KERNEL);
 	if (!db)
 		return -ENOMEM;
-#ifdef JDS	
-	/* codec_apbclk */
-	codec_apbclk = clk_get(NULL,"apb_audio_codec");
-	if (-1 == clk_enable(codec_apbclk)) {
-		printk("codec_apbclk failed; \n");
-	}
-	/* codec_pll2clk */
-	codec_pll2clk = clk_get(NULL,"audio_pll");
-	clk_enable(codec_pll2clk);
 
-	/* codec_moduleclk */
-	codec_moduleclk = clk_get(NULL,"audio_codec");
-
-	if (clk_set_parent(codec_moduleclk, codec_pll2clk)) {
-		printk("try to set parent of codec_moduleclk to codec_pll2clk failed!\n");
-	}
-	if (clk_set_rate(codec_moduleclk, 24576000)) {
-		printk("set codec_moduleclk clock freq 24576000 failed!\n");
-	}
-	if (-1 == clk_enable(codec_moduleclk)) {
-		printk("open codec_moduleclk failed; \n");
-	}
-#endif
 	/* Clock */
 	codec_apbclk = devm_clk_get(dev, "apb");
 	if (IS_ERR(codec_apbclk)) {
@@ -1546,24 +1523,24 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to get codec clock.\n");
 		return PTR_ERR(codec_moduleclk);
 	}
-#ifdef JDS
-	ret = clk_set_rate(ir->clk, SUNXI_IR_BASE_CLK);
+
+	ret = clk_set_rate(codec_moduleclk, 24576000);
 	if (ret) {
-		dev_err(dev, "set ir base clock failed!\n");
+		dev_err(dev, "set codec base clock failed!\n");
 		return ret;
 	}
 
-	if (clk_prepare_enable(ir->apb_clk)) {
-		dev_err(dev, "try to enable apb_ir_clk failed\n");
+	if (clk_prepare_enable(codec_apbclk)) {
+		dev_err(dev, "try to enable apb_codec_clk failed\n");
 		return -EINVAL;
 	}
 
-	if (clk_prepare_enable(ir->clk)) {
-		dev_err(dev, "try to enable ir_clk failed\n");
+	if (clk_prepare_enable(codec_moduleclk)) {
+		dev_err(dev, "try to enable codec failed\n");
 		ret = -EINVAL;
 		goto exit_clkdisable_apb_clk;
 	}
-#endif
+	
 	/* IO */
 	db->codec_base_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	db->dev = &pdev->dev;
@@ -1609,6 +1586,10 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 err_resume_work_queue:
 out:
 	dev_err(db->dev, "not found (%d).\n", ret);
+exit_clkdisable_clk:
+	clk_disable_unprepare(codec_moduleclk);
+exit_clkdisable_apb_clk:
+	clk_disable_unprepare(codec_apbclk);
 
 nodev:
 	snd_card_free(card);
