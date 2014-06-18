@@ -1,5 +1,5 @@
 Bottom: d90793d567f477f784df988b4f53d0f7f49b6a8f
-Top:    dbd06e959142c2c354f20e2f48b2a52a8c2e186e
+Top:    e90d90f116904585821e2cc5d33045f39bca8ec5
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-12 16:01:51 -0400
 
@@ -24,7 +24,7 @@ index bed74a9..a347eff 100644
  			pinctrl-names = "default";
  			pinctrl-0 = <&ir0_pins_a>;
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 263eb79..673aa1d 100644
+index 263eb79..e70e3b9 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -91,6 +91,14 @@
@@ -104,7 +104,7 @@ index 263eb79..673aa1d 100644
  		mbus_clk: clk@01c2015c {
  			#clock-cells = <0>;
  			compatible = "allwinner,sun4i-a10-mod0-clk";
-@@ -807,6 +863,72 @@
+@@ -807,6 +863,81 @@
  			clocks = <&osc24M>;
  			#pwm-cells = <3>;
  		};
@@ -172,6 +172,15 @@ index 263eb79..673aa1d 100644
 +			clock-names = "pll2", "apb", "codec";
 +			dmas = <&dma 0 19>, <&dma 0 19>;
 +			dma-names = "rx", "tx";
++			widgets =
++				"Microphone", "Microphone Jack",
++				"Headphone", "Headphone Jack",
++				"Line", "Line In Jack";
++			routing =
++				"MIC_IN", "Microphone Jack",
++				"Microphone Jack", "Mic Bias",
++				"LINE_IN", "Line In Jack",
++				"Headphone Jack", "HP_OUT";
 +			status = "disabled";
 +		};
  
@@ -292,10 +301,10 @@ index 0000000..b8950d3
 +
 diff --git a/sound/soc/sunxi/sunxi-codec.c b/sound/soc/sunxi/sunxi-codec.c
 new file mode 100644
-index 0000000..b153798
+index 0000000..92ebbee
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-codec.c
-@@ -0,0 +1,1710 @@
+@@ -0,0 +1,1726 @@
 +/*
 + *   Driver for CODEC on Allwinner CPUs
 + *   This program is free software; you can redistribute it and/or modify
@@ -326,6 +335,7 @@ index 0000000..b153798
 +#include <linux/pm.h>
 +#endif
 +#include <sound/core.h>
++#include <sound/soc.h>
 +#include <sound/pcm.h>
 +#include <sound/pcm_params.h>
 +#include <sound/control.h>
@@ -333,6 +343,20 @@ index 0000000..b153798
 +#include <linux/clk.h>
 +#include <linux/timer.h>
 +#include "sunxi-codec.h"
++
++
++/* Structure/enum declaration ------------------------------- */
++struct card_data {
++	struct device *dev; /* parent device */
++	struct resource *codec_base_res; /* resources found */
++	struct resource *codec_base_req; /* resources found */
++
++	spinlock_t lock;
++
++	long samplerate;
++	struct snd_card *card;
++	struct snd_pcm *pcm;
++};
 +
 +#define SCRIPT_AUDIO_OK (0)
 +static int has_playback, has_capture;
@@ -343,15 +367,6 @@ index 0000000..b153798
 +static volatile unsigned int capture_dmadst = 0;
 +static volatile unsigned int play_dmasrc = 0;
 +static volatile unsigned int play_dmadst = 0;
-+
-+/* Structure/enum declaration ------------------------------- */
-+typedef struct codec_board_info {
-+	struct device *dev; /* parent device */
-+	struct resource *codec_base_res; /* resources found */
-+	struct resource *codec_base_req; /* resources found */
-+
-+	spinlock_t lock;
-+} codec_board_info_t;
 +
 +#ifdef JDS
 +static struct sunxi_dma_params sunxi_codec_pcm_stereo_play = {
@@ -443,12 +458,6 @@ index 0000000..b153798
 +	.fifo_size = 32,//fifo字节数
 +};
 +
-+struct sunxi_codec {
-+	long samplerate;
-+	struct snd_card *card;
-+	struct snd_pcm *pcm;
-+};
-+
 +static void codec_resume_events(struct work_struct *work);
 +struct workqueue_struct *resume_work_queue;
 +static DECLARE_WORK(codec_resume_work, codec_resume_events);
@@ -481,7 +490,7 @@ index 0000000..b153798
 +	change = old != new;
 +
 +	if (change) {
-+		codec_wrreg(reg,new);
++		codec_wrreg(reg, new);
 +	}
 +	return change;
 +}
@@ -885,7 +894,7 @@ index 0000000..b153798
 +		.dev_free = codec_dev_free,
 +	};
 +	unsigned char *clnt = "codec";
-+//JDS	int idx
++	int idx;
 +	int err;
 +	/*
 +	 *	snd_ctl_new1函数用于创建一个snd_kcontrol并返回其指针，
@@ -914,6 +923,7 @@ index 0000000..b153798
 +				if ((err = snd_ctl_add(card, snd_ctl_new1(&codec_adc_controls[idx], clnt))) < 0)
 +					return err;
 +	} else if (sunxi_is_sun7i()) {
++#endif
 +		if (has_playback)
 +			for (idx = 0; idx < ARRAY_SIZE(sun7i_dac_ctls); idx++)
 +				if ((err = snd_ctl_add(card, snd_ctl_new1(&sun7i_dac_ctls[idx], clnt))) < 0)
@@ -922,6 +932,7 @@ index 0000000..b153798
 +			for (idx = 0; idx < ARRAY_SIZE(sun7i_adc_ctls); idx++)
 +				if ((err = snd_ctl_add(card, snd_ctl_new1(&sun7i_adc_ctls[idx], clnt))) < 0)
 +					return err;
++#ifdef JDS
 +	} else {
 +		printk("[audio codec] chip version is unknown!\n");
 +		return -1;
@@ -1677,13 +1688,13 @@ index 0000000..b153798
 +	.pointer = snd_sunxi_codec_pointer,//当前缓冲区的硬件位置
 +};
 +
-+static int snd_card_sunxi_codec_pcm(struct sunxi_codec *sunxi_codec, int device)
++static int snd_card_sunxi_codec_pcm(struct card_data *card_data, int device)
 +{
 +	struct snd_pcm *pcm;
 +	int err;
 +
 +	/*创建PCM实例*/
-+	err = snd_pcm_new(sunxi_codec->card, "M1 PCM", device,
++	err = snd_pcm_new(card_data->card, "M1 PCM", device,
 +			has_playback, has_capture, &pcm);
 +	if (err < 0) {
 +		pr_err("snd_pcm_new M1 PCM failed: %d\n", err);
@@ -1710,7 +1721,7 @@ index 0000000..b153798
 +
 +	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &sunxi_pcm_playback_ops);
 +	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &sunxi_pcm_capture_ops);
-+	pcm->private_data = sunxi_codec; //置pcm->private_data为芯片特定数据
++	pcm->private_data = card_data; //置pcm->private_data为芯片特定数据
 +	pcm->info_flags = 0;
 +	strcpy(pcm->name, "sunxi PCM");
 +	/* setup DMA controller */
@@ -1755,56 +1766,16 @@ index 0000000..b153798
 +
 +static int sunxi_codec_probe(struct platform_device *pdev)
 +{
-+//JDS	struct device_node *np = pdev->dev.of_node;
++	struct snd_card *card;
++	struct card_data *priv;
++	struct device_node *np = pdev->dev.of_node;
 +	struct device *dev = &pdev->dev;
 +	int err;
 +	int ret;
-+	struct snd_card *card;
-+	struct sunxi_codec *chip;
-+	struct codec_board_info *db;
++
++	has_playback = 1; 
++	has_capture = 1;
 +	
-+	/* register the soundcard */
-+	ret = snd_card_create(0, "sunxi-codec", THIS_MODULE, sizeof(struct sunxi_codec), &card);
-+	if (ret != 0) {
-+		return -ENOMEM;
-+	}
-+	/*从private_data中取出分配的内存大小*/
-+	chip = card->private_data;
-+	/*声卡芯片的专用数据*/
-+	card->private_free = snd_sunxi_codec_free; //card私有数据释放
-+	chip->card = card;
-+	chip->samplerate = AUDIO_RATE_DEFAULT;
-+
-+	/*
-+	 *	mixer,注册control(mixer)接口
-+	 *	创建一个control至少要实现snd_kcontrol_new中的info(),get()和put()这三个成员函数
-+	 */
-+	if ((err = snd_chip_codec_mixer_new(card)))
-+		goto nodev;
-+
-+	/*
-+	 *	PCM,录音放音相关，注册PCM接口
-+	 */
-+	if ((err = snd_card_sunxi_codec_pcm(chip, 0)) < 0)
-+		goto nodev;
-+
-+	strcpy(card->driver, "sunxi-CODEC");
-+	strcpy(card->shortname, "sunxi-CODEC");
-+	sprintf(card->longname, "sunxi-CODEC  Audio Codec");
-+
-+	snd_card_set_dev(card, &pdev->dev);
-+
-+	//注册card
-+	if ((err = snd_card_register(card)) == 0) {
-+		platform_set_drvdata(pdev, card);
-+	} else {
-+		return err;
-+	}
-+
-+	db = kzalloc(sizeof(*db), GFP_KERNEL);
-+	if (!db)
-+		return -ENOMEM;
-+
 +	/* Clock */
 +	codec_apbclk = devm_clk_get(dev, "apb");
 +	if (IS_ERR(codec_apbclk)) {
@@ -1821,49 +1792,102 @@ index 0000000..b153798
 +		dev_err(dev, "failed to get codec clock.\n");
 +		return PTR_ERR(codec_moduleclk);
 +	}
-+
++#ifdef JDS	
 +	ret = clk_set_rate(codec_moduleclk, 24576000);
 +	if (ret) {
 +		dev_err(dev, "set codec base clock failed!\n");
 +		return ret;
 +	}
-+
++#endif
 +	if (clk_prepare_enable(codec_apbclk)) {
 +		dev_err(dev, "try to enable apb_codec_clk failed\n");
 +		return -EINVAL;
 +	}
-+
 +	if (clk_prepare_enable(codec_moduleclk)) {
 +		dev_err(dev, "try to enable codec failed\n");
 +		ret = -EINVAL;
 +		goto exit_clkdisable_apb_clk;
 +	}
 +	
-+	/* IO */
-+	db->codec_base_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-+	db->dev = &pdev->dev;
++	ret = snd_card_create(0, "sunxi-codec", THIS_MODULE, sizeof(struct card_data),
++			      &card);
++	if (ret != 0) {
++		return -ENOMEM;
++	}
++	/*从private_data中取出分配的内存大小*/
++	priv = card->private_data;
++	/*声卡芯片的专用数据*/
++	card->private_free = snd_sunxi_codec_free; //card私有数据释放
++	priv->card = card;
++	priv->samplerate = AUDIO_RATE_DEFAULT;
 +
-+	if (db->codec_base_res == NULL) {
++	/* IO */
++	priv->codec_base_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	priv->dev = &pdev->dev;
++
++	if (priv->codec_base_res == NULL) {
 +		ret = -ENOENT;
 +		printk("codec insufficient resources\n");
 +		goto out;
 +	}
 +	/* codec address remap */
-+	db->codec_base_req = request_mem_region(db->codec_base_res->start, 0x40, pdev->name);
-+	if (db->codec_base_req == NULL) {
++	priv->codec_base_req = request_mem_region(priv->codec_base_res->start, 0x40, pdev->name);
++	if (priv->codec_base_req == NULL) {
 +		ret = -EIO;
 +		printk("cannot claim codec address reg area\n");
 +		goto out;
 +	}
-+	baseaddr = ioremap(db->codec_base_res->start, 0x40);
++	baseaddr = ioremap(priv->codec_base_res->start, 0x40);
 +
 +	if (baseaddr == NULL) {
 +		ret = -EINVAL;
-+		dev_err(db->dev,"failed to ioremap codec address reg\n");
++		dev_err(priv->dev,"failed to ioremap codec address reg\n");
 +		goto out;
 +	}
++#ifdef JDS
++printk("jds - widgets");
++	/* off-codec widgets */
++	if (of_property_read_bool(np, "widgets")) {
++		ret = snd_soc_of_parse_audio_simple_widgets(&priv->snd_card, "widgets");
++		if (ret)
++			return ret;
++	}
 +
-+	kfree(db);
++printk("jds - routes");
++	/* DAPM routes */
++	if (of_property_read_bool(np, "routing")) {
++		ret = snd_soc_of_parse_audio_routing(&priv->snd_card, "routing");
++		if (ret)
++			return ret;
++	}
++#endif	
++
++	/*
++	 *	mixer,注册control(mixer)接口
++	 *	创建一个control至少要实现snd_kcontrol_new中的info(),get()和put()这三个成员函数
++	 */
++	if ((err = snd_chip_codec_mixer_new(card)))
++		goto nodev;
++
++	/*
++	 *	PCM,录音放音相关，注册PCM接口
++	 */
++	if ((err = snd_card_sunxi_codec_pcm(priv, 0)) < 0)
++		goto nodev;
++
++	strcpy(card->driver, "sunxi-CODEC");
++	strcpy(card->shortname, "sunxi-CODEC");
++	sprintf(card->longname, "sunxi-CODEC  Audio Codec");
++
++	snd_card_set_dev(card, &pdev->dev);
++
++	//注册card
++	if ((err = snd_card_register(card)) == 0) {
++		platform_set_drvdata(pdev, card);
++	} else {
++		return err;
++	}
++
 +#ifdef JDS
 +	gpio_pa_shutdown = gpio_request_ex("audio_para", "audio_pa_ctrl");
 +	if (gpio_pa_shutdown)
@@ -1880,10 +1904,11 @@ index 0000000..b153798
 +		ret = -ENOMEM;
 +		goto err_resume_work_queue;
 +	}
++	printk("jds - codec ok");
 +	return 0;
 +err_resume_work_queue:
 +out:
-+	dev_err(db->dev, "not found (%d).\n", ret);
++	dev_err(priv->dev, "not found (%d).\n", ret);
 +exit_clkdisable_clk:
 +	clk_disable_unprepare(codec_moduleclk);
 +exit_clkdisable_apb_clk:
