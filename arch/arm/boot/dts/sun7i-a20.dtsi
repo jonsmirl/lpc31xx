@@ -927,6 +927,15 @@
 			clock-names = "pll2", "apb", "codec";
 			dmas = <&dma 0 19>, <&dma 0 19>;
 			dma-names = "rx", "tx";
+			widgets =
+				"Microphone", "Microphone Jack",
+				"Headphone", "Headphone Jack",
+				"Line", "Line In Jack";
+			routing =
+				"MIC_IN", "Microphone Jack",
+				"Microphone Jack", "Mic Bias",
+				"LINE_IN", "Line In Jack",
+				"Headphone Jack", "HP_OUT";
 			status = "disabled";
 		};
 
