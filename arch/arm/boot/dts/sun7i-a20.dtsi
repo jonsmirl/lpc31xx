@@ -337,7 +337,7 @@
 
 		i2s0_clk: clk@01c200b8 {
 			#clock-cells = <0>;
-			compatible = "allwinner,sun4i-a10-clk";
+			compatible = "allwinner,sunxi-audio-clk";
 			reg = <0x01c200b8 0x4>;
 			clocks = <&pll2>;
 			clock-output-names = "i2s0";
@@ -345,7 +345,7 @@
 
 		ac97_clk: clk@01c200bc {
 			#clock-cells = <0>;
-			compatible = "allwinner,sun4i-a10-clk";
+			compatible = "allwinner,sunxi-audio-clk";
 			reg = <0x01c200bc 0x4>;
 			clocks = <&pll2>;
 			clock-output-names = "ac97";
@@ -353,7 +353,7 @@
 
 		spdif_clk: clk@01c200c0 {
 			#clock-cells = <0>;
-			compatible = "allwinner,sun4i-a10-clk";
+			compatible = "allwinner,sunxi-audio-clk";
 			reg = <0x01c200c0 0x4>;
 			clocks = <&pll2>;
 			clock-output-names = "spdif";
@@ -378,7 +378,7 @@
 
 		i2s1_clk: clk@01c200d8 {
 			#clock-cells = <0>;
-			compatible = "allwinner,sun4i-a10-clk";
+			compatible = "allwinner,sunxi-audio-clk";
 			reg = <0x01c200d8 0x4>;
 			clocks = <&pll2>;
 			clock-output-names = "i2s1";
@@ -386,7 +386,7 @@
 
 		i2s2_clk: clk@01c200dc {
 			#clock-cells = <0>;
-			compatible = "allwinner,sun4i-a10-clk";
+			compatible = "allwinner,sunxi-audio-clk";
 			reg = <0x01c200dc 0x4>;
 			clocks = <&pll2>;
 			clock-output-names = "i2s2";
@@ -394,7 +394,7 @@
 
 		codec_clk: clk@01c20140 {
 			#clock-cells = <0>;
-			compatible = "allwinner,sun4i-a10-mod0-clk";
+			compatible = "allwinner,sunxi-codec-clk";
 			reg = <0x01c20140 0x4>;
 			clocks = <&pll2>;
 			clock-output-names = "codec";

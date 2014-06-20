@@ -98,12 +98,11 @@ enum m1_codec_config {
 	CMD_ADC_SEL,
 };
 
-void  __iomem *baseaddr;
-
 #define AUDIO_RATE_DEFAULT	44100
 #define ST_RUNNING		(1<<0)
 #define ST_OPENED		(1<<1)
 
+void  __iomem *baseaddr;
 #define codec_rdreg(reg)	    readl((baseaddr+(reg)))
 #define codec_wrreg(reg,val)  writel((val),(baseaddr+(reg)))
 
@@ -135,5 +134,4 @@ struct	codec_mixer_control{
 	unsigned int value;
 };
 
-extern int snd_chip_codec_mixer_new(struct snd_card *card);
 #endif

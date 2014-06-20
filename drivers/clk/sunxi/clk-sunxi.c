@@ -219,6 +219,7 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
 static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
 				   u8 *n, u8 *k, u8 *m, u8 *p)
 {
+	printk("JDS - sun7i_get_pll2_factors %d\n", *freq);
 	/* we were called to round the frequency, we can now return */
 	if (n == NULL)
 		return;
@@ -983,6 +984,10 @@ static const struct gates_data sun6i_a31_usb_gates_data __initconst = {
 	.reset_mask = BIT(2) | BIT(1) | BIT(0),
 };
 
+static const struct gates_data sunxi_codec_data __initconst = {
+	.mask = {BIT(31)},
+};
+
 static void __init sunxi_gates_clk_setup(struct device_node *node,
 					 struct gates_data *data)
 {
@@ -1233,7 +1238,6 @@ free_clkdata:
 }
 
 
-
 /* Matches for factors clocks */
 static const struct of_device_id clk_factors_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-pll1-clk", .data = &sun4i_pll1_data,},
@@ -1297,6 +1301,7 @@ static const struct of_device_id clk_gates_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-usb-clk", .data = &sun4i_a10_usb_gates_data,},
 	{.compatible = "allwinner,sun5i-a13-usb-clk", .data = &sun5i_a13_usb_gates_data,},
 	{.compatible = "allwinner,sun6i-a31-usb-clk", .data = &sun6i_a31_usb_gates_data,},
+	{.compatible = "allwinner,sunxi-codec-clk", .data = &sunxi_codec_data,},
 	{}
 };
 
