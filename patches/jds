@@ -1,5 +1,5 @@
 Bottom: d90793d567f477f784df988b4f53d0f7f49b6a8f
-Top:    e90d90f116904585821e2cc5d33045f39bca8ec5
+Top:    79070f160fcfe92a3df0ffe38b2ebc8533c03365
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-12 16:01:51 -0400
 
@@ -24,7 +24,7 @@ index bed74a9..a347eff 100644
  			pinctrl-names = "default";
  			pinctrl-0 = <&ir0_pins_a>;
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 263eb79..e70e3b9 100644
+index 263eb79..4fbd64a 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -91,6 +91,14 @@
@@ -48,7 +48,7 @@ index 263eb79..e70e3b9 100644
  
 +		i2s0_clk: clk@01c200b8 {
 +			#clock-cells = <0>;
-+			compatible = "allwinner,sun4i-a10-clk";
++			compatible = "allwinner,sunxi-audio-clk";
 +			reg = <0x01c200b8 0x4>;
 +			clocks = <&pll2>;
 +			clock-output-names = "i2s0";
@@ -56,7 +56,7 @@ index 263eb79..e70e3b9 100644
 +
 +		ac97_clk: clk@01c200bc {
 +			#clock-cells = <0>;
-+			compatible = "allwinner,sun4i-a10-clk";
++			compatible = "allwinner,sunxi-audio-clk";
 +			reg = <0x01c200bc 0x4>;
 +			clocks = <&pll2>;
 +			clock-output-names = "ac97";
@@ -64,7 +64,7 @@ index 263eb79..e70e3b9 100644
 +
 +		spdif_clk: clk@01c200c0 {
 +			#clock-cells = <0>;
-+			compatible = "allwinner,sun4i-a10-clk";
++			compatible = "allwinner,sunxi-audio-clk";
 +			reg = <0x01c200c0 0x4>;
 +			clocks = <&pll2>;
 +			clock-output-names = "spdif";
@@ -79,7 +79,7 @@ index 263eb79..e70e3b9 100644
  
 +		i2s1_clk: clk@01c200d8 {
 +			#clock-cells = <0>;
-+			compatible = "allwinner,sun4i-a10-clk";
++			compatible = "allwinner,sunxi-audio-clk";
 +			reg = <0x01c200d8 0x4>;
 +			clocks = <&pll2>;
 +			clock-output-names = "i2s1";
@@ -87,7 +87,7 @@ index 263eb79..e70e3b9 100644
 +
 +		i2s2_clk: clk@01c200dc {
 +			#clock-cells = <0>;
-+			compatible = "allwinner,sun4i-a10-clk";
++			compatible = "allwinner,sunxi-audio-clk";
 +			reg = <0x01c200dc 0x4>;
 +			clocks = <&pll2>;
 +			clock-output-names = "i2s2";
@@ -95,7 +95,7 @@ index 263eb79..e70e3b9 100644
 +
 +		codec_clk: clk@01c20140 {
 +			#clock-cells = <0>;
-+			compatible = "allwinner,sun4i-a10-mod0-clk";
++			compatible = "allwinner,sunxi-codec-clk";
 +			reg = <0x01c20140 0x4>;
 +			clocks = <&pll2>;
 +			clock-output-names = "codec";
@@ -187,10 +187,10 @@ index 263eb79..e70e3b9 100644
  		ir0: ir@01c21800 {
  			compatible = "allwinner,sun7i-a20-ir";
 diff --git a/drivers/clk/sunxi/clk-sunxi.c b/drivers/clk/sunxi/clk-sunxi.c
-index 1d16c0c..faf80be 100644
+index 1d16c0c..b3483a7 100644
 --- a/drivers/clk/sunxi/clk-sunxi.c
 +++ b/drivers/clk/sunxi/clk-sunxi.c
-@@ -212,6 +212,29 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
+@@ -212,6 +212,30 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
  }
  
  /**
@@ -201,6 +201,7 @@ index 1d16c0c..faf80be 100644
 +static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
 +				   u8 *n, u8 *k, u8 *m, u8 *p)
 +{
++	printk("JDS - sun7i_get_pll2_factors %d\n", *freq);
 +	/* we were called to round the frequency, we can now return */
 +	if (n == NULL)
 +		return;
@@ -220,7 +221,7 @@ index 1d16c0c..faf80be 100644
   * sun4i_get_pll5_factors() - calculates n, k factors for PLL5
   * PLL5 rate is calculated as follows
   * rate = parent_rate * n * (k + 1)
-@@ -482,6 +505,15 @@ static struct clk_factors_config sun8i_a23_pll1_config = {
+@@ -482,6 +506,15 @@ static struct clk_factors_config sun8i_a23_pll1_config = {
  	.n_from_one = 1,
  };
  
@@ -236,7 +237,7 @@ index 1d16c0c..faf80be 100644
  static struct clk_factors_config sun4i_pll5_config = {
  	.nshift = 8,
  	.nwidth = 5,
-@@ -538,6 +570,12 @@ static const struct factors_data sun8i_a23_pll1_data __initconst = {
+@@ -538,6 +571,12 @@ static const struct factors_data sun8i_a23_pll1_data __initconst = {
  	.getter = sun8i_a23_get_pll1_factors,
  };
  
@@ -249,7 +250,24 @@ index 1d16c0c..faf80be 100644
  static const struct factors_data sun7i_a20_pll4_data __initconst = {
  	.enable = 31,
  	.table = &sun4i_pll5_config,
-@@ -1201,6 +1239,7 @@ static const struct of_device_id clk_factors_match[] __initconst = {
+@@ -945,6 +984,10 @@ static const struct gates_data sun6i_a31_usb_gates_data __initconst = {
+ 	.reset_mask = BIT(2) | BIT(1) | BIT(0),
+ };
+ 
++static const struct gates_data sunxi_codec_data __initconst = {
++	.mask = {BIT(31)},
++};
++
+ static void __init sunxi_gates_clk_setup(struct device_node *node,
+ 					 struct gates_data *data)
+ {
+@@ -1195,12 +1238,12 @@ free_clkdata:
+ }
+ 
+ 
+-
+ /* Matches for factors clocks */
+ static const struct of_device_id clk_factors_match[] __initconst = {
  	{.compatible = "allwinner,sun4i-a10-pll1-clk", .data = &sun4i_pll1_data,},
  	{.compatible = "allwinner,sun6i-a31-pll1-clk", .data = &sun6i_a31_pll1_data,},
  	{.compatible = "allwinner,sun8i-a23-pll1-clk", .data = &sun8i_a23_pll1_data,},
@@ -257,6 +275,14 @@ index 1d16c0c..faf80be 100644
  	{.compatible = "allwinner,sun7i-a20-pll4-clk", .data = &sun7i_a20_pll4_data,},
  	{.compatible = "allwinner,sun4i-a10-apb1-clk", .data = &sun4i_apb1_data,},
  	{.compatible = "allwinner,sun4i-a10-mod0-clk", .data = &sun4i_mod0_data,},
+@@ -1258,6 +1301,7 @@ static const struct of_device_id clk_gates_match[] __initconst = {
+ 	{.compatible = "allwinner,sun4i-a10-usb-clk", .data = &sun4i_a10_usb_gates_data,},
+ 	{.compatible = "allwinner,sun5i-a13-usb-clk", .data = &sun5i_a13_usb_gates_data,},
+ 	{.compatible = "allwinner,sun6i-a31-usb-clk", .data = &sun6i_a31_usb_gates_data,},
++	{.compatible = "allwinner,sunxi-codec-clk", .data = &sunxi_codec_data,},
+ 	{}
+ };
+ 
 diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
 index 0060b31..8f08e4b 100644
 --- a/sound/soc/Kconfig
@@ -301,10 +327,10 @@ index 0000000..b8950d3
 +
 diff --git a/sound/soc/sunxi/sunxi-codec.c b/sound/soc/sunxi/sunxi-codec.c
 new file mode 100644
-index 0000000..92ebbee
+index 0000000..a7f0f72
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-codec.c
-@@ -0,0 +1,1726 @@
+@@ -0,0 +1,1773 @@
 +/*
 + *   Driver for CODEC on Allwinner CPUs
 + *   This program is free software; you can redistribute it and/or modify
@@ -344,6 +370,7 @@ index 0000000..92ebbee
 +#include <linux/timer.h>
 +#include "sunxi-codec.h"
 +
++enum sunxi_device_id {SUN4A, SUN4I, SUN5I, SUN7I}; 
 +
 +/* Structure/enum declaration ------------------------------- */
 +struct card_data {
@@ -356,6 +383,10 @@ index 0000000..92ebbee
 +	long samplerate;
 +	struct snd_card *card;
 +	struct snd_pcm *pcm;
++	
++	enum sunxi_device_id id;
++	struct dma_chan		*rx_dma_chan;
++	struct dma_chan		*tx_dma_chan;
 +};
 +
 +#define SCRIPT_AUDIO_OK (0)
@@ -614,48 +645,40 @@ index 0000000..92ebbee
 + * Reset the codec, set the register of codec default value
 + * Return 0 for success
 + */
-+static int codec_init(void)
++static int codec_init(struct card_data *priv)
 +{
-+//JDS	enum sw_ic_ver codec_chip_ver = sw_get_ic_ver();
-+
 +	//enable dac digital
 +	codec_wr_control(SUNXI_DAC_DPC, 0x1, DAC_EN, 0x1);
 +
 +	codec_wr_control(SUNXI_DAC_FIFOC, 0x1, 28, 0x1);
 +	//set digital volume to maximum
-+#ifdef JDS	
-+	if (codec_chip_ver == SUNXI_VER_A10A)
++	if (priv->id == SUN4A)
 +		codec_wr_control(SUNXI_DAC_DPC, 0x6, DIGITAL_VOL, 0x0);
-+#endif
++
 +	//pa mute
 +	codec_wr_control(SUNXI_DAC_ACTL, 0x1, PA_MUTE, 0x0);
 +	//enable PA
 +	codec_wr_control(SUNXI_ADC_ACTL, 0x1, PA_ENABLE, 0x1);
 +	codec_wr_control(SUNXI_DAC_FIFOC, 0x3, DRA_LEVEL, 0x3);
 +	//set volume
-+#ifdef JDS	
-+	if (sunxi_is_sun4i()) {
-+		int rc;
++	if ((priv->id == SUN4A) || (priv->id == SUN4I)) {
 +		int device_lr_change = 0;
-+		if (codec_chip_ver == SUNXI_VER_A10A)
++		if (priv->id == SUN4A)
 +			codec_wr_control(SUNXI_DAC_ACTL, 0x6, VOLUME, 0x01);
-+		else if (codec_chip_ver == SUNXI_VER_A10B || codec_chip_ver == SUNXI_VER_A10C)
++		else 
 +			codec_wr_control(SUNXI_DAC_ACTL, 0x6, VOLUME, 0x3b);
-+		else {
-+			printk("[audio codec] chip version is unknown!\n");
-+			return -1;
-+		}
++#ifdef JDS
 +		rc = script_parser_fetch("audio_para", "audio_lr_change", &device_lr_change, 1);
 +		if (rc != SCRIPT_AUDIO_OK) {
 +			pr_err("No audio_lr_change in fex audio_para\n");
 +			return -1;
 +		}
++#endif
 +		if (device_lr_change)
 +			codec_wr_control(SUNXI_DAC_DEBUG, 0x1, DAC_CHANNEL, 0x1);
 +	} else {
 +		codec_wr_control(SUNXI_DAC_ACTL, 0x6, VOLUME, 0x3b);
 +	}
-+#endif
 +	return 0;
 +}
 +
@@ -682,7 +705,7 @@ index 0000000..92ebbee
 +	return 0;
 +}
 +
-+static int codec_capture_open(void)
++static int codec_capture_open(struct card_data *priv)
 +{
 +	//enable mic1 pa
 +	codec_wr_control(SUNXI_ADC_ACTL, 0x1, MIC1_EN, 0x1);
@@ -691,12 +714,10 @@ index 0000000..92ebbee
 +	//enable VMIC
 +	codec_wr_control(SUNXI_ADC_ACTL, 0x1, VMIC_EN, 0x1);
 +
-+#ifdef JDS
-+	if (sunxi_is_sun7i()) {
++	if (priv->id == SUN7I) {
 +		/* boost up record effect */
 +		codec_wr_control(SUNXI_DAC_TUNE, 0x3, 8, 0x3);
 +	}
-+#endif
 +
 +	//enable adc digital
 +	codec_wr_control(SUNXI_ADC_FIFOC, 0x1, ADC_DIG_EN, 0x1);
@@ -753,7 +774,7 @@ index 0000000..92ebbee
 +	return 0;
 +}
 +
-+static int codec_capture_stop(void)
++static int codec_capture_stop(struct card_data *priv)
 +{
 +	//disable adc drq
 +	codec_wr_control(SUNXI_ADC_FIFOC, 0x1, ADC_DRQ, 0x0);
@@ -762,10 +783,9 @@ index 0000000..92ebbee
 +
 +	//enable VMIC
 +	codec_wr_control(SUNXI_ADC_ACTL, 0x1, VMIC_EN, 0x0);
-+#ifdef JDS
-+	if (sunxi_is_sun7i())
++	if (priv->id == SUN7I) {
 +		codec_wr_control(SUNXI_DAC_TUNE, 0x3, 8, 0x0);
-+#endif
++	}
 +	//enable adc digital
 +	codec_wr_control(SUNXI_ADC_FIFOC, 0x1, ADC_DIG_EN, 0x0);
 +	//set RX FIFO mode
@@ -781,13 +801,16 @@ index 0000000..92ebbee
 +{
 +	return 0;
 +}
-+;
++
++struct sunxi_controls {
++	
++};
 +
 +/*	对sunxi-codec.c各寄存器的各种设定，或读取。主要实现函数有三个.
 + * 	.info = snd_codec_info_volsw, .get = snd_codec_get_volsw,\.put = snd_codec_put_volsw,
 + * It should be noted that the only difference between sunxi and sun5i is the Master Playback Volume
 + */
-+static const struct snd_kcontrol_new sunxibc_dac[] = {
++static const struct snd_kcontrol_new sun4i_dac[] = {
 +	//FOR B C VERSION
 +	CODEC_SINGLE("Master Playback Volume", SUNXI_DAC_ACTL, 0, 0x3f, 0), CODEC_SINGLE("Playback Switch", SUNXI_DAC_ACTL, 6, 1, 0), //全局输出开关
 +	CODEC_SINGLE("Fm Volume", SUNXI_DAC_ACTL, 23, 7, 0), //Fm 音量
@@ -802,7 +825,7 @@ index 0000000..92ebbee
 +	CODEC_SINGLE("Mic Input Mux", SUNXI_DAC_ACTL, 9, 15, 0), //from bit 9 to bit 12.Mic（麦克风）输入静音
 +};
 +
-+static const struct snd_kcontrol_new sunxia_dac[] = {
++static const struct snd_kcontrol_new sun4a_dac[] = {
 +	//For A VERSION
 +	CODEC_SINGLE("Master Playback Volume", SUNXI_DAC_DPC, 12, 0x3f, 0), //62 steps, 3e + 1 = 3f 主音量控制
 +	CODEC_SINGLE("Playback Switch", SUNXI_DAC_ACTL, 6, 1, 0), //全局输出开关
@@ -818,7 +841,7 @@ index 0000000..92ebbee
 +	CODEC_SINGLE("Mic Input Mux", SUNXI_DAC_ACTL, 9, 15, 0), //from bit 9 to bit 12.Mic（麦克风）输入静音
 +};
 +
-+static const struct snd_kcontrol_new codec_adc_controls[] = { 
++static const struct snd_kcontrol_new sunxi_adc_controls[] = { 
 +	CODEC_SINGLE("Master Capture Mute", SUNXI_ADC_ACTL, 4, 1, 0), 
 +	CODEC_SINGLE("Right Capture Mute", SUNXI_ADC_ACTL, 31, 1, 0), 
 +	CODEC_SINGLE("Left Capture Mute", SUNXI_ADC_ACTL, 30, 1, 0),
@@ -883,7 +906,7 @@ index 0000000..92ebbee
 +	CODEC_SINGLE("Mic1 gain Volume", SUNXI_MIC_CRT, 29, 3, 0), 
 +};
 +
-+int snd_chip_codec_mixer_new(struct snd_card *card)
++int snd_chip_codec_mixer_new(struct card_data *priv)
 +{
 +	/*
 +	 *	每个alsa预定义的组件在构造时需调用snd_device_new()，而每个组件的析构方法则在函数集中被包含
@@ -900,44 +923,35 @@ index 0000000..92ebbee
 +	 *	snd_ctl_new1函数用于创建一个snd_kcontrol并返回其指针，
 +	 *	snd_ctl_add函数用于将创建的snd_kcontrol添加到对应的card中。
 +	 */
-+#ifdef JDS
-+	enum sw_ic_ver codec_chip_ver = sw_get_ic_ver();
-+
-+	if (codec_chip_ver == SUNXI_VER_A10A) {
++	if (priv->id == SUN4A) {
 +		if (has_playback)
-+			for (idx = 0; idx < ARRAY_SIZE(sunxia_dac); idx++)
-+				if ((err = snd_ctl_add(card, snd_ctl_new1(&sunxia_dac[idx], clnt))) < 0)
++			for (idx = 0; idx < ARRAY_SIZE(sun4a_dac); idx++)
++				if ((err = snd_ctl_add(priv->card, snd_ctl_new1(&sun4a_dac[idx], clnt))) < 0)
 +					return err;
 +		if (has_capture)
-+			for (idx = 0; idx < ARRAY_SIZE(codec_adc_controls); idx++)
-+				if ((err = snd_ctl_add(card, snd_ctl_new1(&codec_adc_controls[idx], clnt))) < 0)
++			for (idx = 0; idx < ARRAY_SIZE(sunxi_adc_controls); idx++)
++				if ((err = snd_ctl_add(priv->card, snd_ctl_new1(&sunxi_adc_controls[idx], clnt))) < 0)
 +					return err;
-+	} else if (sunxi_is_sun5i() || codec_chip_ver == SUNXI_VER_A10B || codec_chip_ver == SUNXI_VER_A10C) {
++	} else if ((priv->id == SUN4I) || (priv->id == SUN5I)) {
 +		
 +		if (has_playback)
-+			for (idx = 0; idx < ARRAY_SIZE(sunxibc_dac); idx++)
-+				if ((err = snd_ctl_add(card, snd_ctl_new1(&sunxibc_dac[idx], clnt))) < 0)
++			for (idx = 0; idx < ARRAY_SIZE(sun4i_dac); idx++)
++				if ((err = snd_ctl_add(priv->card, snd_ctl_new1(&sun4i_dac[idx], clnt))) < 0)
 +					return err;
 +		if (has_capture)
-+			for (idx = 0; idx < ARRAY_SIZE(codec_adc_controls); idx++)
-+				if ((err = snd_ctl_add(card, snd_ctl_new1(&codec_adc_controls[idx], clnt))) < 0)
++			for (idx = 0; idx < ARRAY_SIZE(sunxi_adc_controls); idx++)
++				if ((err = snd_ctl_add(priv->card, snd_ctl_new1(&sunxi_adc_controls[idx], clnt))) < 0)
 +					return err;
-+	} else if (sunxi_is_sun7i()) {
-+#endif
++	} else if (priv->id == SUN7I) {
 +		if (has_playback)
 +			for (idx = 0; idx < ARRAY_SIZE(sun7i_dac_ctls); idx++)
-+				if ((err = snd_ctl_add(card, snd_ctl_new1(&sun7i_dac_ctls[idx], clnt))) < 0)
++				if ((err = snd_ctl_add(priv->card, snd_ctl_new1(&sun7i_dac_ctls[idx], clnt))) < 0)
 +					return err;
 +		if (has_capture)
 +			for (idx = 0; idx < ARRAY_SIZE(sun7i_adc_ctls); idx++)
-+				if ((err = snd_ctl_add(card, snd_ctl_new1(&sun7i_adc_ctls[idx], clnt))) < 0)
++				if ((err = snd_ctl_add(priv->card, snd_ctl_new1(&sun7i_adc_ctls[idx], clnt))) < 0)
 +					return err;
-+#ifdef JDS
-+	} else {
-+		printk("[audio codec] chip version is unknown!\n");
-+		return -1;
 +	}
-+#endif
 +	/*
 +	 *	当card被创建后，设备（组件）能够被创建并关联于该card。第一个参数是snd_card_create
 +	 *	创建的card指针，第二个参数type指的是device-level即设备类型，形式为SNDRV_DEV_XXX,包括
@@ -946,11 +960,11 @@ index 0000000..92ebbee
 +	 *	指针，device_data是设备数据指针，snd_device_new本身不会分配设备数据的内存，因此事先应
 +	 *	分配。在这里在snd_card_create分配。
 +	 */
-+	if ((err = snd_device_new(card, SNDRV_DEV_CODEC, clnt, &ops)) < 0) {
++	if ((err = snd_device_new(priv->card, SNDRV_DEV_CODEC, clnt, &ops)) < 0) {
 +		return err;
 +	}
 +
-+	strcpy(card->mixername, "codec Mixer");
++	strcpy(priv->card->mixername, "codec Mixer");
 +
 +	return 0;
 +}
@@ -1195,12 +1209,16 @@ index 0000000..92ebbee
 +
 +static int snd_sunxi_codec_prepare(struct snd_pcm_substream *substream)
 +{
++	struct snd_soc_pcm_runtime *rtd = substream->private_data;
++	struct card_data *priv = rtd->cpu_dai->dev->platform_data;
 +#if defined CONFIG_ARCH_SUN4I || defined CONFIG_ARCH_SUN5I
 +	struct dma_hw_conf codec_play_dma_conf;
 +	struct dma_hw_conf codec_capture_dma_conf;
 +#else
-+//JDS	dma_config_t codec_play_dma_conf;
-+//JDS	dma_config_t codec_capture_dma_conf;
++#ifdef JDS
++	dma_config_t codec_play_dma_conf;
++	dma_config_t codec_capture_dma_conf;
++#endif
 +#endif
 +
 +	int play_ret = 0, capture_ret = 0;
@@ -1478,7 +1496,7 @@ index 0000000..92ebbee
 +		if (!capture_prtd->params)
 +			return 0;
 +		//open the adc channel register
-+		codec_capture_open();
++		codec_capture_open(priv);
 +		//set the dma
 +#if defined CONFIG_ARCH_SUN4I || defined CONFIG_ARCH_SUN5I
 +
@@ -1521,9 +1539,12 @@ index 0000000..92ebbee
 +
 +static int snd_sunxi_codec_trigger(struct snd_pcm_substream *substream, int cmd)
 +{
++	struct snd_soc_pcm_runtime *rtd = substream->private_data;
++	struct card_data *priv = rtd->cpu_dai->dev->platform_data;
 +	int play_ret = 0, capture_ret = 0;
 +	struct sunxi_playback_runtime_data *play_prtd = NULL;
 +	struct sunxi_capture_runtime_data *capture_prtd = NULL;
++
 +	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 +		play_prtd = substream->runtime->private_data;
 +		spin_lock(&play_prtd->lock);
@@ -1577,11 +1598,11 @@ index 0000000..92ebbee
 +//JDS			sunxi_dma_start(capture_prtd->params);
 +			break;
 +		case SNDRV_PCM_TRIGGER_SUSPEND:
-+			codec_capture_stop();
++			codec_capture_stop(priv);
 +			break;
 +		case SNDRV_PCM_TRIGGER_STOP:
 +			capture_prtd->state &= ~ST_RUNNING;
-+			codec_capture_stop();
++			codec_capture_stop(priv);
 +//JDS			sunxi_dma_stop(capture_prtd->params);
 +			break;
 +		case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
@@ -1764,12 +1785,23 @@ index 0000000..92ebbee
 +	}
 +}
 +
++static const struct of_device_id snd_sunxi_codec_ids[] = {
++	{ .compatible = "allwinner,sun4i-a10a-codec", .data = (void *)SUN4A},
++	{ .compatible = "allwinner,sun4i-a10-codec", .data = (void *)SUN4I},
++	{ .compatible = "allwinner,sun5i-a13-codec", .data = (void *)SUN5I},
++	{ .compatible = "allwinner,sun7i-a20-codec", .data = (void *)SUN7I},
++	{}
++};
++MODULE_DEVICE_TABLE(of, snd_sunxi_codec_ids);
++
 +static int sunxi_codec_probe(struct platform_device *pdev)
 +{
++	struct dma_slave_config dma_sconfig;
 +	struct snd_card *card;
 +	struct card_data *priv;
 +	struct device_node *np = pdev->dev.of_node;
 +	struct device *dev = &pdev->dev;
++	const struct of_device_id *of_id;
 +	int err;
 +	int ret;
 +
@@ -1792,13 +1824,15 @@ index 0000000..92ebbee
 +		dev_err(dev, "failed to get codec clock.\n");
 +		return PTR_ERR(codec_moduleclk);
 +	}
-+#ifdef JDS	
-+	ret = clk_set_rate(codec_moduleclk, 24576000);
++	ret = clk_set_rate(codec_pll2clk, 24576000);
 +	if (ret) {
 +		dev_err(dev, "set codec base clock failed!\n");
 +		return ret;
 +	}
-+#endif
++	if (clk_prepare_enable(codec_pll2clk)) {
++		dev_err(dev, "try to enable codec_pll2clk failed\n");
++		return -EINVAL;
++	}
 +	if (clk_prepare_enable(codec_apbclk)) {
 +		dev_err(dev, "try to enable apb_codec_clk failed\n");
 +		return -EINVAL;
@@ -1818,6 +1852,10 @@ index 0000000..92ebbee
 +	priv = card->private_data;
 +	/*声卡芯片的专用数据*/
 +	card->private_free = snd_sunxi_codec_free; //card私有数据释放
++	
++	of_id = of_match_device(snd_sunxi_codec_ids, &pdev->dev);
++	priv->id = (int)of_id->data;
++	
 +	priv->card = card;
 +	priv->samplerate = AUDIO_RATE_DEFAULT;
 +
@@ -1860,13 +1898,53 @@ index 0000000..92ebbee
 +		if (ret)
 +			return ret;
 +	}
-+#endif	
++#endif
++	
++	priv->tx_dma_chan = dma_request_slave_channel_reason(&pdev->dev, "tx");
++	if (IS_ERR(priv->tx_dma_chan)) {
++		dev_err(priv->dev, "Unable to acquire DMA channel TX\n");
++		ret = PTR_ERR(priv->tx_dma_chan);
++		goto err_free_master;
++	}
++
++	dma_sconfig.direction = DMA_MEM_TO_DEV;
++	dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
++	dma_sconfig.dst_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
++	dma_sconfig.dst_addr = priv->codec_base_res->start + SUNXI_DAC_TXDATA;
++	dma_sconfig.src_maxburst = 1;
++	dma_sconfig.dst_maxburst = 1;
++
++	ret = dmaengine_slave_config(priv->tx_dma_chan, &dma_sconfig);
++	if (ret) {
++		dev_err(&pdev->dev, "Unable to configure TX DMA slave\n");
++		goto err_tx_dma_release;
++	}
++
++	priv->rx_dma_chan = dma_request_slave_channel_reason(&pdev->dev, "rx");
++	if (IS_ERR(priv->rx_dma_chan)) {
++		dev_err(&pdev->dev, "Unable to acquire DMA channel RX\n");
++		ret = PTR_ERR(priv->rx_dma_chan);
++		goto err_tx_dma_release;
++	}
++
++	dma_sconfig.direction = DMA_DEV_TO_MEM;
++	dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
++	dma_sconfig.dst_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
++	dma_sconfig.src_addr = priv->codec_base_res->start + SUNXI_ADC_RXDATA;
++	dma_sconfig.src_maxburst = 1;
++	dma_sconfig.dst_maxburst = 1;
++
++	ret = dmaengine_slave_config(priv->rx_dma_chan, &dma_sconfig);
++	if (ret) {
++		dev_err(&pdev->dev, "Unable to configure RX DMA slave\n");
++		goto err_rx_dma_release;
++	}
 +
 +	/*
 +	 *	mixer,注册control(mixer)接口
 +	 *	创建一个control至少要实现snd_kcontrol_new中的info(),get()和put()这三个成员函数
 +	 */
-+	if ((err = snd_chip_codec_mixer_new(card)))
++	if ((err = snd_chip_codec_mixer_new(priv)))
 +		goto nodev;
 +
 +	/*
@@ -1893,7 +1971,7 @@ index 0000000..92ebbee
 +	if (gpio_pa_shutdown)
 +		gpio_write_one_pin_value(gpio_pa_shutdown, 0, "audio_pa_ctrl");
 +#endif
-+	codec_init();
++	codec_init(priv);
 +#ifdef JDS
 +	if (gpio_pa_shutdown)
 +		gpio_write_one_pin_value(gpio_pa_shutdown, 0, "audio_pa_ctrl");
@@ -1904,8 +1982,12 @@ index 0000000..92ebbee
 +		ret = -ENOMEM;
 +		goto err_resume_work_queue;
 +	}
-+	printk("jds - codec ok");
++	printk("jds - codec ok, %s\n", of_id->compatible);
 +	return 0;
++	
++err_rx_dma_release:
++err_free_master:
++err_tx_dma_release:
 +err_resume_work_queue:
 +out:
 +	dev_err(priv->dev, "not found (%d).\n", ret);
@@ -2000,15 +2082,6 @@ index 0000000..92ebbee
 +	clk_disable(codec_moduleclk);
 +}
 +
-+static const struct of_device_id snd_sunxi_codec_ids[] = {
-+	{ .compatible = "allwinner,sun4i-a10a-codec", .data = (void *) "4a"},
-+	{ .compatible = "allwinner,sun4i-a10-codec", .data = (void *) "4"},
-+	{ .compatible = "allwinner,sun5i-a13-codec", .data = (void *) "5"},
-+	{ .compatible = "allwinner,sun7i-a20-codec", .data = (void *) "7"},
-+	{}
-+};
-+MODULE_DEVICE_TABLE(of, snd_sunxi_codec_ids);
-+
 +/*method relating*/
 +static struct platform_driver sunxi_codec_driver =
 +{
@@ -2033,10 +2106,10 @@ index 0000000..92ebbee
 +MODULE_LICENSE("GPL v2");
 diff --git a/sound/soc/sunxi/sunxi-codec.h b/sound/soc/sunxi/sunxi-codec.h
 new file mode 100644
-index 0000000..d519c0e
+index 0000000..4e12b42
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-codec.h
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,137 @@
 +/*
 + * sound/soc/sunxi/sunxi-codec.h
 + *
@@ -2137,12 +2210,11 @@ index 0000000..d519c0e
 +	CMD_ADC_SEL,
 +};
 +
-+void  __iomem *baseaddr;
-+
 +#define AUDIO_RATE_DEFAULT	44100
 +#define ST_RUNNING		(1<<0)
 +#define ST_OPENED		(1<<1)
 +
++void  __iomem *baseaddr;
 +#define codec_rdreg(reg)	    readl((baseaddr+(reg)))
 +#define codec_wrreg(reg,val)  writel((val),(baseaddr+(reg)))
 +
@@ -2174,5 +2246,4 @@ index 0000000..d519c0e
 +	unsigned int value;
 +};
 +
-+extern int snd_chip_codec_mixer_new(struct snd_card *card);
 +#endif
