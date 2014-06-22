@@ -1,5 +1,5 @@
 Bottom: 79070f160fcfe92a3df0ffe38b2ebc8533c03365
-Top:    a70594678e8964209edeb4462062f31135063fb7
+Top:    72f6448990ccedfa6c82c3332515b5427f37d9df
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-22 11:54:42 -0400
 
@@ -115,6 +115,18 @@ index 4fbd64a..4677fef 100644
 +	};
 +	
  };
+diff --git a/cop b/cop
+new file mode 100755
+index 0000000..727aee3
+--- /dev/null
++++ b/cop
+@@ -0,0 +1,6 @@
++#!/bin/sh
++
++
++make zImage modules uImage dtbs
++cp /work/hans/sound/soc/sunxi/sunxi-codec.ko /work/root/lib/modules/3.15.0+/kernel/sound/soc/sunxi
++
 diff --git a/drivers/dma/of-dma.c b/drivers/dma/of-dma.c
 index e8fe9dc..4fb133c 100644
 --- a/drivers/dma/of-dma.c
