@@ -973,8 +973,8 @@
 			reg-shift = <2>;
 			reg-io-width = <4>;
 			clocks = <&apb1_gates 16>;
-			dmas = <&dma 0 8>, <&dma 0 8>;
-			dma-names = "rx", "tx";
+			/*dmas = <&dma 0 8>, <&dma 0 8>;
+			dma-names = "rx", "tx"; */
 			status = "disabled";
 		};
 

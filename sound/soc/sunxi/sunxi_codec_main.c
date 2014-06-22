@@ -342,7 +342,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	of_id = of_match_device(snd_sunxi_codec_ids, &pdev->dev);
 	if (!of_id)
 		return -EINVAL;
-#ifdef JDS
+
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		dev_err(&pdev->dev, "could not allocate DAI object\n");
@@ -413,8 +413,8 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	ret = snd_soc_register_codec(&pdev->dev, &soc_codec_sunxi_codec, &dit_stub_dai, 1);
 	if (ret)
 		return ret;
-#endif
-//JDS	ret =  devm_sunxi_pcm_platform_register(pdev);
+
+	ret =  devm_sunxi_pcm_platform_register(pdev);
 	printk("JDS - codec driver success registered\n");
 	return ret;
 
