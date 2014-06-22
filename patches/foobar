@@ -1,5 +1,5 @@
 Bottom: 79070f160fcfe92a3df0ffe38b2ebc8533c03365
-Top:    72f6448990ccedfa6c82c3332515b5427f37d9df
+Top:    2bdefaabf5d24e15a716af2cb3d252ebab9394ee
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-22 11:54:42 -0400
 
@@ -9,7 +9,7 @@ temp breakage
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 4fbd64a..4677fef 100644
+index 4fbd64a..30231a9 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -870,7 +870,7 @@
@@ -82,6 +82,17 @@ index 4fbd64a..4677fef 100644
  		};
  
  		ir0: ir@01c21800 {
+@@ -982,8 +973,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 16>;
+-			dmas = <&dma 0 8>, <&dma 0 8>;
+-			dma-names = "rx", "tx";
++			/*dmas = <&dma 0 8>, <&dma 0 8>;
++			dma-names = "rx", "tx"; */
+ 			status = "disabled";
+ 		};
+ 
 @@ -1162,4 +1153,32 @@
  			interrupts = <1 9 0xf04>;
  		};
@@ -840,7 +851,7 @@ index 0000000..f633535
 +EXPORT_SYMBOL_GPL(sunxi_pcm_unregister_platform);
 diff --git a/sound/soc/sunxi/sunxi_codec_main.c b/sound/soc/sunxi/sunxi_codec_main.c
 new file mode 100644
-index 0000000..7733468
+index 0000000..00a5f98
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi_codec_main.c
 @@ -0,0 +1,522 @@
@@ -1188,7 +1199,7 @@ index 0000000..7733468
 +	of_id = of_match_device(snd_sunxi_codec_ids, &pdev->dev);
 +	if (!of_id)
 +		return -EINVAL;
-+#ifdef JDS
++
 +	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 +	if (!priv) {
 +		dev_err(&pdev->dev, "could not allocate DAI object\n");
@@ -1259,8 +1270,8 @@ index 0000000..7733468
 +	ret = snd_soc_register_codec(&pdev->dev, &soc_codec_sunxi_codec, &dit_stub_dai, 1);
 +	if (ret)
 +		return ret;
-+#endif
-+//JDS	ret =  devm_sunxi_pcm_platform_register(pdev);
++
++	ret =  devm_sunxi_pcm_platform_register(pdev);
 +	printk("JDS - codec driver success registered\n");
 +	return ret;
 +
