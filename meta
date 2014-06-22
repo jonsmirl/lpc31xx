@@ -1,10 +1,9 @@
 Version: 1
-Previous: e54713b8c2ee480fbfc91584900a98a5a467a56e
-Head: 6d3d97ab5d2b2150066b4a24451f3fc09b23a5da
+Previous: f54030a8148f28a6637aeb6fa72f376abbb0b9a0
+Head: 8218ec71f4e485b11f104df53e1eddb4fc5ec3ff
 Applied:
   emilio: d7486c0a66996d66e35d792d4ec93ea70ff1d0d1
   jds: 6f5c5256518c0d762ed848216156e0d40f471947
-  foobar: e64a305775acbc96028417daf4664ea498fc3a67
-  refresh-temp: 6d3d97ab5d2b2150066b4a24451f3fc09b23a5da
+  foobar: 8218ec71f4e485b11f104df53e1eddb4fc5ec3ff
 Unapplied:
 Hidden:
