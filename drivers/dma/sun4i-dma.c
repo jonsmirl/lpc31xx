@@ -8,6 +8,8 @@
  * (at your option) any later version.
  */
 
+#define DEBUG
+
 #include <linux/bitmap.h>
 #include <linux/bitops.h>
 #include <linux/clk.h>
@@ -286,6 +288,7 @@ static struct sun4i_dma_pchan *find_and_use_pchan(struct sun4i_ddma_dev *priv,
 	unsigned long flags;
 	int i, max;
 
+	printk("JDS - find_and_use_pchan\n");
 	spin_lock_irqsave(&priv->lock, flags);
 
 	/* pchans 0-NDMA_NR_MAX_CHANNELS are normal, and
@@ -327,6 +330,7 @@ static void release_pchan(struct sun4i_ddma_dev *priv,
 static void configure_pchan(struct sun4i_dma_pchan *pchan,
 			    struct sun4i_ddma_promise *d)
 {
+	printk("JDS - configure_pchan\n");
 	if (pchan->is_dedicated) {
 		/* Configure addresses and misc parameters */
 		writel_relaxed(d->src, pchan->base + DDMA_SRC_ADDR_REG);
@@ -383,6 +387,7 @@ static int execute_vchan_pending(struct sun4i_ddma_dev *priv,
 	unsigned long flags;
 	int ret = 0;
 
+	printk("JDS - execute_vchan_pending\n");
 	/* We need a pchan to do anything, so secure one if available */
 	pchan = find_and_use_pchan(priv, vchan);
 	if (!pchan)
@@ -456,6 +461,7 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
 	struct sun4i_ddma_promise *promise;
 	int ret;
 
+	printk("JDS - generate_ndma_promise\n");
 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
 	if (!promise)
 		return NULL;
@@ -512,6 +518,7 @@ generate_ddma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
 	struct sun4i_ddma_promise *promise;
 	int ret;
 
+	printk("JDS - generate_ddma_promise\n");
 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
 	if (!promise)
 		return NULL;
@@ -603,6 +610,7 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
 	struct sun4i_ddma_promise *promise;
 	struct sun4i_ddma_contract *contract;
 
+	printk("JDS - sun4i_dma_prep_dma_memcpy\n");
 	contract = generate_ddma_contract();
 	if (!contract)
 		return NULL;
@@ -651,6 +659,7 @@ sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 	u32 endpoints, para;
 	int i;
 
+	printk("JDS - sun4i_dma_prep_slave_sg\n");
 	if (!sgl)
 		return NULL;
 
@@ -751,6 +760,8 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
 	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
 	int ret = 0;
 
+	printk("JDS - sun4i_dma_control cmd %d\n", cmd);
+
 	switch (cmd) {
 	case DMA_RESUME:
 	case DMA_PAUSE:
@@ -771,6 +782,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
 		break;
 	}
 
+	printk("JDS - sun4i_dma_control, %d\n", ret);
 	return ret;
 }
 
