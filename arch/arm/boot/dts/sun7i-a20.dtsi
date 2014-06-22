@@ -870,7 +870,7 @@
 			interrupts = <0 13 4>;
 			clocks = <&pll2>, <&apb0_gates 1>, <&spdif_clk>;
 			clock-names = "pll2", "apb", "spdif";
-			dmas = <&dma 0 2>, <&dma 0 2>;
+			dmas = <&dma 1 2>, <&dma 1 2>;
 			dma-names = "rx", "tx";
 			status = "disabled";
 		};
@@ -881,7 +881,7 @@
 			interrupts = <0 14 4>;
 			clocks = <&pll2>, <&apb0_gates 2>, <&ac97_clk>;
 			clock-names = "pll2", "apb", "ac97";
-			dmas = <&dma 0 5>, <&dma 0 5>;
+			dmas = <&dma 1 5>, <&dma 1 5>;
 			dma-names = "rx", "tx";
 			status = "disabled";
 		};
@@ -892,7 +892,7 @@
 			interrupts = <0 16 4>;
 			clocks = <&pll2>, <&apb0_gates 3>, <&i2s0_clk>;
 			clock-names = "pll2", "apb", "i2s";
-			dmas = <&dma 0 3>, <&dma 0 3>;
+			dmas = <&dma 1 3>, <&dma 1 3>;
 			dma-names = "rx", "tx";
 			status = "disabled";
 		};
@@ -903,7 +903,7 @@
 			interrupts = <0 87 4>;
 			clocks = <&pll2>, <&apb0_gates 4>, <&i2s1_clk>;
 			clock-names = "pll2", "apb", "i2s";
-			dmas = <&dma 0 4>, <&dma 0 4>;
+			dmas = <&dma 1 4>, <&dma 1 4>;
 			dma-names = "rx", "tx";
 			status = "disabled";
 		};
@@ -914,29 +914,20 @@
 			interrupts = <0 90 4>;
 			clocks = <&pll2>, <&apb0_gates 8>, <&i2s2_clk>;
 			clock-names = "pll2", "apb", "i2s";
-			dmas = <&dma 0 6>, <&dma 0 6>;
+			dmas = <&dma 1 6>, <&dma 1 6>;
 			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
-		codec@1c22c00 {
+		codec: codec@1c22c00 {
+			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-codec";
 			reg = <0x01C22c00 0x40>;
 			interrupts = <0 30 4>;
 			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk>;
 			clock-names = "pll2", "apb", "codec";
-			dmas = <&dma 0 19>, <&dma 0 19>;
+			dmas = <&dma 1 19>, <&dma 1 19>;
 			dma-names = "rx", "tx";
-			widgets =
-				"Microphone", "Microphone Jack",
-				"Headphone", "Headphone Jack",
-				"Line", "Line In Jack";
-			routing =
-				"MIC_IN", "Microphone Jack",
-				"Microphone Jack", "Mic Bias",
-				"LINE_IN", "Line In Jack",
-				"Headphone Jack", "HP_OUT";
-			status = "disabled";
 		};
 
 		ir0: ir@01c21800 {
@@ -982,8 +973,8 @@
 			reg-shift = <2>;
 			reg-io-width = <4>;
 			clocks = <&apb1_gates 16>;
-			dmas = <&dma 0 8>, <&dma 0 8>;
-			dma-names = "rx", "tx";
+			/*dmas = <&dma 0 8>, <&dma 0 8>;
+			dma-names = "rx", "tx"; */
 			status = "disabled";
 		};
 
@@ -1162,4 +1153,32 @@
 			interrupts = <1 9 0xf04>;
 		};
 	};
+
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,widgets =
+			"Microphone", "Microphone Jack",
+			"Headphone", "Headphone Jack",
+			"Line", "Line In Jack";
+		simple-audio-card,routing =
+			"MIC_IN", "Microphone Jack",
+			"Microphone Jack", "Mic Bias",
+			"LINE_IN", "Line In Jack",
+			"Headphone Jack", "HP_OUT";
+
+		simple-audio-card,cpu {
+			sound-dai = <&codec>;
+			master-clkdir-out;
+			frame-master;
+			bitclock-master;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&codec>;
+			frame-master;
+			bitclock-master;
+		};
+	};
+	
 };
