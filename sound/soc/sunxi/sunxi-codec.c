@@ -37,8 +37,6 @@
 #include <linux/timer.h>
 #include "sunxi-codec.h"
 
-enum sunxi_device_id {SUN4A, SUN4I, SUN5I, SUN7I}; 
-
 /* Structure/enum declaration ------------------------------- */
 struct card_data {
 	struct device *dev; /* parent device */
