@@ -102,7 +102,7 @@ enum m1_codec_config {
 #define ST_RUNNING		(1<<0)
 #define ST_OPENED		(1<<1)
 
-void  __iomem *baseaddr;
+extern void  __iomem *baseaddr;
 #define codec_rdreg(reg)	    readl((baseaddr+(reg)))
 #define codec_wrreg(reg,val)  writel((val),(baseaddr+(reg)))
 
@@ -132,6 +132,35 @@ struct	codec_mixer_control{
 	unsigned int rshift;
 	unsigned int invert;
 	unsigned int value;
+};
+
+struct sunxi_codec_dma_params {
+	unsigned int data_size;
+	dma_addr_t tx_rx_addr;
+//JDS	struct stedma40_chan_cfg *dma_cfg;
+};
+
+enum sunxi_device_id {SUN4A, SUN4I, SUN5I, SUN7I}; 
+
+extern int devm_sunxi_pcm_platform_register(struct platform_device *pdev);
+
+struct sunxi_params {
+	u32 rate;
+	u32 core_freq;
+	u32 mute;
+};
+
+/* Structure/enum declaration ------------------------------- */
+struct card_data {
+	struct sunxi_params saved_params;
+	enum sunxi_device_id id;
+	struct dma_chan		*rx_dma_chan;
+	struct dma_chan		*tx_dma_chan;
+	int irq;
+	unsigned int codec_phys;
+	void  __iomem *baseaddr;
+	struct clk *codec_apbclk, *codec_pll2clk, *codec_moduleclk;
+	u32 running;
 };
 
 #endif
