@@ -1,5 +1,5 @@
 Bottom: 79070f160fcfe92a3df0ffe38b2ebc8533c03365
-Top:    79070f160fcfe92a3df0ffe38b2ebc8533c03365
+Top:    c5d270ed69edbc6de07e1199dcd5db8ff629b618
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-22 11:54:42 -0400
 
@@ -8,4 +8,508 @@ temp breakage
 
 ---
 
-
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index 4fbd64a..4677fef 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -870,7 +870,7 @@
+ 			interrupts = <0 13 4>;
+ 			clocks = <&pll2>, <&apb0_gates 1>, <&spdif_clk>;
+ 			clock-names = "pll2", "apb", "spdif";
+-			dmas = <&dma 0 2>, <&dma 0 2>;
++			dmas = <&dma 1 2>, <&dma 1 2>;
+ 			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+@@ -881,7 +881,7 @@
+ 			interrupts = <0 14 4>;
+ 			clocks = <&pll2>, <&apb0_gates 2>, <&ac97_clk>;
+ 			clock-names = "pll2", "apb", "ac97";
+-			dmas = <&dma 0 5>, <&dma 0 5>;
++			dmas = <&dma 1 5>, <&dma 1 5>;
+ 			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+@@ -892,7 +892,7 @@
+ 			interrupts = <0 16 4>;
+ 			clocks = <&pll2>, <&apb0_gates 3>, <&i2s0_clk>;
+ 			clock-names = "pll2", "apb", "i2s";
+-			dmas = <&dma 0 3>, <&dma 0 3>;
++			dmas = <&dma 1 3>, <&dma 1 3>;
+ 			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+@@ -903,7 +903,7 @@
+ 			interrupts = <0 87 4>;
+ 			clocks = <&pll2>, <&apb0_gates 4>, <&i2s1_clk>;
+ 			clock-names = "pll2", "apb", "i2s";
+-			dmas = <&dma 0 4>, <&dma 0 4>;
++			dmas = <&dma 1 4>, <&dma 1 4>;
+ 			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+@@ -914,29 +914,20 @@
+ 			interrupts = <0 90 4>;
+ 			clocks = <&pll2>, <&apb0_gates 8>, <&i2s2_clk>;
+ 			clock-names = "pll2", "apb", "i2s";
+-			dmas = <&dma 0 6>, <&dma 0 6>;
++			dmas = <&dma 1 6>, <&dma 1 6>;
+ 			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+-		codec@1c22c00 {
++		codec: codec@1c22c00 {
++			#sound-dai-cells = <0>;
+ 			compatible = "allwinner,sun7i-a20-codec";
+ 			reg = <0x01C22c00 0x40>;
+ 			interrupts = <0 30 4>;
+ 			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk>;
+ 			clock-names = "pll2", "apb", "codec";
+-			dmas = <&dma 0 19>, <&dma 0 19>;
++			dmas = <&dma 1 19>, <&dma 1 19>;
+ 			dma-names = "rx", "tx";
+-			widgets =
+-				"Microphone", "Microphone Jack",
+-				"Headphone", "Headphone Jack",
+-				"Line", "Line In Jack";
+-			routing =
+-				"MIC_IN", "Microphone Jack",
+-				"Microphone Jack", "Mic Bias",
+-				"LINE_IN", "Line In Jack",
+-				"Headphone Jack", "HP_OUT";
+-			status = "disabled";
+ 		};
+ 
+ 		ir0: ir@01c21800 {
+@@ -1162,4 +1153,32 @@
+ 			interrupts = <1 9 0xf04>;
+ 		};
+ 	};
++
++	sound {
++		compatible = "simple-audio-card";
++		simple-audio-card,format = "i2s";
++		simple-audio-card,widgets =
++			"Microphone", "Microphone Jack",
++			"Headphone", "Headphone Jack",
++			"Line", "Line In Jack";
++		simple-audio-card,routing =
++			"MIC_IN", "Microphone Jack",
++			"Microphone Jack", "Mic Bias",
++			"LINE_IN", "Line In Jack",
++			"Headphone Jack", "HP_OUT";
++
++		simple-audio-card,cpu {
++			sound-dai = <&codec>;
++			master-clkdir-out;
++			frame-master;
++			bitclock-master;
++		};
++
++		simple-audio-card,codec {
++			sound-dai = <&codec>;
++			frame-master;
++			bitclock-master;
++		};
++	};
++	
+ };
+diff --git a/drivers/dma/of-dma.c b/drivers/dma/of-dma.c
+index e8fe9dc..4fb133c 100644
+--- a/drivers/dma/of-dma.c
++++ b/drivers/dma/of-dma.c
+@@ -159,6 +159,7 @@ struct dma_chan *of_dma_request_slave_channel(struct device_node *np,
+ 		return ERR_PTR(-ENODEV);
+ 	}
+ 
++	printk("JDS = of_dma_request_slave_channel %s %s\n", name, np->full_name);
+ 	count = of_property_count_strings(np, "dma-names");
+ 	if (count < 0) {
+ 		pr_err("%s: dma-names property of node '%s' missing or empty\n",
+diff --git a/drivers/dma/sun4i-dma.c b/drivers/dma/sun4i-dma.c
+index 7b986bd..5c8cdd7 100644
+--- a/drivers/dma/sun4i-dma.c
++++ b/drivers/dma/sun4i-dma.c
+@@ -8,6 +8,8 @@
+  * (at your option) any later version.
+  */
+ 
++#define DEBUG
++
+ #include <linux/bitmap.h>
+ #include <linux/bitops.h>
+ #include <linux/clk.h>
+@@ -286,6 +288,7 @@ static struct sun4i_dma_pchan *find_and_use_pchan(struct sun4i_ddma_dev *priv,
+ 	unsigned long flags;
+ 	int i, max;
+ 
++	printk("JDS - find_and_use_pchan\n");
+ 	spin_lock_irqsave(&priv->lock, flags);
+ 
+ 	/* pchans 0-NDMA_NR_MAX_CHANNELS are normal, and
+@@ -327,6 +330,7 @@ static void release_pchan(struct sun4i_ddma_dev *priv,
+ static void configure_pchan(struct sun4i_dma_pchan *pchan,
+ 			    struct sun4i_ddma_promise *d)
+ {
++	printk("JDS - configure_pchan\n");
+ 	if (pchan->is_dedicated) {
+ 		/* Configure addresses and misc parameters */
+ 		writel_relaxed(d->src, pchan->base + DDMA_SRC_ADDR_REG);
+@@ -383,6 +387,7 @@ static int execute_vchan_pending(struct sun4i_ddma_dev *priv,
+ 	unsigned long flags;
+ 	int ret = 0;
+ 
++	printk("JDS - execute_vchan_pending\n");
+ 	/* We need a pchan to do anything, so secure one if available */
+ 	pchan = find_and_use_pchan(priv, vchan);
+ 	if (!pchan)
+@@ -456,6 +461,7 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
+ 	struct sun4i_ddma_promise *promise;
+ 	int ret;
+ 
++	printk("JDS - generate_ndma_promise\n");
+ 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
+ 	if (!promise)
+ 		return NULL;
+@@ -512,6 +518,7 @@ generate_ddma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
+ 	struct sun4i_ddma_promise *promise;
+ 	int ret;
+ 
++	printk("JDS - generate_ddma_promise\n");
+ 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
+ 	if (!promise)
+ 		return NULL;
+@@ -603,6 +610,7 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
+ 	struct sun4i_ddma_promise *promise;
+ 	struct sun4i_ddma_contract *contract;
+ 
++	printk("JDS - sun4i_dma_prep_dma_memcpy\n");
+ 	contract = generate_ddma_contract();
+ 	if (!contract)
+ 		return NULL;
+@@ -651,6 +659,7 @@ sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
+ 	u32 endpoints, para;
+ 	int i;
+ 
++	printk("JDS - sun4i_dma_prep_slave_sg\n");
+ 	if (!sgl)
+ 		return NULL;
+ 
+@@ -751,6 +760,8 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+ 	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
+ 	int ret = 0;
+ 
++	printk("JDS - sun4i_dma_control cmd %d\n", cmd);
++
+ 	switch (cmd) {
+ 	case DMA_RESUME:
+ 	case DMA_PAUSE:
+@@ -771,6 +782,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+ 		break;
+ 	}
+ 
++	printk("JDS - sun4i_dma_control, %d\n", ret);
+ 	return ret;
+ }
+ 
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index 21f1ccb..917db58 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -8,6 +8,9 @@
+  * it under the terms of the GNU General Public License version 2 as
+  * published by the Free Software Foundation.
+  */
++
++#define DEBUG
++
+ #include <linux/clk.h>
+ #include <linux/device.h>
+ #include <linux/module.h>
+@@ -96,7 +99,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 	struct device_node *node;
+ 	struct clk *clk;
+ 	int ret;
+-
++printk("JDS - asoc_simple_card_sub_parse_of\n");
+ 	/*
+ 	 * get node via "sound-dai = <&phandle port>"
+ 	 * it will be used as xxx_of_node on soc_bind_dai_link()
+@@ -105,16 +108,19 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 	if (!node)
+ 		return -ENODEV;
+ 	*p_node = node;
++printk("JDS - asoc_simple_card_sub_parse_of 1\n");
+ 
+ 	/* get dai->name */
+ 	ret = snd_soc_of_get_dai_name(np, name);
+ 	if (ret < 0)
+ 		return ret;
++printk("JDS - asoc_simple_card_sub_parse_of 2\n");
+ 
+ 	/* parse TDM slot */
+ 	ret = snd_soc_of_parse_tdm_slot(np, &dai->slots, &dai->slot_width);
+ 	if (ret)
+ 		return ret;
++printk("JDS - asoc_simple_card_sub_parse_of 3\n");
+ 
+ 	/*
+ 	 * bitclock-inversion, frame-inversion
+@@ -135,6 +141,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 		if (IS_ERR(clk)) {
+ 			ret = PTR_ERR(clk);
+ 			return ret;
++printk("JDS - asoc_simple_card_sub_parse_of 4\n");
+ 		}
+ 
+ 		dai->sysclk = clk_get_rate(clk);
+@@ -148,6 +155,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 			dai->sysclk = clk_get_rate(clk);
+ 	}
+ 
++printk("JDS - asoc_simple_card_sub_parse_of 5\n");
+ 	return 0;
+ }
+ 
+@@ -158,7 +166,7 @@ static int simple_card_cpu_codec_of(struct device_node *node,
+ {
+ 	struct device_node *np;
+ 	int ret;
+-
++printk("JDS - simple_card_cpu_codec_of\n");
+ 	/* CPU sub-node */
+ 	ret = -EINVAL;
+ 	np = of_get_child_by_name(node, "simple-audio-card,cpu");
+@@ -169,6 +177,7 @@ static int simple_card_cpu_codec_of(struct device_node *node,
+ 						&dai_link->cpu_dai_name);
+ 		of_node_put(np);
+ 	}
++printk("JDS - simple_card_cpu_codec_of  %d\n", ret);
+ 	if (ret < 0)
+ 		return ret;
+ 
+@@ -182,6 +191,7 @@ static int simple_card_cpu_codec_of(struct device_node *node,
+ 						&dai_link->codec_dai_name);
+ 		of_node_put(np);
+ 	}
++printk("JDS - simple_card_cpu_codec_of 2 %d\n", ret);
+ 	return ret;
+ }
+ 
+@@ -196,7 +206,7 @@ static int asoc_simple_card_parse_of(struct device_node *node,
+ 	char *name;
+ 	unsigned int daifmt;
+ 	int ret;
+-
++printk("JDS - asoc_simple_card_parse_of 1\n");
+ 	/* parsing the card name from DT */
+ 	snd_soc_of_parse_card_name(&priv->snd_card, "simple-audio-card,name");
+ 
+@@ -204,7 +214,8 @@ static int asoc_simple_card_parse_of(struct device_node *node,
+ 	daifmt = snd_soc_of_parse_daifmt(node, "simple-audio-card,") &
+ 		(SND_SOC_DAIFMT_FORMAT_MASK | SND_SOC_DAIFMT_INV_MASK);
+ 
+-	/* off-codec widgets */
++printk("JDS - asoc_simple_card_parse_of 2\n");
++	/* off-codec widgets */ 
+ 	if (of_property_read_bool(node, "simple-audio-card,widgets")) {
+ 		ret = snd_soc_of_parse_audio_simple_widgets(&priv->snd_card,
+ 					"simple-audio-card,widgets");
+@@ -212,6 +223,7 @@ static int asoc_simple_card_parse_of(struct device_node *node,
+ 			return ret;
+ 	}
+ 
++printk("JDS - asoc_simple_card_parse_of 3\n");
+ 	/* DAPM routes */
+ 	if (of_property_read_bool(node, "simple-audio-card,routing")) {
+ 		ret = snd_soc_of_parse_audio_routing(&priv->snd_card,
+@@ -220,6 +232,7 @@ static int asoc_simple_card_parse_of(struct device_node *node,
+ 			return ret;
+ 	}
+ 
++printk("JDS - asoc_simple_card_parse_of 4\n");
+ 	/* loop on the DAI links */
+ 	np = NULL;
+ 	for (;;) {
+@@ -234,6 +247,7 @@ static int asoc_simple_card_parse_of(struct device_node *node,
+ 		if (ret < 0)
+ 			goto err;
+ 
++printk("JDS - asoc_simple_card_parse_of 5\n");
+ 		/*
+ 		 * overwrite cpu_dai->fmt as its DAIFMT_MASTER bit is based on CODEC
+ 		 * while the other bits should be identical unless buggy SW/HW design.
+@@ -283,6 +297,7 @@ static int asoc_simple_card_parse_of(struct device_node *node,
+ 	return 0;
+ 
+ err:
++printk("JDS - asoc_simple_card_parse_of err\n");
+ 	of_node_put(np);
+ 	return ret;
+ }
+diff --git a/sound/soc/soc-core.c b/sound/soc/soc-core.c
+index 051c006..e351821 100644
+--- a/sound/soc/soc-core.c
++++ b/sound/soc/soc-core.c
+@@ -21,7 +21,7 @@
+  *   o Add more codecs and platforms to ensure good API coverage.
+  *   o Support TDM on PCM and I2S
+  */
+-
++#define DEBUG
+ #include <linux/module.h>
+ #include <linux/moduleparam.h>
+ #include <linux/init.h>
+diff --git a/sound/soc/soc-generic-dmaengine-pcm.c b/sound/soc/soc-generic-dmaengine-pcm.c
+index 5bace12..4440d49 100644
+--- a/sound/soc/soc-generic-dmaengine-pcm.c
++++ b/sound/soc/soc-generic-dmaengine-pcm.c
+@@ -65,6 +65,7 @@ int snd_dmaengine_pcm_prepare_slave_config(struct snd_pcm_substream *substream,
+ 	struct snd_dmaengine_dai_dma_data *dma_data;
+ 	int ret;
+ 
++	printk("JDS - snd_dmaengine_pcm_prepare_slave_config\n");
+ 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+ 
+ 	ret = snd_hwparams_to_dma_slave_config(substream, params, slave_config);
+@@ -90,6 +91,7 @@ static int dmaengine_pcm_hw_params(struct snd_pcm_substream *substream,
+ 	struct dma_slave_config slave_config;
+ 	int ret;
+ 
++	printk("JDS - dmaengine_pcm_hw_params\n");
+ 	memset(&slave_config, 0, sizeof(slave_config));
+ 
+ 	if (!pcm->config)
+@@ -121,6 +123,7 @@ static int dmaengine_pcm_set_runtime_hwparams(struct snd_pcm_substream *substrea
+ 	struct snd_pcm_hardware hw;
+ 	int ret;
+ 
++	printk("JDS - dmaengine_pcm_set_runtime_hwparams\n");
+ 	if (pcm->config && pcm->config->pcm_hardware)
+ 		return snd_soc_set_runtime_hwparams(substream,
+ 				pcm->config->pcm_hardware);
+@@ -158,6 +161,7 @@ static int dmaengine_pcm_open(struct snd_pcm_substream *substream)
+ 	struct dma_chan *chan = pcm->chan[substream->stream];
+ 	int ret;
+ 
++	printk("JDS - dmaengine_pcm_open\n");
+ 	ret = dmaengine_pcm_set_runtime_hwparams(substream);
+ 	if (ret)
+ 		return ret;
+@@ -178,6 +182,7 @@ static struct dma_chan *dmaengine_pcm_compat_request_channel(
+ 	struct snd_dmaengine_dai_dma_data *dma_data;
+ 	dma_filter_fn fn = NULL;
+ 
++	printk("JDS - dmaengine_pcm_compat_request_channel\n");
+ 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+ 
+ 	if ((pcm->flags & SND_DMAENGINE_PCM_FLAG_HALF_DUPLEX) && pcm->chan[0])
+@@ -219,6 +224,7 @@ static int dmaengine_pcm_new(struct snd_soc_pcm_runtime *rtd)
+ 	unsigned int i;
+ 	int ret;
+ 
++	printk("JDS - dmaengine_pcm_new\n");
+ 	if (config && config->prealloc_buffer_size) {
+ 		prealloc_buffer_size = config->prealloc_buffer_size;
+ 		max_buffer_size = config->pcm_hardware->buffer_bytes_max;
+@@ -319,6 +325,7 @@ static int dmaengine_pcm_request_chan_of(struct dmaengine_pcm *pcm,
+ 	const char *name;
+ 	struct dma_chan *chan;
+ 
++	printk("JDS - dmaengine_pcm_request_chan_of\n");
+ 	if ((pcm->flags & (SND_DMAENGINE_PCM_FLAG_NO_DT |
+ 			   SND_DMAENGINE_PCM_FLAG_CUSTOM_CHANNEL_NAME)) ||
+ 	    !dev->of_node)
+@@ -388,6 +395,7 @@ int snd_dmaengine_pcm_register(struct device *dev,
+ 	struct dmaengine_pcm *pcm;
+ 	int ret;
+ 
++	printk("JDS - snd_dmaengine_pcm_register\n");
+ 	pcm = kzalloc(sizeof(*pcm), GFP_KERNEL);
+ 	if (!pcm)
+ 		return -ENOMEM;
+diff --git a/sound/soc/sunxi/Kconfig b/sound/soc/sunxi/Kconfig
+index ccdbee3..72bb3c4 100644
+--- a/sound/soc/sunxi/Kconfig
++++ b/sound/soc/sunxi/Kconfig
+@@ -2,3 +2,8 @@ config SND_SUNXI_SOC_CODEC
+ 	tristate "APB On-Chip sun4i and sun5i Codec"
+ 	select SND_SOC_GENERIC_DMAENGINE_PCM
+ 	default y
++
++config SND_SUNXI_SOC_CODEC_JDS
++	tristate "JDS version - APB On-Chip sun4i and sun5i Codec"
++	select SND_SOC_GENERIC_DMAENGINE_PCM
++	default y
+diff --git a/sound/soc/sunxi/Makefile b/sound/soc/sunxi/Makefile
+index b8950d3..86f7223 100644
+--- a/sound/soc/sunxi/Makefile
++++ b/sound/soc/sunxi/Makefile
+@@ -1,2 +1,4 @@
+ obj-$(CONFIG_SND_SUNXI_SOC_CODEC) += sunxi-codec.o
++obj-$(CONFIG_SND_SUNXI_SOC_CODEC_JDS) += sunxi_codec_main.o sunxi_codec_dma.o
++
+ 
+diff --git a/sound/soc/sunxi/sunxi-codec.c b/sound/soc/sunxi/sunxi-codec.c
+index a7f0f72..e82997d 100644
+--- a/sound/soc/sunxi/sunxi-codec.c
++++ b/sound/soc/sunxi/sunxi-codec.c
+@@ -37,8 +37,6 @@
+ #include <linux/timer.h>
+ #include "sunxi-codec.h"
+ 
+-enum sunxi_device_id {SUN4A, SUN4I, SUN5I, SUN7I}; 
+-
+ /* Structure/enum declaration ------------------------------- */
+ struct card_data {
+ 	struct device *dev; /* parent device */
+diff --git a/sound/soc/sunxi/sunxi-codec.h b/sound/soc/sunxi/sunxi-codec.h
+index 4e12b42..78380dc 100644
+--- a/sound/soc/sunxi/sunxi-codec.h
++++ b/sound/soc/sunxi/sunxi-codec.h
+@@ -102,7 +102,7 @@ enum m1_codec_config {
+ #define ST_RUNNING		(1<<0)
+ #define ST_OPENED		(1<<1)
+ 
+-void  __iomem *baseaddr;
++extern void  __iomem *baseaddr;
+ #define codec_rdreg(reg)	    readl((baseaddr+(reg)))
+ #define codec_wrreg(reg,val)  writel((val),(baseaddr+(reg)))
+ 
+@@ -134,4 +134,35 @@ struct	codec_mixer_control{
+ 	unsigned int value;
+ };
+ 
++struct sunxi_codec_dma_params {
++	unsigned int data_size;
++	dma_addr_t tx_rx_addr;
++//JDS	struct stedma40_chan_cfg *dma_cfg;
++};
++
++enum sunxi_device_id {SUN4A, SUN4I, SUN5I, SUN7I}; 
++
++extern int devm_sunxi_pcm_platform_register(struct platform_device *pdev);
++
++/* Structure/enum declaration ------------------------------- */
++struct card_data {
++//	struct device *dev; /* parent device */
++//	struct resource *codec_base_res; /* resources found */
++//	struct resource *codec_base_req; /* resources found */
++
++//	spinlock_t lock;
++
++//	long samplerate;
++//	struct snd_card *card;
++//	struct snd_pcm *pcm;
++	
++	enum sunxi_device_id id;
++	struct dma_chan		*rx_dma_chan;
++	struct dma_chan		*tx_dma_chan;
++	int irq;
++	unsigned int codec_phys;
++	void  __iomem *baseaddr;
++	struct clk *codec_apbclk, *codec_pll2clk, *codec_moduleclk;
++};
++
+ #endif
