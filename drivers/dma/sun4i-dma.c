@@ -327,6 +327,7 @@ static void release_pchan(struct sun4i_ddma_dev *priv,
 static void configure_pchan(struct sun4i_dma_pchan *pchan,
 			    struct sun4i_ddma_promise *d)
 {
+	printk("JDS - configure_pchan\n");
 	if (pchan->is_dedicated) {
 		/* Configure addresses and misc parameters */
 		writel_relaxed(d->src, pchan->base + DDMA_SRC_ADDR_REG);
@@ -456,6 +457,7 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
 	struct sun4i_ddma_promise *promise;
 	int ret;
 
+	printk("JDS - generate_ndma_promise\n");
 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
 	if (!promise)
 		return NULL;
@@ -512,6 +514,7 @@ generate_ddma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
 	struct sun4i_ddma_promise *promise;
 	int ret;
 
+	printk("JDS - generate_ddma_promise\n");
 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
 	if (!promise)
 		return NULL;
@@ -603,6 +606,7 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
 	struct sun4i_ddma_promise *promise;
 	struct sun4i_ddma_contract *contract;
 
+	printk("JDS - sun4i_dma_prep_dma_memcpy\n");
 	contract = generate_ddma_contract();
 	if (!contract)
 		return NULL;
@@ -637,6 +641,73 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
 	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
 }
 
+static struct dma_async_tx_descriptor *sun4i_dma_prep_dma_cyclic(
+		struct dma_chan *chan, dma_addr_t buf, size_t len,
+		size_t period_len, enum dma_transfer_direction dir,
+		unsigned long flags, void *context) {
+	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
+	struct dma_slave_config *sconfig = &vchan->cfg;
+	struct sun4i_ddma_promise *promise;
+	struct sun4i_ddma_contract *contract;
+	dma_addr_t src, dest;
+
+	printk("JDS - sun4i_dma_prep_dma_cyclic\n");
+	if (!is_slave_direction(dir)) {
+		dev_err(chan2dev(chan), "Invalid DMA direction\n");
+		return NULL;
+	}
+
+	contract = generate_ddma_contract();
+	if (!contract)
+		return NULL;
+
+	/* Figure out addresses */
+	if (dir == DMA_MEM_TO_DEV) {
+		src = buf;
+		dest = sconfig->dst_addr;
+	} else {
+		src = sconfig->src_addr;
+		dest = buf;
+	}
+
+	if (vchan->is_dedicated)
+		promise = generate_ddma_promise(chan, src, dest, len, sconfig);
+	else
+		promise = generate_ndma_promise(chan, src, dest, len, sconfig);
+
+	if (!promise) {
+		kfree(contract);
+		return NULL;
+	}
+
+	/* Figure out endpoints */
+	if (vchan->is_dedicated && dir == DMA_MEM_TO_DEV) {
+		promise->cfg |= DDMA_CFG_CONT_MODE | DDMA_CFG_SRC_DRQ_TYPE(DDMA_DRQ_TYPE_SDRAM) |
+			    DDMA_CFG_SRC_ADDR_MODE(DDMA_ADDR_MODE_LINEAR) |
+			    DDMA_CFG_DEST_DRQ_TYPE(vchan->endpoint) |
+			    DDMA_CFG_DEST_ADDR_MODE(DDMA_ADDR_MODE_IO);
+	} else if (!vchan->is_dedicated && dir == DMA_MEM_TO_DEV) {
+		promise->cfg |= NDMA_CFG_CONT_MODE | NDMA_CFG_SRC_DRQ_TYPE(NDMA_DRQ_TYPE_SDRAM) |
+			    NDMA_CFG_DEST_DRQ_TYPE(vchan->endpoint) |
+			    NDMA_CFG_DEST_FIXED_ADDR;
+	} else if (vchan->is_dedicated) {
+		promise->cfg |= DDMA_CFG_CONT_MODE | DDMA_CFG_SRC_DRQ_TYPE(vchan->endpoint) |
+			    DDMA_CFG_SRC_ADDR_MODE(DDMA_ADDR_MODE_IO) |
+			    DDMA_CFG_DEST_DRQ_TYPE(DDMA_DRQ_TYPE_SDRAM) |
+			    DDMA_CFG_DEST_ADDR_MODE(DDMA_ADDR_MODE_LINEAR);
+	} else {
+		promise->cfg |= NDMA_CFG_CONT_MODE | NDMA_CFG_SRC_DRQ_TYPE(vchan->endpoint) |
+			    NDMA_CFG_SRC_FIXED_ADDR |
+			    NDMA_CFG_DEST_DRQ_TYPE(NDMA_DRQ_TYPE_SDRAM);
+	}
+
+	/* Fill the contract with our only promise */
+	list_add_tail(&promise->list, &contract->demands);
+
+	/* And add it to the vchan */
+	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
+}
+
 static struct dma_async_tx_descriptor *
 sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 			unsigned int sg_len, enum dma_transfer_direction dir,
@@ -651,6 +722,7 @@ sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 	u32 endpoints, para;
 	int i;
 
+	printk("JDS - sun4i_dma_prep_slave_sg\n");
 	if (!sgl)
 		return NULL;
 
@@ -723,6 +795,7 @@ static void sun4i_ddma_terminate_all(struct sun4i_dma_vchan *vchan)
 	u32 n_busy = NDMA_CFG_LOADING;
 
 
+	printk("sun4i_ddma_terminate_all\n");
 	spin_lock_irqsave(&vchan->vc.lock, flags);
 	vchan_get_all_descriptors(&vchan->vc, &head);
 	spin_unlock_irqrestore(&vchan->vc.lock, flags);
@@ -751,6 +824,8 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
 	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
 	int ret = 0;
 
+	printk("JDS - sun4i_dma_control cmd %d\n", cmd);
+
 	switch (cmd) {
 	case DMA_RESUME:
 	case DMA_PAUSE:
@@ -771,6 +846,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
 		break;
 	}
 
+	printk("JDS - sun4i_dma_control, %d\n", ret);
 	return ret;
 }
 
@@ -919,6 +995,19 @@ static void sun4i_ddma_tasklet(unsigned long data)
 		execute_vchan_pending(priv, &priv->vchans[i]);
 }
 
+static int sun4i_dma_device_slave_caps(struct dma_chan *dchan,
+				      struct dma_slave_caps *caps)
+{
+	caps->src_addr_widths = 32;
+	caps->dstn_addr_widths = 32;
+	caps->directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
+	caps->cmd_pause = true;
+	caps->cmd_terminate = true;
+	caps->residue_granularity = DMA_RESIDUE_GRANULARITY_BURST;
+
+	return 0;
+}
+
 static int sun4i_dma_probe(struct platform_device *pdev)
 {
 	struct sun4i_ddma_dev *priv;
@@ -962,7 +1051,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
 	priv->slave.device_issue_pending	= sun4i_dma_issue_pending;
 	priv->slave.device_prep_slave_sg	= sun4i_dma_prep_slave_sg;
 	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;
+	priv->slave.device_prep_dma_cyclic	= sun4i_dma_prep_dma_cyclic;
 	priv->slave.device_control		= sun4i_dma_control;
+	priv->slave.device_slave_caps 		= sun4i_dma_device_slave_caps;
 	priv->slave.chancnt			= DDMA_NR_MAX_VCHANS;
 
 	priv->slave.dev = &pdev->dev;
