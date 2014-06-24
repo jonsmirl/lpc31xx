@@ -1,5 +1,5 @@
 Bottom: d90793d567f477f784df988b4f53d0f7f49b6a8f
-Top:    02982b8f53314dbeff967e01b61a60305a29affc
+Top:    231864b32b088d18bb5d704acf7b19232c1842c3
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
@@ -23,7 +23,7 @@ index bed74a9..a347eff 100644
  			pinctrl-names = "default";
  			pinctrl-0 = <&ir0_pins_a>;
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 263eb79..a07fa08 100644
+index 263eb79..be643fc 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -91,6 +91,14 @@
@@ -108,7 +108,7 @@ index 263eb79..a07fa08 100644
  			#pwm-cells = <3>;
  		};
 +		
-+		spdif@1c21000 {
++		spdif@01c21000 {
 +			compatible = "allwinner,sun7i-a20-spdif";
 +			reg = <0x01C21000 0x40>;
 +			interrupts = <0 13 4>;
@@ -119,7 +119,7 @@ index 263eb79..a07fa08 100644
 +			status = "disabled";
 +		};
 +
-+		ac97@1c21400 {
++		ac97@01c21400 {
 +			compatible = "allwinner,sun7i-a20-ac97";
 +			reg = <0x01C21400 0x40>;
 +			interrupts = <0 14 4>;
@@ -130,7 +130,7 @@ index 263eb79..a07fa08 100644
 +			status = "disabled";
 +		};
 +
-+		i2s0: i2s@1c22000 {
++		i2s0: i2s@01c22000 {
 +			compatible = "allwinner,sun7i-a20-i2s";
 +			reg = <0x01C22000 0x40>;
 +			interrupts = <0 16 4>;
@@ -141,7 +141,7 @@ index 263eb79..a07fa08 100644
 +			status = "disabled";
 +		};
 +
-+		i2s1: i2s@1c22400 {
++		i2s1: i2s@01c22400 {
 +			compatible = "allwinner,sun7i-a20-i2s";
 +			reg = <0x01C22400 0x40>;
 +			interrupts = <0 87 4>;
@@ -152,7 +152,7 @@ index 263eb79..a07fa08 100644
 +			status = "disabled";
 +		};
 +
-+		i2s2: i2s@1c24400 {
++		i2s2: i2s@01c24400 {
 +			compatible = "allwinner,sun7i-a20-i2s";
 +			reg = <0x01C24400 0x40>;
 +			interrupts = <0 90 4>;
@@ -163,7 +163,7 @@ index 263eb79..a07fa08 100644
 +			status = "disabled";
 +		};
 +
-+		codec: codec@1c22c00 {
++		codec: codec@01c22c00 {
 +			#sound-dai-cells = <0>;
 +			compatible = "allwinner,sun7i-a20-codec";
 +			reg = <0x01C22c00 0x40>;
