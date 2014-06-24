@@ -144,18 +144,15 @@ enum sunxi_device_id {SUN4A, SUN4I, SUN5I, SUN7I};
 
 extern int devm_sunxi_pcm_platform_register(struct platform_device *pdev);
 
+struct sunxi_params {
+	u32 rate;
+	u32 core_freq;
+	u32 mute;
+};
+
 /* Structure/enum declaration ------------------------------- */
 struct card_data {
-//	struct device *dev; /* parent device */
-//	struct resource *codec_base_res; /* resources found */
-//	struct resource *codec_base_req; /* resources found */
-
-//	spinlock_t lock;
-
-//	long samplerate;
-//	struct snd_card *card;
-//	struct snd_pcm *pcm;
-	
+	struct sunxi_params saved_params;
 	enum sunxi_device_id id;
 	struct dma_chan		*rx_dma_chan;
 	struct dma_chan		*tx_dma_chan;
@@ -163,6 +160,7 @@ struct card_data {
 	unsigned int codec_phys;
 	void  __iomem *baseaddr;
 	struct clk *codec_apbclk, *codec_pll2clk, *codec_moduleclk;
+	u32 running;
 };
 
 #endif

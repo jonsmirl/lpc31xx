@@ -25,56 +25,40 @@
 #include <sound/soc.h>
 #include "sunxi-codec.h"
 
-struct sunxi_params {
-	u32 rate;
-	u32 core_freq;
-	u32 mute;
-};
 
-struct sunxi_dev {
-	struct clk *clk;
-	struct sunxi_codec_dma_params dma_params;
-	struct sunxi_params saved_params;
-	u32 running;
-	void __iomem *io_base;
-	struct snd_dmaengine_dai_dma_data dma_params_tx;
-	struct snd_dmaengine_pcm_config config;
-};
-
-
-static void sunxi_configure(struct sunxi_dev *host)
+static void sunxi_configure(struct card_data *priv)
 {
 #ifdef JDS
-	writel(sunxi_RESET, host->io_base + sunxi_SOFT_RST);
+	writel(sunxi_RESET, priv->io_base + sunxi_SOFT_RST);
 	mdelay(1);
-	writel(readl(host->io_base + sunxi_SOFT_RST) & ~sunxi_RESET,
-			host->io_base + sunxi_SOFT_RST);
+	writel(readl(priv->io_base + sunxi_SOFT_RST) & ~sunxi_RESET,
+			priv->io_base + sunxi_SOFT_RST);
 
 	writel(sunxi_FDMA_TRIG_16 | sunxi_MEMFMT_16_16 |
 			sunxi_VALID_HW | sunxi_USER_HW |
 			sunxi_CHNLSTA_HW | sunxi_PARITY_HW,
-			host->io_base + sunxi_CFG);
+			priv->io_base + sunxi_CFG);
 
-	writel(0x7F, host->io_base + sunxi_INT_STA_CLR);
-	writel(0x7F, host->io_base + sunxi_INT_EN_CLR);
+	writel(0x7F, priv->io_base + sunxi_INT_STA_CLR);
+	writel(0x7F, priv->io_base + sunxi_INT_EN_CLR);
 #endif 
 }
 
 static int sunxi_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret;
 
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
 		return -EINVAL;
 
-	ret = clk_enable(host->clk);
+	ret = clk_enable(priv->codec_moduleclk);
 	if (ret)
 		return ret;
 
-	host->running = true;
-	sunxi_configure(host);
+	priv->running = true;
+	sunxi_configure(priv);
 
 	return 0;
 }
@@ -82,27 +66,27 @@ static int sunxi_startup(struct snd_pcm_substream *substream,
 static void sunxi_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(dai);
 
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
 		return;
 
-	clk_disable(host->clk);
-	host->running = false;
+	clk_disable(priv->codec_moduleclk);
+	priv->running = false;
 }
 
-static void sunxi_clock(struct sunxi_dev *host, u32 core_freq,
+static void sunxi_clock(struct card_data *priv, u32 core_freq,
 		u32 rate)
 {
 #ifdef JDS
 	u32 divider, ctrl;
-	clk_set_rate(host->clk, core_freq);
-	divider = DIV_ROUND_CLOSEST(clk_get_rate(host->clk), (rate * 128));
+	clk_set_rate(priv->clk, core_freq);
+	divider = DIV_ROUND_CLOSEST(clk_get_rate(priv->clk), (rate * 128));
 
-	ctrl = readl(host->io_base + sunxi_CTRL);
+	ctrl = readl(priv->io_base + sunxi_CTRL);
 	ctrl &= ~codec_DIVIDER_MASK;
 	ctrl |= (divider << codec_DIVIDER_SHIFT) & codec_DIVIDER_MASK;
-	writel(ctrl, host->io_base + sunxi_CTRL);
+	writel(ctrl, priv->io_base + sunxi_CTRL);
 #endif
 }
 
@@ -110,7 +94,7 @@ static int sunxi_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params,
 		struct snd_soc_dai *dai)
 {
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(dai);
 	u32 rate, core_freq;
 
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
@@ -145,9 +129,9 @@ static int sunxi_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	sunxi_clock(host, core_freq, rate);
-	host->saved_params.core_freq = core_freq;
-	host->saved_params.rate = rate;
+	sunxi_clock(priv, core_freq, rate);
+	priv->saved_params.core_freq = core_freq;
+	priv->saved_params.rate = rate;
 
 	return 0;
 }
@@ -156,7 +140,7 @@ static int sunxi_trigger(struct snd_pcm_substream *substream, int cmd,
 		struct snd_soc_dai *dai)
 {
 #ifdef JDS
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(dai);
 	u32 ctrl;
 #endif
 	int ret = 0;
@@ -169,14 +153,14 @@ static int sunxi_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 #ifdef JDS		
-			ctrl = readl(host->io_base + sunxi_CTRL);
+			ctrl = readl(priv->io_base + sunxi_CTRL);
 			ctrl &= ~codec_OPMODE_MASK;
-			if (!host->saved_params.mute)
+			if (!priv->saved_params.mute)
 				ctrl |= codec_OPMODE_AUD_DATA |
 					codec_STATE_NORMAL;
 			else
 				ctrl |= codec_OPMODE_MUTE_PCM;
-			writel(ctrl, host->io_base + sunxi_CTRL);
+			writel(ctrl, priv->io_base + sunxi_CTRL);
 #endif
 		break;
 
@@ -184,10 +168,10 @@ static int sunxi_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 #ifdef JDS		
-		ctrl = readl(host->io_base + sunxi_CTRL);
+		ctrl = readl(priv->io_base + sunxi_CTRL);
 		ctrl &= ~codec_OPMODE_MASK;
 		ctrl |= codec_OPMODE_OFF;
-		writel(ctrl, host->io_base + sunxi_CTRL);
+		writel(ctrl, priv->io_base + sunxi_CTRL);
 #endif
 		break;
 
@@ -201,23 +185,23 @@ static int sunxi_trigger(struct snd_pcm_substream *substream, int cmd,
 static int sunxi_digital_mute(struct snd_soc_dai *dai, int mute)
 {
 #ifdef JDS
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(dai);
 	u32 val;
 
-	host->saved_params.mute = mute;
-	val = readl(host->io_base + sunxi_CTRL);
+	priv->saved_params.mute = mute;
+	val = readl(priv->io_base + sunxi_CTRL);
 	val &= ~codec_OPMODE_MASK;
 
 	if (mute)
 		val |= codec_OPMODE_MUTE_PCM;
 	else {
-		if (host->running)
+		if (priv->running)
 			val |= codec_OPMODE_AUD_DATA | codec_STATE_NORMAL;
 		else
 			val |= codec_OPMODE_OFF;
 	}
 
-	writel(val, host->io_base + sunxi_CTRL);
+	writel(val, priv->io_base + sunxi_CTRL);
 #endif
 	return 0;
 }
@@ -226,9 +210,9 @@ static int codec_mute_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(cpu_dai);
 
-	ucontrol->value.integer.value[0] = host->saved_params.mute;
+	ucontrol->value.integer.value[0] = priv->saved_params.mute;
 	return 0;
 }
 
@@ -236,9 +220,9 @@ static int codec_mute_put(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(cpu_dai);
 
-	if (host->saved_params.mute == ucontrol->value.integer.value[0])
+	if (priv->saved_params.mute == ucontrol->value.integer.value[0])
 		return 0;
 
 	sunxi_digital_mute(cpu_dai, ucontrol->value.integer.value[0]);
@@ -252,10 +236,32 @@ static const struct snd_kcontrol_new sunxi_controls[] = {
 
 static int sunxi_soc_dai_probe(struct snd_soc_dai *dai)
 {
-	struct sunxi_dev *host = snd_soc_dai_get_drvdata(dai);
+	struct card_data *priv = snd_soc_dai_get_drvdata(dai);
+	struct snd_dmaengine_dai_dma_data *playback_dma_data;
+	struct snd_dmaengine_dai_dma_data *capture_dma_data;
 
-	host->dma_params_tx.filter_data = &host->dma_params;
-	dai->playback_dma_data = &host->dma_params_tx;
+	playback_dma_data = devm_kzalloc(dai->dev,
+					 sizeof(*playback_dma_data),
+					 GFP_KERNEL);
+	if (!playback_dma_data)
+		return -ENOMEM;
+
+	capture_dma_data = devm_kzalloc(dai->dev,
+					sizeof(*capture_dma_data),
+					GFP_KERNEL);
+	if (!capture_dma_data)
+		return -ENOMEM;
+
+	playback_dma_data->addr = priv->codec_phys + SUNXI_DAC_TXDATA;
+	capture_dma_data->addr = priv->codec_phys + SUNXI_ADC_RXDATA;
+
+	playback_dma_data->maxburst = 4;
+	capture_dma_data->maxburst = 4;
+
+	playback_dma_data->addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	playback_dma_data->addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+
+	snd_soc_dai_init_dma_data(dai, playback_dma_data, capture_dma_data);
 
 	return snd_soc_add_dai_controls(dai, sunxi_controls,
 				ARRAY_SIZE(sunxi_controls));
@@ -414,7 +420,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret =  devm_sunxi_pcm_platform_register(pdev);
+	snd_dmaengine_pcm_register(&pdev->dev, NULL, SND_DMAENGINE_PCM_FLAG_NO_RESIDUE);
 	printk("JDS - codec driver success registered\n");
 	return ret;
 
@@ -426,10 +432,10 @@ exit_clkdisable_apb_clk:
 static int snd_sunxi_codec_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct sunxi_dev *host = dev_get_drvdata(&pdev->dev);
+	struct card_data *priv = dev_get_drvdata(&pdev->dev);
 
-	if (host->running)
-		clk_disable(host->clk);
+	if (priv->running)
+		clk_disable(priv->codec_moduleclk);
 
 	return 0;
 }
@@ -437,13 +443,13 @@ static int snd_sunxi_codec_suspend(struct device *dev)
 static int snd_sunxi_codec_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct sunxi_dev *host = dev_get_drvdata(&pdev->dev);
+	struct card_data *priv = dev_get_drvdata(&pdev->dev);
 
-	if (host->running) {
-		clk_enable(host->clk);
-		sunxi_configure(host);
-		sunxi_clock(host, host->saved_params.core_freq,
-				host->saved_params.rate);
+	if (priv->running) {
+		clk_enable(priv->codec_moduleclk);
+		sunxi_configure(priv);
+		sunxi_clock(priv, priv->saved_params.core_freq,
+				priv->saved_params.rate);
 	}
 	return 0;
 }
@@ -458,7 +464,7 @@ static SIMPLE_DEV_PM_OPS(sunxi_dev_pm_ops, snd_sunxi_codec_suspend, \
 
 #endif
 
-static int sunxi_codec_remove(struct platform_device *devptr)
+static int sunxi_codec_remove(struct platform_device *pdev)
 {
 #ifdef JDS
 	clk_disable(codec_moduleclk);
@@ -471,6 +477,7 @@ static int sunxi_codec_remove(struct platform_device *devptr)
 	platform_set_drvdata(devptr, NULL);
 #endif
 	return 0;
+	snd_dmaengine_pcm_unregister(&pdev->dev);
 }
 
 static void sunxi_codec_shutdown(struct platform_device *devptr)
