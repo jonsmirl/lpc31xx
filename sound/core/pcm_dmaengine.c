@@ -148,10 +148,12 @@ static int dmaengine_pcm_prepare_and_submit(struct snd_pcm_substream *substream)
 	enum dma_transfer_direction direction;
 	unsigned long flags = DMA_CTRL_ACK;
 
+	printk("JDS - dmaengine_pcm_prepare_and_submit\n");
 	direction = snd_pcm_substream_to_dma_direction(substream);
 
 	if (!substream->runtime->no_period_wakeup)
 		flags |= DMA_PREP_INTERRUPT;
+	printk("JDS - dmaengine_pcm_prepare_and_submit a\n");
 
 	prtd->pos = 0;
 	desc = dmaengine_prep_dma_cyclic(chan,
@@ -159,13 +161,16 @@ static int dmaengine_pcm_prepare_and_submit(struct snd_pcm_substream *substream)
 		snd_pcm_lib_buffer_bytes(substream),
 		snd_pcm_lib_period_bytes(substream), direction, flags);
 
+	printk("JDS - dmaengine_pcm_prepare_and_submit b\n");
 	if (!desc)
 		return -ENOMEM;
 
+	printk("JDS - dmaengine_pcm_prepare_and_submit c\n");
 	desc->callback = dmaengine_pcm_dma_complete;
 	desc->callback_param = substream;
 	prtd->cookie = dmaengine_submit(desc);
 
+	printk("JDS - dmaengine_pcm_prepare_and_submit d\n");
 	return 0;
 }
 
@@ -185,12 +190,17 @@ int snd_dmaengine_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int ret;
 
+	printk("JDS = snd_dmaengine_pcm_trigger cmd %d prtd %p runtime %p\n", cmd, prtd, runtime);
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
+	printk("JDS = snd_dmaengine_pcm_trigger a\n");
 		ret = dmaengine_pcm_prepare_and_submit(substream);
+	printk("JDS = snd_dmaengine_pcm_trigger b\n");
 		if (ret)
 			return ret;
+	printk("JDS = snd_dmaengine_pcm_trigger c\n");
 		dma_async_issue_pending(prtd->dma_chan);
+	printk("JDS = snd_dmaengine_pcm_trigger d\n");
 		break;
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
@@ -212,6 +222,7 @@ int snd_dmaengine_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		return -EINVAL;
 	}
 
+	printk("JDS = snd_dmaengine_pcm_trigger f\n");
 	return 0;
 }
 EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_trigger);
@@ -295,6 +306,7 @@ int snd_dmaengine_pcm_open(struct snd_pcm_substream *substream,
 	struct dmaengine_pcm_runtime_data *prtd;
 	int ret;
 
+	printk("JDS - snd_dmaengine_pcm_open\n");
 	if (!chan)
 		return -ENXIO;
 
@@ -311,6 +323,7 @@ int snd_dmaengine_pcm_open(struct snd_pcm_substream *substream,
 
 	substream->runtime->private_data = prtd;
 
+	printk("JDS - snd_dmaengine_pcm_open ret\n");
 	return 0;
 }
 EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_open);
