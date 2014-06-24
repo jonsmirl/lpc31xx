@@ -212,6 +212,29 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
 }
 
 /**
+ * sun7i_get_pll2_factors()
+ * parent_rate is always 24Mhz
+ */
+
+static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
+				   u8 *n, u8 *k, u8 *m, u8 *p)
+{
+	/* we were called to round the frequency, we can now return */
+	if (n == NULL)
+		return;
+	
+	if (*freq == 22579200) {
+		*n = 79;
+		*m = 21;  /* Pre */
+		*k = 4;   /* Post */
+	} else  {
+		*n = 86;
+		*m = 21;  /* Pre */
+		*k = 4;   /* Post */
+	}
+}
+
+/**
  * sun4i_get_pll5_factors() - calculates n, k factors for PLL5
  * PLL5 rate is calculated as follows
  * rate = parent_rate * n * (k + 1)
@@ -479,7 +502,17 @@ static struct clk_factors_config sun8i_a23_pll1_config = {
 	.mwidth = 2,
 	.pshift = 16,
 	.pwidth = 2,
-	.n_from_one = 1,
+	.rate_adjust = N_FROM_ONE,
+};
+
+static struct clk_factors_config sun7i_pll2_config = {
+	.nshift = 8,
+	.nwidth = 7,
+	.kshift = 26,
+	.kwidth = 4,
+	.mshift = 0,
+	.mwidth = 5,
+	.rate_adjust = PLL2_DIV,
 };
 
 static struct clk_factors_config sun4i_pll5_config = {
@@ -494,7 +527,7 @@ static struct clk_factors_config sun6i_a31_pll6_config = {
 	.nwidth = 5,
 	.kshift = 4,
 	.kwidth = 2,
-	.n_from_one = 1,
+	.rate_adjust = N_FROM_ONE,
 };
 
 static struct clk_factors_config sun4i_apb1_config = {
@@ -536,6 +569,12 @@ static const struct factors_data sun8i_a23_pll1_data __initconst = {
 	.enable = 31,
 	.table = &sun8i_a23_pll1_config,
 	.getter = sun8i_a23_get_pll1_factors,
+};
+
+static const struct factors_data sun7i_a20_pll2_data __initconst = {
+	.enable = 31,
+	.table = &sun7i_pll2_config,
+	.getter = sun7i_get_pll2_factors,
 };
 
 static const struct factors_data sun7i_a20_pll4_data __initconst = {
@@ -945,6 +984,10 @@ static const struct gates_data sun6i_a31_usb_gates_data __initconst = {
 	.reset_mask = BIT(2) | BIT(1) | BIT(0),
 };
 
+static const struct gates_data sunxi_codec_data __initconst = {
+	.mask = {BIT(31)},
+};
+
 static void __init sunxi_gates_clk_setup(struct device_node *node,
 					 struct gates_data *data)
 {
@@ -975,16 +1018,18 @@ static void __init sunxi_gates_clk_setup(struct device_node *node,
 	for_each_set_bit(i, data->mask, SUNXI_GATES_MAX_SIZE) {
 		of_property_read_string_index(node, "clock-output-names",
 					      j, &clk_name);
-
 		clk_data->clks[i] = clk_register_gate(NULL, clk_name,
 						      clk_parent, 0,
 						      reg + 4 * (i/32), i % 32,
 						      0, &clk_lock);
 		WARN_ON(IS_ERR(clk_data->clks[i]));
 		clk_register_clkdev(clk_data->clks[i], clk_name, NULL);
-
 		j++;
 	}
+
+	/* if there is a single gate, copy it to entry[0] so there is no requirement for phandle arg */
+	if (j == 1)
+		clk_data->clks[0] = clk_data->clks[i];
 
 	/* Adjust to the real max */
 	clk_data->clk_num = i;
@@ -1195,12 +1240,12 @@ free_clkdata:
 }
 
 
-
 /* Matches for factors clocks */
 static const struct of_device_id clk_factors_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-pll1-clk", .data = &sun4i_pll1_data,},
 	{.compatible = "allwinner,sun6i-a31-pll1-clk", .data = &sun6i_a31_pll1_data,},
 	{.compatible = "allwinner,sun8i-a23-pll1-clk", .data = &sun8i_a23_pll1_data,},
+	{.compatible = "allwinner,sun7i-a20-pll2-clk", .data = &sun7i_a20_pll2_data,},
 	{.compatible = "allwinner,sun7i-a20-pll4-clk", .data = &sun7i_a20_pll4_data,},
 	{.compatible = "allwinner,sun4i-a10-apb1-clk", .data = &sun4i_apb1_data,},
 	{.compatible = "allwinner,sun4i-a10-mod0-clk", .data = &sun4i_mod0_data,},
@@ -1258,6 +1303,7 @@ static const struct of_device_id clk_gates_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-usb-clk", .data = &sun4i_a10_usb_gates_data,},
 	{.compatible = "allwinner,sun5i-a13-usb-clk", .data = &sun5i_a13_usb_gates_data,},
 	{.compatible = "allwinner,sun6i-a31-usb-clk", .data = &sun6i_a31_usb_gates_data,},
+	{.compatible = "allwinner,sunxi-codec-clk", .data = &sunxi_codec_data,},
 	{}
 };
 
