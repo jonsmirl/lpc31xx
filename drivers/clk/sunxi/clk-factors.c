@@ -62,11 +62,17 @@ static unsigned long clk_factors_recalc_rate(struct clk_hw *hw,
 		p = FACTOR_GET(config->pshift, config->pwidth, reg);
 
 	/* Calculate the rate */
-	if (config->n_from_one)
+	switch (config->rate_adjust) {
+	case N_FROM_ONE:
 		rate = (parent_rate * (n + 1) * (k + 1) >> p) / (m + 1);
-	else
+		break;
+	case PLL2_DIV:
+		rate = parent_rate * n / k / m;
+		break;
+	default:
 		rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
-
+		break;
+	}
 	return rate;
 }
 
