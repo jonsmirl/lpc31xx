@@ -1154,6 +1154,10 @@
 		};
 	};
 
+	ac: ac@0 {
+		compatible = "allwinner,sunxi-ac";
+	}
+
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
@@ -1175,7 +1179,7 @@
 		};
 
 		simple-audio-card,codec {
-			sound-dai = <&codec>;
+			sound-dai = <&ac>;
 			frame-master;
 			bitclock-master;
 		};

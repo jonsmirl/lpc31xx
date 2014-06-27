@@ -21,10 +21,19 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
+#include <linux/regmap.h>
 #include <sound/dmaengine_pcm.h>
+#include <sound/core.h>
 #include <sound/soc.h>
+#include <sound/pcm.h>
+#include <sound/pcm_params.h>
+#include <sound/control.h>
+#include <sound/initval.h>
 #include "sunxi-codec.h"
 
+static void codec_resume_events(struct work_struct *work);
+struct workqueue_struct *resume_work_queue;
+static DECLARE_WORK(codec_resume_work, codec_resume_events);
 
 static void sunxi_configure(struct card_data *priv)
 {
@@ -229,10 +238,189 @@ static int codec_mute_put(struct snd_kcontrol *kcontrol,
 
 	return 1;
 }
-static const struct snd_kcontrol_new sunxi_controls[] = {
-	SOC_SINGLE_BOOL_EXT("IEC958 Playback Switch", 0,
-			codec_mute_get, codec_mute_put),
+
+#ifdef JDS
+static void codec_resume_events(struct work_struct *work)
+{
+	printk("%s,%d\n", __func__, __LINE__);
+
+	if (priv->id == SUN7I) {
+		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x1, PA_MUTE, 0x0);
+	else
+		regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 0x1, DAC_EN, 0x1);
+
+	msleep(20);
+	//enable PA
+	regmap_update_bits(priv->regmap, SUNXI_ADC_ACTL, 0x1, PA_ENABLE, 0x1);
+	msleep(550);
+	//enable dac analog
+
+	if (priv->id == SUN7I) {
+		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x1, PA_MUTE, 0x1);
+		regmap_update_bits(priv->regmap, SUNXI_ADC_ACTL, 0x1, 8, 0x0);
+	} else {
+		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x1, DACAEN_L, 0x1);
+		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x1, DACAEN_R, 0x1);
+
+		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x1, DACPAS, 0x1);
+	}
+	if (gpio_pa_shutdown) {
+		msleep(50);
+		gpio_write_one_pin_value(gpio_pa_shutdown, 1, "audio_pa_ctrl");
+	}
+}
+#endif
+
+
+
+/**
+ *	codec_reset - reset the codec
+ * @codec	SoC Audio Codec
+ * Reset the codec, set the register of codec default value
+ * Return 0 for success
+ */
+static int codec_init(struct card_data *priv)
+{
+	//enable dac digital
+	regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 0x1 << DAC_EN, 0x1 << DAC_EN);
+
+	regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << 28, 0x1 << 28);
+	//set digital volume to maximum
+	if (priv->id == SUN4A)
+		regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 0x6 << DIGITAL_VOL, 0x0 << DIGITAL_VOL);
+
+	//pa mute
+	regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x1 << PA_MUTE, 0x0 << PA_MUTE);
+	//enable PA
+	regmap_update_bits(priv->regmap, SUNXI_ADC_ACTL, 0x1 << PA_ENABLE, 0x1 << PA_ENABLE);
+	regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x3 << DRA_LEVEL, 0x3 << DRA_LEVEL);
+	//set volume
+	if ((priv->id == SUN4A) || (priv->id == SUN4I)) {
+		int device_lr_change = 0;
+		if (priv->id == SUN4A)
+			regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x6 << VOLUME, 0x01 << VOLUME);
+		else 
+			regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x6 << VOLUME, 0x3b << VOLUME);
+#ifdef JDS
+		rc = script_parser_fetch("audio_para", "audio_lr_change", &device_lr_change, 1);
+		if (rc != SCRIPT_AUDIO_OK) {
+			pr_err("No audio_lr_change in fex audio_para\n");
+			return -1;
+		}
+#endif
+		if (device_lr_change)
+			regmap_update_bits(priv->regmap, SUNXI_DAC_DEBUG, 0x1 << DAC_CHANNEL, 0x1 << DAC_CHANNEL);
+	} else {
+		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x6 << VOLUME, 0x3b << VOLUME);
+	}
+	return 0;
+}
+
+
+/*	对sunxi-codec.c各寄存器的各种设定，或读取。主要实现函数有三个.
+ * 	.info = snd_codec_info_volsw, .get = snd_codec_get_volsw,\.put = snd_codec_put_volsw,
+ * It should be noted that the only difference between sunxi and sun5i is the Master Playback Volume
+ */
+static const struct snd_kcontrol_new sun4i_dac[] = {
+	//FOR B C VERSION
+	SOC_SINGLE("Master Playback Volume", SUNXI_DAC_ACTL, 0, 0x3f, 0), 
+	SOC_SINGLE("Playback Switch", SUNXI_DAC_ACTL, 6, 1, 0), //全局输出开关
+	SOC_SINGLE("Fm Volume", SUNXI_DAC_ACTL, 23, 7, 0), //Fm 音量
+	SOC_SINGLE("Line Volume", SUNXI_DAC_ACTL, 26, 1, 0), //Line音量
+	SOC_SINGLE("FmL Switch", SUNXI_DAC_ACTL, 17, 1, 0), //Fm左开关
+	SOC_SINGLE("FmR Switch", SUNXI_DAC_ACTL, 16, 1, 0), //Fm右开关
+	SOC_SINGLE("LineL Switch", SUNXI_DAC_ACTL, 19, 1, 0), //Line左开关
+	SOC_SINGLE("LineR Switch", SUNXI_DAC_ACTL, 18, 1, 0), //Line右开关
+	SOC_SINGLE("Ldac Left Mixer", SUNXI_DAC_ACTL, 15, 1, 0), 
+	SOC_SINGLE("Rdac Right Mixer", SUNXI_DAC_ACTL, 14, 1, 0), 
+	SOC_SINGLE("Ldac Right Mixer", SUNXI_DAC_ACTL, 13, 1, 0),
+	SOC_SINGLE("Mic Input Mux", SUNXI_DAC_ACTL, 9, 15, 0), //from bit 9 to bit 12.Mic（麦克风）输入静音
 };
+
+static const struct snd_kcontrol_new sun4a_dac[] = {
+	//For A VERSION
+	SOC_SINGLE("Master Playback Volume", SUNXI_DAC_DPC, 12, 0x3f, 0), //62 steps, 3e + 1 = 3f 主音量控制
+	SOC_SINGLE("Playback Switch", SUNXI_DAC_ACTL, 6, 1, 0), //全局输出开关
+	SOC_SINGLE("Fm Volume", SUNXI_DAC_ACTL, 23, 7, 0), //Fm 音量
+	SOC_SINGLE("Line Volume", SUNXI_DAC_ACTL, 26, 1, 0), //Line音量
+	SOC_SINGLE("FmL Switch", SUNXI_DAC_ACTL, 17, 1, 0), //Fm左开关
+	SOC_SINGLE("FmR Switch", SUNXI_DAC_ACTL, 16, 1, 0), //Fm右开关
+	SOC_SINGLE("LineL Switch", SUNXI_DAC_ACTL, 19, 1, 0), //Line左开关
+	SOC_SINGLE("LineR Switch", SUNXI_DAC_ACTL, 18, 1, 0), //Line右开关
+	SOC_SINGLE("Ldac Left Mixer", SUNXI_DAC_ACTL, 15, 1, 0), 
+	SOC_SINGLE("Rdac Right Mixer", SUNXI_DAC_ACTL, 14, 1, 0), 
+	SOC_SINGLE("Ldac Right Mixer", SUNXI_DAC_ACTL, 13, 1, 0),
+	SOC_SINGLE("Mic Input Mux", SUNXI_DAC_ACTL, 9, 15, 0), //from bit 9 to bit 12.Mic（麦克风）输入静音
+};
+
+static const struct snd_kcontrol_new sunxi_adc_controls[] = { 
+	SOC_SINGLE("Master Capture Mute", SUNXI_ADC_ACTL, 4, 1, 0), 
+	SOC_SINGLE("Right Capture Mute", SUNXI_ADC_ACTL, 31, 1, 0), 
+	SOC_SINGLE("Left Capture Mute", SUNXI_ADC_ACTL, 30, 1, 0),
+	SOC_SINGLE("Capture Volume", SUNXI_ADC_ACTL, 20, 7, 0), //录音音量
+	SOC_SINGLE("Line Capture Volume", SUNXI_ADC_ACTL, 13, 7, 0), 
+	SOC_SINGLE("MicL Volume", SUNXI_ADC_ACTL, 25, 3, 0), //mic左音量
+	SOC_SINGLE("MicR Volume", SUNXI_ADC_ACTL, 23, 3, 0), //mic右音量
+	SOC_SINGLE("Mic2 Boost", SUNXI_ADC_ACTL, 29, 1, 0), 
+	SOC_SINGLE("Mic1 Boost", SUNXI_ADC_ACTL, 28, 1, 0), 
+	SOC_SINGLE("Mic Power", SUNXI_ADC_ACTL, 27, 1, 0), 
+	SOC_SINGLE("ADC Input Mux", SUNXI_ADC_ACTL, 17, 7, 0), //ADC输入静音
+};
+
+static const struct snd_kcontrol_new sun7i_dac_ctls[] = {
+	/*SUNXI_DAC_ACTL = 0x10,PAVOL*/
+	SOC_SINGLE("Master Playback Volume", SUNXI_DAC_ACTL, 0, 0x3f, 0), 
+	SOC_SINGLE("Playback Switch", SUNXI_DAC_ACTL, 6, 1, 0), //全局输出开关
+	SOC_SINGLE("FmL Switch", SUNXI_DAC_ACTL, 17, 1, 0), //Fm左开关
+	SOC_SINGLE("FmR Switch", SUNXI_DAC_ACTL, 16, 1, 0), //Fm右开关
+	SOC_SINGLE("LineL Switch", SUNXI_DAC_ACTL, 19, 1, 0), //Line左开关
+	SOC_SINGLE("LineR Switch", SUNXI_DAC_ACTL, 18, 1, 0), //Line右开关
+	SOC_SINGLE("Ldac Left Mixer", SUNXI_DAC_ACTL, 15, 1, 0), 
+	SOC_SINGLE("Rdac Right Mixer", SUNXI_DAC_ACTL, 14, 1, 0), 
+	SOC_SINGLE("Ldac Right Mixer", SUNXI_DAC_ACTL, 13, 1, 0), 
+	SOC_SINGLE("Mic Input Mux", SUNXI_DAC_ACTL, 9, 15, 0), //from bit 9 to bit 12.Mic（麦克风）输入静音
+	SOC_SINGLE("MIC output volume", SUNXI_DAC_ACTL, 20, 7, 0),
+	/*	FM Input to output mixer Gain Control
+	* 	From -4.5db to 6db,1.5db/step,default is 0db
+	*	-4.5db:0x0,-3.0db:0x1,-1.5db:0x2,0db:0x3
+	*	1.5db:0x4,3.0db:0x5,4.5db:0x6,6db:0x7
+	*/
+	SOC_SINGLE("Fm output Volume", SUNXI_DAC_ACTL, 23, 7, 0),
+	/*	Line-in gain stage to output mixer Gain Control
+	*	0:-1.5db,1:0db
+	*/
+	SOC_SINGLE("Line output Volume", SUNXI_DAC_ACTL, 26, 1, 0),
+};
+
+static const struct snd_kcontrol_new sun7i_adc_ctls[] = { 
+	SOC_SINGLE("Master Capture Mute", SUNXI_ADC_ACTL, 4, 1, 0), 
+	SOC_SINGLE("Right Capture Mute", SUNXI_ADC_ACTL, 31, 1, 0), 
+	SOC_SINGLE("Left Capture Mute", SUNXI_ADC_ACTL, 30, 1, 0), 
+	SOC_SINGLE("Linein Pre-AMP", SUNXI_ADC_ACTL, 13, 7, 0), 
+	SOC_SINGLE("LINEIN APM Volume", SUNXI_MIC_CRT, 13, 0x7, 0),
+	/* ADC Input Gain Control, capture volume
+	* 000:-4.5db,001:-3db,010:-1.5db,011:0db,100:1.5db,101:3db,110:4.5db,111:6db
+	*/
+	SOC_SINGLE("Capture Volume", SUNXI_ADC_ACTL, 20, 7, 0),
+	/*
+	*	MIC2 pre-amplifier Gain Control
+	*	00:0db,01:35db,10:38db,11:41db
+	*/
+	SOC_SINGLE("MicL Volume", SUNXI_ADC_ACTL, 25, 3, 0), //mic左音量
+	SOC_SINGLE("MicR Volume", SUNXI_ADC_ACTL, 23, 3, 0), //mic右音量
+	SOC_SINGLE("Mic2 Boost", SUNXI_ADC_ACTL, 29, 1, 0), 
+	SOC_SINGLE("Mic1 Boost", SUNXI_ADC_ACTL, 28, 1, 0), 
+	SOC_SINGLE("Mic Power", SUNXI_ADC_ACTL, 27, 1, 0), 
+	SOC_SINGLE("ADC Input Mux", SUNXI_ADC_ACTL, 17, 7, 0), //ADC输入静音
+	SOC_SINGLE("Mic2 gain Volume", SUNXI_MIC_CRT, 26, 7, 0),
+	/*
+	*	MIC1 pre-amplifier Gain Control
+	*	00:0db,01:35db,10:38db,11:41db
+	*/
+	SOC_SINGLE("Mic1 gain Volume", SUNXI_MIC_CRT, 29, 3, 0), 
+};
+
+
 
 static int sunxi_soc_dai_probe(struct snd_soc_dai *dai)
 {
@@ -262,9 +450,7 @@ static int sunxi_soc_dai_probe(struct snd_soc_dai *dai)
 	playback_dma_data->addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
 	snd_soc_dai_init_dma_data(dai, playback_dma_data, capture_dma_data);
-
-	return snd_soc_add_dai_controls(dai, sunxi_controls,
-				ARRAY_SIZE(sunxi_controls));
+	return 0;
 }
 
 static const struct snd_soc_dai_ops sunxi_dai_ops = {
@@ -298,19 +484,23 @@ static const struct snd_soc_component_driver sunxi_component = {
 			SNDRV_PCM_FMTBIT_S20_3LE | \
 			SNDRV_PCM_FMTBIT_S24_LE)
 
-static const struct snd_soc_dapm_widget dit_widgets[] = {
-	SND_SOC_DAPM_OUTPUT("spdif-out"),
+unsigned int read(struct snd_soc_codec *codec, unsigned int reg);
+int write(struct snd_soc_codec *, unsigned int reg, unsigned int);
+
+
+static struct snd_soc_codec_driver soc_codec_sun4a_codec = {
+	.controls = sun4a_dac,
+	.num_controls = ARRAY_SIZE(sun4a_dac),
 };
 
-static const struct snd_soc_dapm_route dit_routes[] = {
-	{ "spdif-out", NULL, "Playback" },
+static struct snd_soc_codec_driver soc_codec_sun4i_codec = {
+	.controls = sun4i_dac,
+	.num_controls = ARRAY_SIZE(sun4i_dac),
 };
 
-static struct snd_soc_codec_driver soc_codec_sunxi_codec = {
-	.dapm_widgets = dit_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(dit_widgets),
-	.dapm_routes = dit_routes,
-	.num_dapm_routes = ARRAY_SIZE(dit_routes),
+static struct snd_soc_codec_driver soc_codec_sun7i_codec = {
+	.controls = sun7i_dac_ctls,
+	.num_controls = ARRAY_SIZE(sun7i_dac_ctls),
 };
 
 static struct snd_soc_dai_driver dit_stub_dai = {
@@ -322,6 +512,13 @@ static struct snd_soc_dai_driver dit_stub_dai = {
 		.rates		= STUB_RATES,
 		.formats	= STUB_FORMATS,
 	},
+};
+
+static const struct regmap_config sunxi_regmap_config = {
+	.reg_bits = 32,
+	.reg_stride = 4,
+	.val_bits = 32,
+	.max_register = SUNXI_MIC_CRT,
 };
 
 static const struct of_device_id snd_sunxi_codec_ids[] = {
@@ -370,6 +567,10 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	}
 	priv->codec_phys = res.start;
 
+	priv->regmap = devm_regmap_init_mmio(&pdev->dev, priv->baseaddr, &sunxi_regmap_config);
+	if (IS_ERR(priv->regmap))
+		return PTR_ERR(priv->regmap);
+
 	priv->irq = irq_of_parse_and_map(np, 0);
 	if (!priv->irq) {
 		dev_err(&pdev->dev, "no irq for node %s\n", np->full_name);
@@ -416,14 +617,36 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = snd_soc_register_codec(&pdev->dev, &soc_codec_sunxi_codec, &dit_stub_dai, 1);
+	switch (priv->id) {
+	case SUN4A:
+		ret = snd_soc_register_codec(&pdev->dev, &soc_codec_sun4a_codec, &dit_stub_dai, 1);
+	case SUN4I:
+	case SUN5I:
+		ret = snd_soc_register_codec(&pdev->dev, &soc_codec_sun4i_codec, &dit_stub_dai, 1);
+	case SUN7I:
+		ret = snd_soc_register_codec(&pdev->dev, &soc_codec_sun7i_codec, &dit_stub_dai, 1);
+	}
 	if (ret)
 		return ret;
 
 	snd_dmaengine_pcm_register(&pdev->dev, NULL, SND_DMAENGINE_PCM_FLAG_NO_RESIDUE);
+
+	codec_init(priv);
+#ifdef JDS
+	if (gpio_pa_shutdown)
+		gpio_write_one_pin_value(gpio_pa_shutdown, 0, "audio_pa_ctrl");
+
+	resume_work_queue = create_singlethread_workqueue("codec_resume");
+	if (resume_work_queue == NULL) {
+		printk("[su4i-codec] try to create workqueue for codec failed!\n");
+		ret = -ENOMEM;
+		goto err_resume_work_queue;
+	}
+#endif
 	printk("JDS - codec driver success registered\n");
 	return ret;
 
+err_resume_work_queue:
 exit_clkdisable_apb_clk:
 	return ret;
 }
@@ -487,18 +710,18 @@ static void sunxi_codec_shutdown(struct platform_device *devptr)
 //JDS		gpio_write_one_pin_value(gpio_pa_shutdown, 0, "audio_pa_ctrl");
 		mdelay(50);
 	}
-	codec_wr_control(SUNXI_ADC_ACTL, 0x1, PA_ENABLE, 0x0);
+	regmap_update_bits(SUNXI_ADC_ACTL, 0x1, PA_ENABLE, 0x0);
 	mdelay(100);
 	//pa mute
-	codec_wr_control(SUNXI_DAC_ACTL, 0x1, PA_MUTE, 0x0);
+	regmap_update_bits(SUNXI_DAC_ACTL, 0x1, PA_MUTE, 0x0);
 	mdelay(500);
 	//disable dac analog
-	codec_wr_control(SUNXI_DAC_ACTL, 0x1, DACAEN_L, 0x0);
-	codec_wr_control(SUNXI_DAC_ACTL, 0x1, DACAEN_R, 0x0);
+	regmap_update_bits(SUNXI_DAC_ACTL, 0x1, DACAEN_L, 0x0);
+	regmap_update_bits(SUNXI_DAC_ACTL, 0x1, DACAEN_R, 0x0);
 
 	//disable dac to pa
-	codec_wr_control(SUNXI_DAC_ACTL, 0x1, DACPAS, 0x0);
-	codec_wr_control(SUNXI_DAC_DPC, 0x1, DAC_EN, 0x0);
+	regmap_update_bits(SUNXI_DAC_ACTL, 0x1, DACPAS, 0x0);
+	regmap_update_bits(SUNXI_DAC_DPC, 0x1, DAC_EN, 0x0);
 
 	clk_disable(codec_moduleclk);
 #endif
