@@ -152,6 +152,7 @@ struct sunxi_params {
 
 /* Structure/enum declaration ------------------------------- */
 struct card_data {
+	struct regmap *regmap;
 	struct sunxi_params saved_params;
 	enum sunxi_device_id id;
 	struct dma_chan		*rx_dma_chan;

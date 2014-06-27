@@ -864,7 +864,7 @@
 			#pwm-cells = <3>;
 		};
 		
-		spdif@1c21000 {
+		spdif@01c21000 {
 			compatible = "allwinner,sun7i-a20-spdif";
 			reg = <0x01C21000 0x40>;
 			interrupts = <0 13 4>;
@@ -875,7 +875,7 @@
 			status = "disabled";
 		};
 
-		ac97@1c21400 {
+		ac97@01c21400 {
 			compatible = "allwinner,sun7i-a20-ac97";
 			reg = <0x01C21400 0x40>;
 			interrupts = <0 14 4>;
@@ -886,7 +886,7 @@
 			status = "disabled";
 		};
 
-		i2s0: i2s@1c22000 {
+		i2s0: i2s@01c22000 {
 			compatible = "allwinner,sun7i-a20-i2s";
 			reg = <0x01C22000 0x40>;
 			interrupts = <0 16 4>;
@@ -897,7 +897,7 @@
 			status = "disabled";
 		};
 
-		i2s1: i2s@1c22400 {
+		i2s1: i2s@01c22400 {
 			compatible = "allwinner,sun7i-a20-i2s";
 			reg = <0x01C22400 0x40>;
 			interrupts = <0 87 4>;
@@ -908,7 +908,7 @@
 			status = "disabled";
 		};
 
-		i2s2: i2s@1c24400 {
+		i2s2: i2s@01c24400 {
 			compatible = "allwinner,sun7i-a20-i2s";
 			reg = <0x01C24400 0x40>;
 			interrupts = <0 90 4>;
@@ -919,7 +919,7 @@
 			status = "disabled";
 		};
 
-		codec: codec@1c22c00 {
+		codec: codec@01c22c00 {
 			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-codec";
 			reg = <0x01C22c00 0x40>;
@@ -1154,6 +1154,10 @@
 		};
 	};
 
+	ac: ac@0 {
+		compatible = "allwinner,sunxi-ac";
+	}
+
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
@@ -1175,7 +1179,7 @@
 		};
 
 		simple-audio-card,codec {
-			sound-dai = <&codec>;
+			sound-dai = <&ac>;
 			frame-master;
 			bitclock-master;
 		};
