@@ -8,8 +8,6 @@
  * (at your option) any later version.
  */
 
-#define DEBUG
-
 #include <linux/bitmap.h>
 #include <linux/bitops.h>
 #include <linux/clk.h>
@@ -288,7 +286,6 @@ static struct sun4i_dma_pchan *find_and_use_pchan(struct sun4i_ddma_dev *priv,
 	unsigned long flags;
 	int i, max;
 
-	printk("JDS - find_and_use_pchan\n");
 	spin_lock_irqsave(&priv->lock, flags);
 
 	/* pchans 0-NDMA_NR_MAX_CHANNELS are normal, and
@@ -387,7 +384,6 @@ static int execute_vchan_pending(struct sun4i_ddma_dev *priv,
 	unsigned long flags;
 	int ret = 0;
 
-	printk("JDS - execute_vchan_pending\n");
 	/* We need a pchan to do anything, so secure one if available */
 	pchan = find_and_use_pchan(priv, vchan);
 	if (!pchan)
@@ -999,6 +995,19 @@ static void sun4i_ddma_tasklet(unsigned long data)
 		execute_vchan_pending(priv, &priv->vchans[i]);
 }
 
+static int sun4i_dma_device_slave_caps(struct dma_chan *dchan,
+				      struct dma_slave_caps *caps)
+{
+	caps->src_addr_widths = 32;
+	caps->dstn_addr_widths = 32;
+	caps->directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
+	caps->cmd_pause = true;
+	caps->cmd_terminate = true;
+	caps->residue_granularity = DMA_RESIDUE_GRANULARITY_BURST;
+
+	return 0;
+}
+
 static int sun4i_dma_probe(struct platform_device *pdev)
 {
 	struct sun4i_ddma_dev *priv;
@@ -1044,6 +1053,7 @@ static int sun4i_dma_probe(struct platform_device *pdev)
 	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;
 	priv->slave.device_prep_dma_cyclic	= sun4i_dma_prep_dma_cyclic;
 	priv->slave.device_control		= sun4i_dma_control;
+	priv->slave.device_slave_caps 		= sun4i_dma_device_slave_caps;
 	priv->slave.chancnt			= DDMA_NR_MAX_VCHANS;
 
 	priv->slave.dev = &pdev->dev;

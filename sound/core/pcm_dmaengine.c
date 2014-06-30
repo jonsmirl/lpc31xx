@@ -306,6 +306,7 @@ int snd_dmaengine_pcm_open(struct snd_pcm_substream *substream,
 	struct dmaengine_pcm_runtime_data *prtd;
 	int ret;
 
+	printk("JDS - snd_dmaengine_pcm_open\n");
 	if (!chan)
 		return -ENXIO;
 
@@ -322,6 +323,7 @@ int snd_dmaengine_pcm_open(struct snd_pcm_substream *substream,
 
 	substream->runtime->private_data = prtd;
 
+	printk("JDS - snd_dmaengine_pcm_open ret\n");
 	return 0;
 }
 EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_open);

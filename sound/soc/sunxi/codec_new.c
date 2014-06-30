@@ -7,7 +7,6 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
@@ -108,147 +107,30 @@ struct sunxi_codec {
 	struct snd_pcm_hw_constraint_ratnums rate_constraints;
 };
 
-static int codec_play_start(struct sunxi_codec *codec)
-{
-#ifdef JDS
-	if (gpio_pa_shutdown)
-		gpio_write_one_pin_value(gpio_pa_shutdown, 1, "audio_pa_ctrl");
-#endif
-	//flush TX FIFO
-	regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_FIFO_FLUSH, 0x1 << DAC_FIFO_FLUSH);
-	//enable dac drq
-	regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_DRQ, 0x1 << DAC_DRQ);
-	return 0;
-}
-
-static int codec_play_stop(struct sunxi_codec *codec)
-{
-	//pa mute
-#ifdef JDS
-	if (gpio_pa_shutdown)
-		gpio_write_one_pin_value(gpio_pa_shutdown, 0, "audio_pa_ctrl");
-#endif
-	regmap_update_bits(codec->regmap, SUNXI_DAC_ACTL, 0x1 << PA_MUTE, 0x0 << PA_MUTE);
-	mdelay(5);
-	//disable dac drq
-	regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_DRQ, 0x0 << DAC_DRQ);
-	//pa mute
-	regmap_update_bits(codec->regmap, SUNXI_DAC_ACTL, 0x1 << PA_MUTE, 0x0 << PA_MUTE);
-	regmap_update_bits(codec->regmap, SUNXI_DAC_ACTL, 0x1 << DACAEN_L, 0x0 << DACAEN_L);
-	regmap_update_bits(codec->regmap, SUNXI_DAC_ACTL, 0x1 << DACAEN_R, 0x0 << DACAEN_R);
-	return 0;
-}
-
-static int codec_capture_start(struct sunxi_codec *codec)
-{
-	//enable adc drq
-#ifdef JDS
-	if (gpio_pa_shutdown)
-		gpio_write_one_pin_value(gpio_pa_shutdown, 1, "audio_pa_ctrl");
-#endif
-	regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << ADC_DRQ, 0x1 << ADC_DRQ);
-	return 0;
-}
-
-static int codec_capture_stop(struct sunxi_codec *codec)
-{
-	//disable adc drq
-	regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << ADC_DRQ, 0x0 << ADC_DRQ);
-	//enable mic1 pa
-	regmap_update_bits(codec->regmap, SUNXI_ADC_ACTL, 0x1 << MIC1_EN, 0x0 << MIC1_EN);
-	//enable VMIC
-	regmap_update_bits(codec->regmap, SUNXI_ADC_ACTL, 0x1 << VMIC_EN, 0x0 << VMIC_EN);
-	if (codec->id == SUN7I) {
-		regmap_update_bits(codec->regmap, SUNXI_DAC_TUNE, 0x3 << 8, 0x0 << 8);
-	}
-	//enable adc digital
-	regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << ADC_DIG_EN, 0x0 << ADC_DIG_EN);
-	//set RX FIFO mode
-	regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << RX_FIFO_MODE, 0x0 << RX_FIFO_MODE);
-	//flush RX FIFO
-	regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << ADC_FIFO_FLUSH, 0x0 << ADC_FIFO_FLUSH);
-	//enable adc1 analog
-	regmap_update_bits(codec->regmap, SUNXI_ADC_ACTL, 0x3 << ADC_EN, 0x0 << ADC_EN);
-	return 0;
-}
-
 static int sunxi_codec_trigger(struct snd_pcm_substream *substream, int cmd,
 	struct snd_soc_dai *dai)
 {
-	struct sunxi_codec *codec = snd_soc_dai_get_drvdata(dai);
+//JDS	struct sunxi_codec *codec = snd_soc_dai_get_drvdata(dai);
+	unsigned int val;
 
-	printk("JDS - sunxi_codec_trigger cmd %d\n", cmd);
+	printk("JDS - sunxi_codec_trigger\n");
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-			codec_capture_start(codec);
-		else
-			codec_play_start(codec);
-		break;		break;
+//JDS		val = SUNXI_SPDIF_CTRL_TXDATA;
+		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-			codec_capture_stop(codec);
-		else
-			codec_play_stop(codec);
+		val = 0;
 		break;
 	default:
 		return -EINVAL;
 	}
-	return 0;
-}
 
-static int sunxi_codec_prepare(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
-{
-	struct sunxi_codec *codec = snd_soc_dai_get_drvdata(dai);
+//JDS	regmap_update_bits(codec->regmap, SUNXI_SPDIF_REG_CTRL, SUNXI_SPDIF_CTRL_TXDATA, val);
 
-	printk("JDS - sunxi_codec_prepare\n");
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
-		regmap_update_bits(codec->regmap, SUNXI_DAC_DPC, 0x1 << DAC_EN, 0x1 << DAC_EN);
-		regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_FIFO_FLUSH, 0x1 << DAC_FIFO_FLUSH);
-		//set TX FIFO send drq level
-		regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0xf << TX_TRI_LEVEL, 0xf << TX_TRI_LEVEL);
-		if (substream->runtime->rate > 32000) {
-			regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << 28, 0x0 << 28);
-		} else {
-			regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << 28, 0x1 << 28);
-		}
-		//set TX FIFO MODE
-		regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << TX_FIFO_MODE, 0x1 << TX_FIFO_MODE);
-		//send last sample when dac fifo under run
-		regmap_update_bits(codec->regmap, SUNXI_DAC_FIFOC, 0x1 << LAST_SE, 0x0 << LAST_SE);
-		//enable dac analog
-		regmap_update_bits(codec->regmap, SUNXI_DAC_ACTL, 0x1 << DACAEN_L, 0x1 << DACAEN_L);
-		regmap_update_bits(codec->regmap, SUNXI_DAC_ACTL, 0x1 << DACAEN_R, 0x1 << DACAEN_R);
-		//enable dac to pa
-		regmap_update_bits(codec->regmap, SUNXI_DAC_ACTL, 0x1 << DACPAS, 0x1 << DACPAS);
-	} else {
-		//enable mic1 pa
-		regmap_update_bits(codec->regmap, SUNXI_ADC_ACTL, 0x1 << MIC1_EN, 0x1 << MIC1_EN);
-		//mic1 gain 32dB
-		regmap_update_bits(codec->regmap, SUNXI_ADC_ACTL, 0x3 << 25, 0x1 << 25);
-		//enable VMIC
-		regmap_update_bits(codec->regmap, SUNXI_ADC_ACTL, 0x1 << VMIC_EN, 0x1 << VMIC_EN);
-
-		if (codec->id == SUN7I) {
-			/* boost up record effect */
-			regmap_update_bits(codec->regmap, SUNXI_DAC_TUNE, 0x3 << 8, 0x1 << 8);
-		}
-
-		//enable adc digital
-		regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << ADC_DIG_EN, 0x1 << ADC_DIG_EN);
-		//set RX FIFO mode
-		regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << RX_FIFO_MODE, 0x1 << RX_FIFO_MODE);
-		//flush RX FIFO
-		regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0x1 << ADC_FIFO_FLUSH, 0x1 << ADC_FIFO_FLUSH);
-		//set RX FIFO rec drq level
-		regmap_update_bits(codec->regmap, SUNXI_ADC_FIFOC, 0xf << RX_TRI_LEVEL, 0x7 << RX_TRI_LEVEL);
-		//enable adc1 analog
-		regmap_update_bits(codec->regmap, SUNXI_ADC_ACTL, 0x3 << ADC_EN, 0x3 << ADC_EN);
-	}
 	return 0;
 }
 
@@ -347,20 +229,19 @@ static int sunxi_codec_startup(struct snd_pcm_substream *substream,
 {
 	struct sunxi_codec *codec = snd_soc_dai_get_drvdata(dai);
 	int ret;
-	printk("JDS - sunxi_codec_startup %p %p\n", codec, codec->clk_module);
-#ifdef JDS
 
+	printk("JDS - sunxi_codec_startup\n");
 	ret = snd_pcm_hw_constraint_ratnums(substream->runtime, 0,
 			   SNDRV_PCM_HW_PARAM_RATE,
 			   &codec->rate_constraints);
 	if (ret)
 		return ret;
 
-	regmap_update_bits(codec->regmap, SUNXI_SPDIF_REG_CTRL, SUNXI_SPDIF_CTRL_TXEN, SUNXI_SPDIF_CTRL_TXEN);
-#endif
 	ret = clk_prepare_enable(codec->clk_module);
 	if (ret)
 		return ret;
+
+//	regmap_update_bits(codec->regmap, SUNXI_SPDIF_REG_CTRL, SUNXI_SPDIF_CTRL_TXEN, SUNXI_SPDIF_CTRL_TXEN);
 
 	printk("JDS - sunxi_codec_startup - ok\n");
 	return 0;
@@ -382,7 +263,6 @@ static const struct snd_soc_dai_ops sunxi_codec_dai_ops = {
 	.shutdown = sunxi_codec_shutdown,
 	.trigger = sunxi_codec_trigger,
 	.hw_params = sunxi_codec_hw_params,
-	.prepare = sunxi_codec_prepare,
 };
 
 static struct snd_soc_dai_driver sunxi_codec_dai = {
@@ -479,7 +359,6 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to get codec clock.\n");
 		return PTR_ERR(codec->clk_module);
 	}
-
 	ret = clk_set_rate(codec->clk_pll2, 24576000);
 	if (ret) {
 		dev_err(dev, "set codec base clock rate failed!\n");
@@ -493,6 +372,10 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		dev_err(dev, "try to enable clk_apb failed\n");
 		return -EINVAL;
 	}
+	if (clk_prepare_enable(codec->clk_module)) {
+		dev_err(dev, "try to enable clk_module failed\n");
+		return -EINVAL;
+	}
 
 	codec->playback_dma_data.addr = res->start + SUNXI_DAC_TXDATA;
 	codec->playback_dma_data.maxburst = 4;
@@ -502,8 +385,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	codec->capture_dma_data.maxburst = 4;
 	codec->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
-//	printk("JDS - clk_get_rate(codec->clk_module) %lu\n", clk_get_rate(codec->clk_module));
-//	codec->ratnum.num = clk_get_rate(codec->clk_module) / 128;
+	codec->ratnum.num = clk_get_rate(codec->clk_module) / 128;
 	codec->ratnum.den_step = 1;
 	codec->ratnum.den_min = 1;
 	codec->ratnum.den_max = 64;

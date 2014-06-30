@@ -1155,8 +1155,9 @@
 	};
 
 	ac: ac@0 {
-		compatible = "allwinner,sunxi-ac";
-	}
+		#sound-dai-cells = <0>;
+		compatible = "allwinner,stub";
+	};
 
 	sound {
 		compatible = "simple-audio-card";

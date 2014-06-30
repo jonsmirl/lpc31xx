@@ -296,11 +296,14 @@ static snd_pcm_uframes_t dmaengine_pcm_pointer(
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct dmaengine_pcm *pcm = soc_platform_to_pcm(rtd->platform);
+	snd_pcm_uframes_t ret;
 
 	if (pcm->flags & SND_DMAENGINE_PCM_FLAG_NO_RESIDUE)
-		return snd_dmaengine_pcm_pointer_no_residue(substream);
+		ret = snd_dmaengine_pcm_pointer_no_residue(substream);
 	else
-		return snd_dmaengine_pcm_pointer(substream);
+		ret = snd_dmaengine_pcm_pointer(substream);
+	printk("dmaengine_pcm_pointer %x\n", ret);
+	return ret;
 }
 
 static const struct snd_pcm_ops dmaengine_pcm_ops = {
