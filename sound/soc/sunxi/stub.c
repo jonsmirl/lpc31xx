@@ -21,34 +21,42 @@
 #include <sound/pcm.h>
 #include <sound/initval.h>
 #include <linux/of.h>
+#include "sunxi-codec.h"
 
-#define DRV_NAME "spdif-dit"
+#define DRV_NAME "awstub"
 
 #define STUB_RATES	SNDRV_PCM_RATE_8000_96000
 #define STUB_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | \
 			SNDRV_PCM_FMTBIT_S20_3LE | \
 			SNDRV_PCM_FMTBIT_S24_LE)
 
+
+
 static const struct snd_soc_dapm_widget dit_widgets[] = {
-	SND_SOC_DAPM_OUTPUT("spdif-out"),
 	SND_SOC_DAPM_OUTPUT("Mic Bias"),
 	SND_SOC_DAPM_OUTPUT("HP_OUT"),
 	SND_SOC_DAPM_INPUT("MIC_IN"),
 	SND_SOC_DAPM_INPUT("LINE_IN"),
 };
 
-static const struct snd_soc_dapm_route dit_routes[] = {
-	{ "spdif-out", NULL, "Playback" },
-};
-
-static struct snd_soc_codec_driver soc_codec_spdif_dit = {
+static struct snd_soc_codec_driver soc_codec_stub = {
 	.dapm_widgets = dit_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(dit_widgets),
-	.dapm_routes = dit_routes,
-	.num_dapm_routes = ARRAY_SIZE(dit_routes),
 };
 
-static struct snd_soc_dai_driver dit_stub_dai = {
+#ifdef JDS
+static struct snd_soc_codec_driver soc_codec_sun4a_codec = {
+	.controls = sun4a_dac,
+	.num_controls = ARRAY_SIZE(sun4a_dac),
+};
+
+static struct snd_soc_codec_driver soc_codec_sun4i_codec = {
+	.controls = sun4i_dac,
+	.num_controls = ARRAY_SIZE(sun4i_dac),
+};
+#endif
+
+static struct snd_soc_dai_driver awstub_dai = {
 	.name		= "awstub",
 	.playback 	= {
 		.stream_name	= "Playback",
@@ -59,39 +67,38 @@ static struct snd_soc_dai_driver dit_stub_dai = {
 	},
 };
 
-static int spdif_dit_probe(struct platform_device *pdev)
+static int stub_probe(struct platform_device *pdev)
 {
-	return snd_soc_register_codec(&pdev->dev, &soc_codec_spdif_dit,
-			&dit_stub_dai, 1);
+	return snd_soc_register_codec(&pdev->dev, &soc_codec_stub, &awstub_dai, 1);
 }
 
-static int spdif_dit_remove(struct platform_device *pdev)
+static int stub_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
 }
 
 #ifdef CONFIG_OF
-static const struct of_device_id spdif_dit_dt_ids[] = {
+static const struct of_device_id stub_dt_ids[] = {
 	{ .compatible = "allwinner,stub", },
 	{ }
 };
-MODULE_DEVICE_TABLE(of, spdif_dit_dt_ids);
+MODULE_DEVICE_TABLE(of, stub_dt_ids);
 #endif
 
-static struct platform_driver spdif_dit_driver = {
-	.probe		= spdif_dit_probe,
-	.remove		= spdif_dit_remove,
+static struct platform_driver stub_driver = {
+	.probe		= stub_probe,
+	.remove		= stub_remove,
 	.driver		= {
 		.name	= DRV_NAME,
 		.owner	= THIS_MODULE,
-		.of_match_table = of_match_ptr(spdif_dit_dt_ids),
+		.of_match_table = of_match_ptr(stub_dt_ids),
 	},
 };
 
-module_platform_driver(spdif_dit_driver);
+module_platform_driver(stub_driver);
 
 MODULE_AUTHOR("Steve Chen <schen@mvista.com>");
-MODULE_DESCRIPTION("SPDIF dummy codec driver");
+MODULE_DESCRIPTION("AWStub codec driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:" DRV_NAME);

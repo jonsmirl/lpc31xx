@@ -409,6 +409,7 @@ int _snd_pcm_lib_alloc_vmalloc_buffer(struct snd_pcm_substream *substream,
 	if (PCM_RUNTIME_CHECK(substream))
 		return -EINVAL;
 	runtime = substream->runtime;
+	printk("CLK - _snd_pcm_lib_alloc_vmalloc_buffer substream %p runtime %p dma_area %p\n", substream, runtime, runtime->dma_area);
 	if (runtime->dma_area) {
 		if (runtime->dma_bytes >= size)
 			return 0; /* already large enough */
@@ -418,6 +419,7 @@ int _snd_pcm_lib_alloc_vmalloc_buffer(struct snd_pcm_substream *substream,
 	if (!runtime->dma_area)
 		return -ENOMEM;
 	runtime->dma_bytes = size;
+	printk("CLK - _snd_pcm_lib_alloc_vmalloc_buffer substream %p runtime %p dma_area %p\n", substream, runtime, runtime->dma_area);
 	return 1;
 }
 EXPORT_SYMBOL(_snd_pcm_lib_alloc_vmalloc_buffer);
