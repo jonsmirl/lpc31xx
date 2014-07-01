@@ -3,6 +3,7 @@ Top:    ea6e5302c36855bc97048043faf77177773baf21
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-01 11:33:12 -0400
 
+First attempt at a driver for the internal codec on the Allwinner A20.
 First attempt at a driver for the internal codec on the Allwinner A20. This codec is a combination codec and DAI,
 it is all on-chip.
 
