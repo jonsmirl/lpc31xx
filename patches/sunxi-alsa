@@ -1,0 +1,33 @@
+Bottom: d90793d567f477f784df988b4f53d0f7f49b6a8f
+Top:    d90793d567f477f784df988b4f53d0f7f49b6a8f
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-01 11:33:12 -0400
+
+First attempt at a driver for the internal codec on the Allwinner A20. This codec is a combination codec and DAI,
+it is all on-chip.
+
+So why don't I have a DMA buffer?
+Any other hints to get this working would be appreciated.
+
+[   31.910394] pcm_sanity_check   (null)   (null)
+[   31.910415] ------------[ cut here ]------------
+[   31.910440] WARNING: CPU: 1 PID: 738 at sound/core/pcm_lib.c:2090 pcm_sanity_check+0x70/0x98()
+[   31.910448] Modules linked in: brcmfmac brcmutil
+[   31.910470] CPU: 1 PID: 738 Comm: aplay Not tainted 3.15.0+ #161
+[   31.910508] [<c001513c>] (unwind_backtrace) from [<c0011d08>] (show_stack+0x18/0x1c)
+[   31.910528] [<c0011d08>] (show_stack) from [<c0566934>] (dump_stack+0x78/0x94)
+[   31.910549] [<c0566934>] (dump_stack) from [<c00237c4>] (warn_slowpath_common+0x6c/0x90)
+[   31.910567] [<c00237c4>] (warn_slowpath_common) from [<c0023890>] (warn_slowpath_null+0x20/0x28)
+[   31.910585] [<c0023890>] (warn_slowpath_null) from [<c03f7e64>] (pcm_sanity_check+0x70/0x98)
+[   31.910602] [<c03f7e64>] (pcm_sanity_check) from [<c03faa08>] (snd_pcm_lib_write+0x1c/0x74)
+[   31.910619] [<c03faa08>] (snd_pcm_lib_write) from [<c03f6400>] (snd_pcm_playback_ioctl1+0x3c8/0x4a8)
+[   31.910637] [<c03f6400>] (snd_pcm_playback_ioctl1) from [<c013762c>] (do_vfs_ioctl+0x4d4/0x594)
+[   31.910653] [<c013762c>] (do_vfs_ioctl) from [<c0137740>] (SyS_ioctl+0x54/0x7c)
+[   31.910668] [<c0137740>] (SyS_ioctl) from [<c000e420>] (ret_fast_syscall+0x0/0x30)
+[   31.910677] ---[ end trace 86fcd83010b5b5b5 ]---
+
+
+
+---
+
+
