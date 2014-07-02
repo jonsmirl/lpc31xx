@@ -1,0 +1,364 @@
+Bottom: 99fad5003a0b4a0b86d8a49261e78e73711468dc
+Top:    364d484754ac349fbf9955073d698e0426359bdb
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-02 13:07:30 -0400
+
+Refresh of initial-sound-driver-port
+
+---
+
+diff --git a/drivers/dma/of-dma.c b/drivers/dma/of-dma.c
+index 4fb133c..e8fe9dc 100644
+--- a/drivers/dma/of-dma.c
++++ b/drivers/dma/of-dma.c
+@@ -159,7 +159,6 @@ struct dma_chan *of_dma_request_slave_channel(struct device_node *np,
+ 		return ERR_PTR(-ENODEV);
+ 	}
+ 
+-	printk("JDS = of_dma_request_slave_channel %s %s\n", name, np->full_name);
+ 	count = of_property_count_strings(np, "dma-names");
+ 	if (count < 0) {
+ 		pr_err("%s: dma-names property of node '%s' missing or empty\n",
+diff --git a/sound/core/pcm_dmaengine.c b/sound/core/pcm_dmaengine.c
+index 7878410..76cbb9e 100644
+--- a/sound/core/pcm_dmaengine.c
++++ b/sound/core/pcm_dmaengine.c
+@@ -148,12 +148,10 @@ static int dmaengine_pcm_prepare_and_submit(struct snd_pcm_substream *substream)
+ 	enum dma_transfer_direction direction;
+ 	unsigned long flags = DMA_CTRL_ACK;
+ 
+-	printk("JDS - dmaengine_pcm_prepare_and_submit\n");
+ 	direction = snd_pcm_substream_to_dma_direction(substream);
+ 
+ 	if (!substream->runtime->no_period_wakeup)
+ 		flags |= DMA_PREP_INTERRUPT;
+-	printk("JDS - dmaengine_pcm_prepare_and_submit a\n");
+ 
+ 	prtd->pos = 0;
+ 	desc = dmaengine_prep_dma_cyclic(chan,
+@@ -161,16 +159,13 @@ static int dmaengine_pcm_prepare_and_submit(struct snd_pcm_substream *substream)
+ 		snd_pcm_lib_buffer_bytes(substream),
+ 		snd_pcm_lib_period_bytes(substream), direction, flags);
+ 
+-	printk("JDS - dmaengine_pcm_prepare_and_submit b\n");
+ 	if (!desc)
+ 		return -ENOMEM;
+ 
+-	printk("JDS - dmaengine_pcm_prepare_and_submit c\n");
+ 	desc->callback = dmaengine_pcm_dma_complete;
+ 	desc->callback_param = substream;
+ 	prtd->cookie = dmaengine_submit(desc);
+ 
+-	printk("JDS - dmaengine_pcm_prepare_and_submit d\n");
+ 	return 0;
+ }
+ 
+@@ -190,17 +185,12 @@ int snd_dmaengine_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+ 	struct snd_pcm_runtime *runtime = substream->runtime;
+ 	int ret;
+ 
+-	printk("JDS = snd_dmaengine_pcm_trigger cmd %d prtd %p runtime %p\n", cmd, prtd, runtime);
+ 	switch (cmd) {
+ 	case SNDRV_PCM_TRIGGER_START:
+-	printk("JDS = snd_dmaengine_pcm_trigger a\n");
+ 		ret = dmaengine_pcm_prepare_and_submit(substream);
+-	printk("JDS = snd_dmaengine_pcm_trigger b\n");
+ 		if (ret)
+ 			return ret;
+-	printk("JDS = snd_dmaengine_pcm_trigger c\n");
+ 		dma_async_issue_pending(prtd->dma_chan);
+-	printk("JDS = snd_dmaengine_pcm_trigger d\n");
+ 		break;
+ 	case SNDRV_PCM_TRIGGER_RESUME:
+ 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+@@ -222,7 +212,6 @@ int snd_dmaengine_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+ 		return -EINVAL;
+ 	}
+ 
+-	printk("JDS = snd_dmaengine_pcm_trigger f\n");
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_trigger);
+@@ -306,7 +295,6 @@ int snd_dmaengine_pcm_open(struct snd_pcm_substream *substream,
+ 	struct dmaengine_pcm_runtime_data *prtd;
+ 	int ret;
+ 
+-	printk("JDS - snd_dmaengine_pcm_open\n");
+ 	if (!chan)
+ 		return -ENXIO;
+ 
+@@ -323,7 +311,6 @@ int snd_dmaengine_pcm_open(struct snd_pcm_substream *substream,
+ 
+ 	substream->runtime->private_data = prtd;
+ 
+-	printk("JDS - snd_dmaengine_pcm_open ret\n");
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_open);
+diff --git a/sound/core/pcm_lib.c b/sound/core/pcm_lib.c
+index f6edad4..ce83def 100644
+--- a/sound/core/pcm_lib.c
++++ b/sound/core/pcm_lib.c
+@@ -2086,7 +2086,6 @@ static int pcm_sanity_check(struct snd_pcm_substream *substream)
+ 	if (PCM_RUNTIME_CHECK(substream))
+ 		return -ENXIO;
+ 	runtime = substream->runtime;
+-	printk("pcm_sanity_check %p %p\n", substream->ops->copy, runtime->dma_area);
+ 	if (snd_BUG_ON(!substream->ops->copy && !runtime->dma_area))
+ 		return -EINVAL;
+ 	if (runtime->status->state == SNDRV_PCM_STATE_OPEN)
+diff --git a/sound/core/pcm_memory.c b/sound/core/pcm_memory.c
+index 66186c5..54debc0 100644
+--- a/sound/core/pcm_memory.c
++++ b/sound/core/pcm_memory.c
+@@ -409,7 +409,6 @@ int _snd_pcm_lib_alloc_vmalloc_buffer(struct snd_pcm_substream *substream,
+ 	if (PCM_RUNTIME_CHECK(substream))
+ 		return -EINVAL;
+ 	runtime = substream->runtime;
+-	printk("CLK - _snd_pcm_lib_alloc_vmalloc_buffer substream %p runtime %p dma_area %p\n", substream, runtime, runtime->dma_area);
+ 	if (runtime->dma_area) {
+ 		if (runtime->dma_bytes >= size)
+ 			return 0; /* already large enough */
+@@ -419,7 +418,6 @@ int _snd_pcm_lib_alloc_vmalloc_buffer(struct snd_pcm_substream *substream,
+ 	if (!runtime->dma_area)
+ 		return -ENOMEM;
+ 	runtime->dma_bytes = size;
+-	printk("CLK - _snd_pcm_lib_alloc_vmalloc_buffer substream %p runtime %p dma_area %p\n", substream, runtime, runtime->dma_area);
+ 	return 1;
+ }
+ EXPORT_SYMBOL(_snd_pcm_lib_alloc_vmalloc_buffer);
+diff --git a/sound/soc/soc-core.c b/sound/soc/soc-core.c
+index dc3b7c1..051c006 100644
+--- a/sound/soc/soc-core.c
++++ b/sound/soc/soc-core.c
+@@ -21,7 +21,7 @@
+  *   o Add more codecs and platforms to ensure good API coverage.
+  *   o Support TDM on PCM and I2S
+  */
+-#define DEBUG
++
+ #include <linux/module.h>
+ #include <linux/moduleparam.h>
+ #include <linux/init.h>
+@@ -4667,7 +4667,6 @@ int snd_soc_of_get_dai_name(struct device_node *of_node,
+ 	struct of_phandle_args args;
+ 	int ret;
+ 
+-printk("JDS = snd_soc_of_get_dai_name\n");
+ 	ret = of_parse_phandle_with_args(of_node, "sound-dai",
+ 					 "#sound-dai-cells", 0, &args);
+ 	if (ret)
+@@ -4675,13 +4674,11 @@ printk("JDS = snd_soc_of_get_dai_name\n");
+ 
+ 	ret = -EPROBE_DEFER;
+ 
+-printk("JDS = snd_soc_of_get_dai_name a\n");
+ 	mutex_lock(&client_mutex);
+ 	list_for_each_entry(pos, &component_list, list) {
+ 		if (pos->dev->of_node != args.np)
+ 			continue;
+ 
+-printk("JDS = snd_soc_of_get_dai_name b\n");
+ 		if (pos->driver->of_xlate_dai_name) {
+ 			ret = pos->driver->of_xlate_dai_name(pos, &args, dai_name);
+ 		} else {
+@@ -4706,12 +4703,9 @@ printk("JDS = snd_soc_of_get_dai_name b\n");
+ 
+ 			ret = 0;
+ 
+-printk("JDS = snd_soc_of_get_dai_name c\n");
+ 			*dai_name = pos->dai_drv[id].name;
+-printk("JDS = snd_soc_of_get_dai_name name %s\n", *dai_name);
+ 			if (!*dai_name)
+ 				*dai_name = pos->name;
+-printk("JDS = snd_soc_of_get_dai_name d *s\n", *dai_name);
+ 		}
+ 
+ 		break;
+@@ -4719,7 +4713,6 @@ printk("JDS = snd_soc_of_get_dai_name d *s\n", *dai_name);
+ 	mutex_unlock(&client_mutex);
+ 
+ 	of_node_put(args.np);
+-printk("JDS = snd_soc_of_get_dai_name e\n");
+ 
+ 	return ret;
+ }
+diff --git a/sound/soc/soc-generic-dmaengine-pcm.c b/sound/soc/soc-generic-dmaengine-pcm.c
+index 4ba2a2bc..5bace12 100644
+--- a/sound/soc/soc-generic-dmaengine-pcm.c
++++ b/sound/soc/soc-generic-dmaengine-pcm.c
+@@ -65,19 +65,15 @@ int snd_dmaengine_pcm_prepare_slave_config(struct snd_pcm_substream *substream,
+ 	struct snd_dmaengine_dai_dma_data *dma_data;
+ 	int ret;
+ 
+-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config\n");
+ 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+ 
+-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config 1\n");
+ 	ret = snd_hwparams_to_dma_slave_config(substream, params, slave_config);
+ 	if (ret)
+ 		return ret;
+ 
+-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config 2\n");
+ 	snd_dmaengine_pcm_set_config_from_dai_data(substream, dma_data,
+ 		slave_config);
+ 
+-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config 3\n");
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_prepare_slave_config);
+@@ -94,7 +90,6 @@ static int dmaengine_pcm_hw_params(struct snd_pcm_substream *substream,
+ 	struct dma_slave_config slave_config;
+ 	int ret;
+ 
+-	printk("JDS - dmaengine_pcm_hw_params pcm %p\n", pcm);
+ 	memset(&slave_config, 0, sizeof(slave_config));
+ 
+ 	if (!pcm->config)
+@@ -112,7 +107,6 @@ static int dmaengine_pcm_hw_params(struct snd_pcm_substream *substream,
+ 			return ret;
+ 	}
+ 
+-	printk("JDS - dmaengine_pcm_hw_params ret\n");
+ 	return snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(params));
+ }
+ 
+@@ -127,14 +121,12 @@ static int dmaengine_pcm_set_runtime_hwparams(struct snd_pcm_substream *substrea
+ 	struct snd_pcm_hardware hw;
+ 	int ret;
+ 
+-	printk("JDS - dmaengine_pcm_set_runtime_hwparams pcm %p\n", pcm);
+ 	if (pcm->config && pcm->config->pcm_hardware)
+ 		return snd_soc_set_runtime_hwparams(substream,
+ 				pcm->config->pcm_hardware);
+ 
+ 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+ 
+-	printk("JDS - dmaengine_pcm_set_runtime_hwparams dma_data %p\n", dma_data);
+ 	memset(&hw, 0, sizeof(hw));
+ 	hw.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
+ 			SNDRV_PCM_INFO_INTERLEAVED;
+@@ -145,7 +137,6 @@ static int dmaengine_pcm_set_runtime_hwparams(struct snd_pcm_substream *substrea
+ 	hw.buffer_bytes_max = SIZE_MAX;
+ 	hw.fifo_size = dma_data->fifo_size;
+ 
+-	printk("JDS - dmaengine_pcm_set_runtime_hwparams dma_data 2  %p\n", dma_data);
+ 	if (pcm->flags & SND_DMAENGINE_PCM_FLAG_NO_RESIDUE)
+ 		hw.info |= SNDRV_PCM_INFO_BATCH;
+ 
+@@ -157,7 +148,6 @@ static int dmaengine_pcm_set_runtime_hwparams(struct snd_pcm_substream *substrea
+ 			hw.info |= SNDRV_PCM_INFO_BATCH;
+ 	}
+ 
+-	printk("JDS - dmaengine_pcm_set_runtime_hwparams dma_data 3 %p\n", dma_data);
+ 	return snd_soc_set_runtime_hwparams(substream, &hw);
+ }
+ 
+@@ -168,7 +158,6 @@ static int dmaengine_pcm_open(struct snd_pcm_substream *substream)
+ 	struct dma_chan *chan = pcm->chan[substream->stream];
+ 	int ret;
+ 
+-	printk("JDS - dmaengine_pcm_open\n");
+ 	ret = dmaengine_pcm_set_runtime_hwparams(substream);
+ 	if (ret)
+ 		return ret;
+@@ -189,7 +178,6 @@ static struct dma_chan *dmaengine_pcm_compat_request_channel(
+ 	struct snd_dmaengine_dai_dma_data *dma_data;
+ 	dma_filter_fn fn = NULL;
+ 
+-	printk("JDS - dmaengine_pcm_compat_request_channel\n");
+ 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+ 
+ 	if ((pcm->flags & SND_DMAENGINE_PCM_FLAG_HALF_DUPLEX) && pcm->chan[0])
+@@ -231,7 +219,6 @@ static int dmaengine_pcm_new(struct snd_soc_pcm_runtime *rtd)
+ 	unsigned int i;
+ 	int ret;
+ 
+-	printk("JDS - dmaengine_pcm_new\n");
+ 	if (config && config->prealloc_buffer_size) {
+ 		prealloc_buffer_size = config->prealloc_buffer_size;
+ 		max_buffer_size = config->pcm_hardware->buffer_bytes_max;
+@@ -296,14 +283,11 @@ static snd_pcm_uframes_t dmaengine_pcm_pointer(
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+ 	struct dmaengine_pcm *pcm = soc_platform_to_pcm(rtd->platform);
+-	snd_pcm_uframes_t ret;
+ 
+ 	if (pcm->flags & SND_DMAENGINE_PCM_FLAG_NO_RESIDUE)
+-		ret = snd_dmaengine_pcm_pointer_no_residue(substream);
++		return snd_dmaengine_pcm_pointer_no_residue(substream);
+ 	else
+-		ret = snd_dmaengine_pcm_pointer(substream);
+-	printk("dmaengine_pcm_pointer %x\n", ret);
+-	return ret;
++		return snd_dmaengine_pcm_pointer(substream);
+ }
+ 
+ static const struct snd_pcm_ops dmaengine_pcm_ops = {
+@@ -335,7 +319,6 @@ static int dmaengine_pcm_request_chan_of(struct dmaengine_pcm *pcm,
+ 	const char *name;
+ 	struct dma_chan *chan;
+ 
+-	printk("JDS - dmaengine_pcm_request_chan_of\n");
+ 	if ((pcm->flags & (SND_DMAENGINE_PCM_FLAG_NO_DT |
+ 			   SND_DMAENGINE_PCM_FLAG_CUSTOM_CHANNEL_NAME)) ||
+ 	    !dev->of_node)
+@@ -405,7 +388,6 @@ int snd_dmaengine_pcm_register(struct device *dev,
+ 	struct dmaengine_pcm *pcm;
+ 	int ret;
+ 
+-	printk("JDS - snd_dmaengine_pcm_register\n");
+ 	pcm = kzalloc(sizeof(*pcm), GFP_KERNEL);
+ 	if (!pcm)
+ 		return -ENOMEM;
+diff --git a/sound/soc/soc-pcm.c b/sound/soc/soc-pcm.c
+index 59a03a0..a391de0 100644
+--- a/sound/soc/soc-pcm.c
++++ b/sound/soc/soc-pcm.c
+@@ -671,14 +671,12 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
+ 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+ 	int ret = 0;
+ 
+-	printk("JDS - soc_pcm_hw_params\n");
+ 	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
+ 
+ 	ret = soc_pcm_params_symmetry(substream, params);
+ 	if (ret)
+ 		goto out;
+ 
+-	printk("JDS - soc_pcm_hw_params a\n");
+ 	if (rtd->dai_link->ops && rtd->dai_link->ops->hw_params) {
+ 		ret = rtd->dai_link->ops->hw_params(substream, params);
+ 		if (ret < 0) {
+@@ -688,7 +686,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
+ 		}
+ 	}
+ 
+-	printk("JDS - soc_pcm_hw_params b\n");
+ 	if (codec_dai->driver->ops && codec_dai->driver->ops->hw_params) {
+ 		ret = codec_dai->driver->ops->hw_params(substream, params, codec_dai);
+ 		if (ret < 0) {
+@@ -698,7 +695,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
+ 		}
+ 	}
+ 
+-	printk("JDS - soc_pcm_hw_params c\n");
+ 	if (cpu_dai->driver->ops && cpu_dai->driver->ops->hw_params) {
+ 		ret = cpu_dai->driver->ops->hw_params(substream, params, cpu_dai);
+ 		if (ret < 0) {
+@@ -708,7 +704,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
+ 		}
+ 	}
+ 
+-	printk("JDS - soc_pcm_hw_params d\n");
+ 	if (platform->driver->ops && platform->driver->ops->hw_params) {
+ 		ret = platform->driver->ops->hw_params(substream, params);
+ 		if (ret < 0) {
+@@ -731,7 +726,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
+ 
+ out:
+ 	mutex_unlock(&rtd->pcm_mutex);
+-	printk("JDS - soc_pcm_hw_params e\n");
+ 	return ret;
+ 
+ platform_err:
