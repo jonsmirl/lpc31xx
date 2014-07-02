@@ -1,10 +1,9 @@
 Version: 1
-Previous: b37f83de461b35a799d70f7f7a1796226aeeaaca
-Head: 519b0a1bf1a8ddc876d35bc6aebeaca8516285b5
+Previous: 195fbdcef6104466f0b6e32ca9a62dcdd8908fe0
+Head: 73f55fab7c1ead50e9dcd4384eee5d30ec13bb26
 Applied:
   emilio: d7486c0a66996d66e35d792d4ec93ea70ff1d0d1
-  initial-sound-driver-port: 30f7ba92b68f29baf6dda58ea2e4ccac238e381d
-  refresh-temp: 519b0a1bf1a8ddc876d35bc6aebeaca8516285b5
+  initial-sound-driver-port: 73f55fab7c1ead50e9dcd4384eee5d30ec13bb26
 Unapplied:
   sunxi-alsa: 760dbdfdfafad2c9cdd8502c4fa6f4d950a7c6ee
 Hidden:
