@@ -178,7 +178,6 @@ static int sunxi_codec_trigger(struct snd_pcm_substream *substream, int cmd,
 	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
-	printk("JDS - sunxi_codec_trigger cmd %d\n", cmd);
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
@@ -210,7 +209,6 @@ static int sunxi_codec_prepare(struct snd_pcm_substream *substream, struct snd_s
 	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
-	printk("JDS - sunxi_codec_prepare\n");
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
 		regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 0x1 << DAC_EN, 0x1 << DAC_EN);
 		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_FIFO_FLUSH, 0x1 << DAC_FIFO_FLUSH);
@@ -267,7 +265,6 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 	unsigned int rate = params_rate(params);
 
-	printk("CLK - sunxi_codec_hw_params substream %p runtime %p\n", substream, rtd);
 	switch (params_rate(params)) {
 	case 44100:
 	case 22050:
@@ -398,7 +395,6 @@ static int sunxi_codec_dai_probe(struct snd_soc_dai *dai)
 	struct snd_soc_card *card = snd_soc_dai_get_drvdata(dai);
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
-	printk("CLK - sunxi_codec_dai_probe %p\n", priv);
 	snd_soc_dai_init_dma_data(dai, &priv->playback_dma_data, &priv->capture_dma_data);
 
 	return 0;
@@ -412,14 +408,12 @@ static int sunxi_codec_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
-
 	int ret;
-	printk("JDS - CLK sunxi_codec_startup %p %p\n", codec, priv->clk_module);
+
 	ret = clk_prepare_enable(priv->clk_module);
 	if (ret)
 		return ret;
 
-	printk("JDS - sunxi_codec_startup - ok\n");
 	return 0;
 }
 
@@ -432,7 +426,6 @@ static void sunxi_codec_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
-	printk("JDS - sunxi_codec_shutdown\n");
 	clk_disable_unprepare(priv->clk_module);
 }
 
@@ -602,7 +595,6 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to get codec clock.\n");
 		return PTR_ERR(priv->clk_module);
 	}
-	printk("CLK = card %p priv %p priv->clk_module %p\n", card, priv, priv->clk_module);
 
 	ret = clk_set_rate(priv->clk_pll2, 24576000);
 	if (ret) {
