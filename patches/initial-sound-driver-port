@@ -1,5 +1,5 @@
 Bottom: bae139086b9de274400f2e5c29352b82708f7fd4
-Top:    364d484754ac349fbf9955073d698e0426359bdb
+Top:    94084abcdd5c58996302208d4a8baa289d099635
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
@@ -193,7 +193,7 @@ index 263eb79..833ef7e 100644
  		};
  
 diff --git a/drivers/clk/sunxi/clk-factors.c b/drivers/clk/sunxi/clk-factors.c
-index 399cf4d..9e67ac5 100644
+index 399cf4d..a6264a7 100644
 --- a/drivers/clk/sunxi/clk-factors.c
 +++ b/drivers/clk/sunxi/clk-factors.c
 @@ -62,11 +62,17 @@ static unsigned long clk_factors_recalc_rate(struct clk_hw *hw,
@@ -217,14 +217,6 @@ index 399cf4d..9e67ac5 100644
  	return rate;
  }
  
-@@ -139,6 +145,7 @@ static int clk_factors_set_rate(struct clk_hw *hw, unsigned long rate,
- 	reg = FACTOR_SET(config->pshift, config->pwidth, reg, p);
- 
- 	/* Apply them now */
-+	printk("CLK - write reg %p value %x\n", factors->reg, reg);
- 	writel(reg, factors->reg);
- 
- 	/* delay 500us so pll stabilizes */
 diff --git a/drivers/clk/sunxi/clk-factors.h b/drivers/clk/sunxi/clk-factors.h
 index 0484a48..2d63400 100644
 --- a/drivers/clk/sunxi/clk-factors.h
