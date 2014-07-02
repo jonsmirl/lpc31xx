@@ -145,7 +145,6 @@ static int clk_factors_set_rate(struct clk_hw *hw, unsigned long rate,
 	reg = FACTOR_SET(config->pshift, config->pwidth, reg, p);
 
 	/* Apply them now */
-	printk("CLK - write reg %p value %x\n", factors->reg, reg);
 	writel(reg, factors->reg);
 
 	/* delay 500us so pll stabilizes */
