@@ -933,6 +933,7 @@
 				"Microphone Jack", "Mic Bias",
 				"LINE_IN", "Line In Jack",
 				"Headphone Jack", "HP_OUT";
+			status = "disabled";
 		};
 
 		ir0: ir@01c21800 {
