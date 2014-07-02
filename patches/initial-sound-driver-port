@@ -1,5 +1,5 @@
 Bottom: bae139086b9de274400f2e5c29352b82708f7fd4
-Top:    94084abcdd5c58996302208d4a8baa289d099635
+Top:    2e848616f7562d3eb1dca6a8cc51e6875cb66b3e
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
@@ -240,10 +240,10 @@ index 0484a48..2d63400 100644
  
  struct clk_factors {
 diff --git a/drivers/clk/sunxi/clk-sunxi.c b/drivers/clk/sunxi/clk-sunxi.c
-index 1d16c0c..1e4c98d 100644
+index 1d16c0c..0f0de4d 100644
 --- a/drivers/clk/sunxi/clk-sunxi.c
 +++ b/drivers/clk/sunxi/clk-sunxi.c
-@@ -212,6 +212,30 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
+@@ -212,6 +212,29 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
  }
  
  /**
@@ -254,7 +254,6 @@ index 1d16c0c..1e4c98d 100644
 +static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
 +				   u8 *n, u8 *k, u8 *m, u8 *p)
 +{
-+	printk("JDS - sun7i_get_pll2_factors %d\n", *freq);
 +	/* we were called to round the frequency, we can now return */
 +	if (n == NULL)
 +		return;
@@ -274,7 +273,7 @@ index 1d16c0c..1e4c98d 100644
   * sun4i_get_pll5_factors() - calculates n, k factors for PLL5
   * PLL5 rate is calculated as follows
   * rate = parent_rate * n * (k + 1)
-@@ -479,7 +503,17 @@ static struct clk_factors_config sun8i_a23_pll1_config = {
+@@ -479,7 +502,17 @@ static struct clk_factors_config sun8i_a23_pll1_config = {
  	.mwidth = 2,
  	.pshift = 16,
  	.pwidth = 2,
@@ -293,7 +292,7 @@ index 1d16c0c..1e4c98d 100644
  };
  
  static struct clk_factors_config sun4i_pll5_config = {
-@@ -494,7 +528,7 @@ static struct clk_factors_config sun6i_a31_pll6_config = {
+@@ -494,7 +527,7 @@ static struct clk_factors_config sun6i_a31_pll6_config = {
  	.nwidth = 5,
  	.kshift = 4,
  	.kwidth = 2,
@@ -302,7 +301,7 @@ index 1d16c0c..1e4c98d 100644
  };
  
  static struct clk_factors_config sun4i_apb1_config = {
-@@ -538,6 +572,12 @@ static const struct factors_data sun8i_a23_pll1_data __initconst = {
+@@ -538,6 +571,12 @@ static const struct factors_data sun8i_a23_pll1_data __initconst = {
  	.getter = sun8i_a23_get_pll1_factors,
  };
  
@@ -315,7 +314,7 @@ index 1d16c0c..1e4c98d 100644
  static const struct factors_data sun7i_a20_pll4_data __initconst = {
  	.enable = 31,
  	.table = &sun4i_pll5_config,
-@@ -945,6 +985,10 @@ static const struct gates_data sun6i_a31_usb_gates_data __initconst = {
+@@ -945,6 +984,10 @@ static const struct gates_data sun6i_a31_usb_gates_data __initconst = {
  	.reset_mask = BIT(2) | BIT(1) | BIT(0),
  };
  
@@ -326,7 +325,7 @@ index 1d16c0c..1e4c98d 100644
  static void __init sunxi_gates_clk_setup(struct device_node *node,
  					 struct gates_data *data)
  {
-@@ -975,17 +1019,19 @@ static void __init sunxi_gates_clk_setup(struct device_node *node,
+@@ -975,17 +1018,19 @@ static void __init sunxi_gates_clk_setup(struct device_node *node,
  	for_each_set_bit(i, data->mask, SUNXI_GATES_MAX_SIZE) {
  		of_property_read_string_index(node, "clock-output-names",
  					      j, &clk_name);
@@ -348,7 +347,7 @@ index 1d16c0c..1e4c98d 100644
  	/* Adjust to the real max */
  	clk_data->clk_num = i;
  
-@@ -1195,12 +1241,12 @@ free_clkdata:
+@@ -1195,12 +1240,12 @@ free_clkdata:
  }
  
  
@@ -362,7 +361,7 @@ index 1d16c0c..1e4c98d 100644
  	{.compatible = "allwinner,sun7i-a20-pll4-clk", .data = &sun7i_a20_pll4_data,},
  	{.compatible = "allwinner,sun4i-a10-apb1-clk", .data = &sun4i_apb1_data,},
  	{.compatible = "allwinner,sun4i-a10-mod0-clk", .data = &sun4i_mod0_data,},
-@@ -1258,6 +1304,7 @@ static const struct of_device_id clk_gates_match[] __initconst = {
+@@ -1258,6 +1303,7 @@ static const struct of_device_id clk_gates_match[] __initconst = {
  	{.compatible = "allwinner,sun4i-a10-usb-clk", .data = &sun4i_a10_usb_gates_data,},
  	{.compatible = "allwinner,sun5i-a13-usb-clk", .data = &sun5i_a13_usb_gates_data,},
  	{.compatible = "allwinner,sun6i-a31-usb-clk", .data = &sun6i_a31_usb_gates_data,},
