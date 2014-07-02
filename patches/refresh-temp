@@ -1,0 +1,21 @@
+Bottom: 1a5563289485fa0a73f6bf873275d5a6bbdaeb78
+Top:    12777dfddf9d17f32a74e6133d2451c7a5543b9c
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-02 13:17:36 -0400
+
+Refresh of initial-sound-driver-port
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index 833ef7e..222648f 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -933,6 +933,7 @@
+ 				"Microphone Jack", "Mic Bias",
+ 				"LINE_IN", "Line In Jack",
+ 				"Headphone Jack", "HP_OUT";
++			status = "disabled";
+ 		};
+ 
+ 		ir0: ir@01c21800 {
