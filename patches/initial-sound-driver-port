@@ -1,5 +1,5 @@
 Bottom: bae139086b9de274400f2e5c29352b82708f7fd4
-Top:    c0c45a14e3c8f416efbf07e3f1aad2da66431da7
+Top:    1a5563289485fa0a73f6bf873275d5a6bbdaeb78
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
@@ -521,10 +521,10 @@ index 0000000..b8950d3
 +
 diff --git a/sound/soc/sunxi/sunxi-codec.c b/sound/soc/sunxi/sunxi-codec.c
 new file mode 100644
-index 0000000..9f13308
+index 0000000..98601d4
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-codec.c
-@@ -0,0 +1,686 @@
+@@ -0,0 +1,678 @@
 +/*
 + *
 + * Licensed under the GPL-2.
@@ -705,7 +705,6 @@ index 0000000..9f13308
 +	struct snd_soc_card *card = codec->card;
 +	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 +
-+	printk("JDS - sunxi_codec_trigger cmd %d\n", cmd);
 +	switch (cmd) {
 +	case SNDRV_PCM_TRIGGER_START:
 +	case SNDRV_PCM_TRIGGER_RESUME:
@@ -737,7 +736,6 @@ index 0000000..9f13308
 +	struct snd_soc_card *card = codec->card;
 +	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 +
-+	printk("JDS - sunxi_codec_prepare\n");
 +	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
 +		regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 0x1 << DAC_EN, 0x1 << DAC_EN);
 +		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_FIFO_FLUSH, 0x1 << DAC_FIFO_FLUSH);
@@ -794,7 +792,6 @@ index 0000000..9f13308
 +	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 +	unsigned int rate = params_rate(params);
 +
-+	printk("CLK - sunxi_codec_hw_params substream %p runtime %p\n", substream, rtd);
 +	switch (params_rate(params)) {
 +	case 44100:
 +	case 22050:
@@ -925,7 +922,6 @@ index 0000000..9f13308
 +	struct snd_soc_card *card = snd_soc_dai_get_drvdata(dai);
 +	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 +
-+	printk("CLK - sunxi_codec_dai_probe %p\n", priv);
 +	snd_soc_dai_init_dma_data(dai, &priv->playback_dma_data, &priv->capture_dma_data);
 +
 +	return 0;
@@ -939,14 +935,12 @@ index 0000000..9f13308
 +	struct snd_soc_codec *codec = codec_dai->codec;
 +	struct snd_soc_card *card = codec->card;
 +	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
-+
 +	int ret;
-+	printk("JDS - CLK sunxi_codec_startup %p %p\n", codec, priv->clk_module);
++
 +	ret = clk_prepare_enable(priv->clk_module);
 +	if (ret)
 +		return ret;
 +
-+	printk("JDS - sunxi_codec_startup - ok\n");
 +	return 0;
 +}
 +
@@ -959,7 +953,6 @@ index 0000000..9f13308
 +	struct snd_soc_card *card = codec->card;
 +	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 +
-+	printk("JDS - sunxi_codec_shutdown\n");
 +	clk_disable_unprepare(priv->clk_module);
 +}
 +
@@ -1129,7 +1122,6 @@ index 0000000..9f13308
 +		dev_err(dev, "failed to get codec clock.\n");
 +		return PTR_ERR(priv->clk_module);
 +	}
-+	printk("CLK = card %p priv %p priv->clk_module %p\n", card, priv, priv->clk_module);
 +
 +	ret = clk_set_rate(priv->clk_pll2, 24576000);
 +	if (ret) {
