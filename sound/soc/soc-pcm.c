@@ -671,14 +671,12 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	int ret = 0;
 
-	printk("JDS - soc_pcm_hw_params\n");
 	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
 
 	ret = soc_pcm_params_symmetry(substream, params);
 	if (ret)
 		goto out;
 
-	printk("JDS - soc_pcm_hw_params a\n");
 	if (rtd->dai_link->ops && rtd->dai_link->ops->hw_params) {
 		ret = rtd->dai_link->ops->hw_params(substream, params);
 		if (ret < 0) {
@@ -688,7 +686,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	printk("JDS - soc_pcm_hw_params b\n");
 	if (codec_dai->driver->ops && codec_dai->driver->ops->hw_params) {
 		ret = codec_dai->driver->ops->hw_params(substream, params, codec_dai);
 		if (ret < 0) {
@@ -698,7 +695,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	printk("JDS - soc_pcm_hw_params c\n");
 	if (cpu_dai->driver->ops && cpu_dai->driver->ops->hw_params) {
 		ret = cpu_dai->driver->ops->hw_params(substream, params, cpu_dai);
 		if (ret < 0) {
@@ -708,7 +704,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	printk("JDS - soc_pcm_hw_params d\n");
 	if (platform->driver->ops && platform->driver->ops->hw_params) {
 		ret = platform->driver->ops->hw_params(substream, params);
 		if (ret < 0) {
@@ -731,7 +726,6 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 
 out:
 	mutex_unlock(&rtd->pcm_mutex);
-	printk("JDS - soc_pcm_hw_params e\n");
 	return ret;
 
 platform_err:

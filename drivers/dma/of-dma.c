@@ -159,7 +159,6 @@ struct dma_chan *of_dma_request_slave_channel(struct device_node *np,
 		return ERR_PTR(-ENODEV);
 	}
 
-	printk("JDS = of_dma_request_slave_channel %s %s\n", name, np->full_name);
 	count = of_property_count_strings(np, "dma-names");
 	if (count < 0) {
 		pr_err("%s: dma-names property of node '%s' missing or empty\n",
