@@ -219,7 +219,6 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
 static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
 				   u8 *n, u8 *k, u8 *m, u8 *p)
 {
-	printk("JDS - sun7i_get_pll2_factors %d\n", *freq);
 	/* we were called to round the frequency, we can now return */
 	if (n == NULL)
 		return;
