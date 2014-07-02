@@ -1,5 +1,5 @@
 Bottom: bae139086b9de274400f2e5c29352b82708f7fd4
-Top:    2e848616f7562d3eb1dca6a8cc51e6875cb66b3e
+Top:    c0c45a14e3c8f416efbf07e3f1aad2da66431da7
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
@@ -370,42 +370,10 @@ index 1d16c0c..0f0de4d 100644
  };
  
 diff --git a/drivers/dma/sun4i-dma.c b/drivers/dma/sun4i-dma.c
-index 7b986bd..5c30ecd 100644
+index 7b986bd..a23b176 100644
 --- a/drivers/dma/sun4i-dma.c
 +++ b/drivers/dma/sun4i-dma.c
-@@ -327,6 +327,7 @@ static void release_pchan(struct sun4i_ddma_dev *priv,
- static void configure_pchan(struct sun4i_dma_pchan *pchan,
- 			    struct sun4i_ddma_promise *d)
- {
-+	printk("JDS - configure_pchan\n");
- 	if (pchan->is_dedicated) {
- 		/* Configure addresses and misc parameters */
- 		writel_relaxed(d->src, pchan->base + DDMA_SRC_ADDR_REG);
-@@ -456,6 +457,7 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
- 	struct sun4i_ddma_promise *promise;
- 	int ret;
- 
-+	printk("JDS - generate_ndma_promise\n");
- 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
- 	if (!promise)
- 		return NULL;
-@@ -512,6 +514,7 @@ generate_ddma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
- 	struct sun4i_ddma_promise *promise;
- 	int ret;
- 
-+	printk("JDS - generate_ddma_promise\n");
- 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
- 	if (!promise)
- 		return NULL;
-@@ -603,6 +606,7 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
- 	struct sun4i_ddma_promise *promise;
- 	struct sun4i_ddma_contract *contract;
- 
-+	printk("JDS - sun4i_dma_prep_dma_memcpy\n");
- 	contract = generate_ddma_contract();
- 	if (!contract)
- 		return NULL;
-@@ -637,6 +641,73 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
+@@ -637,6 +637,72 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
  	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
  }
  
@@ -419,7 +387,6 @@ index 7b986bd..5c30ecd 100644
 +	struct sun4i_ddma_contract *contract;
 +	dma_addr_t src, dest;
 +
-+	printk("JDS - sun4i_dma_prep_dma_cyclic\n");
 +	if (!is_slave_direction(dir)) {
 +		dev_err(chan2dev(chan), "Invalid DMA direction\n");
 +		return NULL;
@@ -479,40 +446,7 @@ index 7b986bd..5c30ecd 100644
  static struct dma_async_tx_descriptor *
  sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
  			unsigned int sg_len, enum dma_transfer_direction dir,
-@@ -651,6 +722,7 @@ sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
- 	u32 endpoints, para;
- 	int i;
- 
-+	printk("JDS - sun4i_dma_prep_slave_sg\n");
- 	if (!sgl)
- 		return NULL;
- 
-@@ -723,6 +795,7 @@ static void sun4i_ddma_terminate_all(struct sun4i_dma_vchan *vchan)
- 	u32 n_busy = NDMA_CFG_LOADING;
- 
- 
-+	printk("sun4i_ddma_terminate_all\n");
- 	spin_lock_irqsave(&vchan->vc.lock, flags);
- 	vchan_get_all_descriptors(&vchan->vc, &head);
- 	spin_unlock_irqrestore(&vchan->vc.lock, flags);
-@@ -751,6 +824,8 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
- 	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
- 	int ret = 0;
- 
-+	printk("JDS - sun4i_dma_control cmd %d\n", cmd);
-+
- 	switch (cmd) {
- 	case DMA_RESUME:
- 	case DMA_PAUSE:
-@@ -771,6 +846,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
- 		break;
- 	}
- 
-+	printk("JDS - sun4i_dma_control, %d\n", ret);
- 	return ret;
- }
- 
-@@ -919,6 +995,19 @@ static void sun4i_ddma_tasklet(unsigned long data)
+@@ -919,6 +985,19 @@ static void sun4i_ddma_tasklet(unsigned long data)
  		execute_vchan_pending(priv, &priv->vchans[i]);
  }
  
@@ -532,7 +466,7 @@ index 7b986bd..5c30ecd 100644
  static int sun4i_dma_probe(struct platform_device *pdev)
  {
  	struct sun4i_ddma_dev *priv;
-@@ -962,7 +1051,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
+@@ -962,7 +1041,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
  	priv->slave.device_issue_pending	= sun4i_dma_issue_pending;
  	priv->slave.device_prep_slave_sg	= sun4i_dma_prep_slave_sg;
  	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;
