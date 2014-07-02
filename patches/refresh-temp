@@ -1,0 +1,21 @@
+Bottom: 364d484754ac349fbf9955073d698e0426359bdb
+Top:    94084abcdd5c58996302208d4a8baa289d099635
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-02 13:11:39 -0400
+
+Refresh of initial-sound-driver-port
+
+---
+
+diff --git a/drivers/clk/sunxi/clk-factors.c b/drivers/clk/sunxi/clk-factors.c
+index 9e67ac5..a6264a7 100644
+--- a/drivers/clk/sunxi/clk-factors.c
++++ b/drivers/clk/sunxi/clk-factors.c
+@@ -145,7 +145,6 @@ static int clk_factors_set_rate(struct clk_hw *hw, unsigned long rate,
+ 	reg = FACTOR_SET(config->pshift, config->pwidth, reg, p);
+ 
+ 	/* Apply them now */
+-	printk("CLK - write reg %p value %x\n", factors->reg, reg);
+ 	writel(reg, factors->reg);
+ 
+ 	/* delay 500us so pll stabilizes */
