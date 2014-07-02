@@ -1,5 +1,5 @@
 Bottom: bae139086b9de274400f2e5c29352b82708f7fd4
-Top:    1a5563289485fa0a73f6bf873275d5a6bbdaeb78
+Top:    12777dfddf9d17f32a74e6133d2451c7a5543b9c
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
@@ -23,7 +23,7 @@ index bed74a9..a347eff 100644
  			pinctrl-names = "default";
  			pinctrl-0 = <&ir0_pins_a>;
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 263eb79..833ef7e 100644
+index 263eb79..222648f 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -91,6 +91,14 @@
@@ -103,7 +103,7 @@ index 263eb79..833ef7e 100644
  		mbus_clk: clk@01c2015c {
  			#clock-cells = <0>;
  			compatible = "allwinner,sun4i-a10-mod0-clk";
-@@ -807,6 +863,77 @@
+@@ -807,6 +863,78 @@
  			clocks = <&osc24M>;
  			#pwm-cells = <3>;
  		};
@@ -177,11 +177,12 @@ index 263eb79..833ef7e 100644
 +				"Microphone Jack", "Mic Bias",
 +				"LINE_IN", "Line In Jack",
 +				"Headphone Jack", "HP_OUT";
++			status = "disabled";
 +		};
  
  		ir0: ir@01c21800 {
  			compatible = "allwinner,sun7i-a20-ir";
-@@ -851,8 +978,8 @@
+@@ -851,8 +979,8 @@
  			reg-shift = <2>;
  			reg-io-width = <4>;
  			clocks = <&apb1_gates 16>;
