@@ -3,7 +3,3 @@ config SND_SUNXI_SOC_CODEC
 	select SND_SOC_GENERIC_DMAENGINE_PCM
 	default y
 
-config SND_SUNXI_SOC_CODEC_JDS
-	tristate "JDS version - APB On-Chip sun4i and sun5i Codec"
-	select SND_SOC_GENERIC_DMAENGINE_PCM
-	default y
