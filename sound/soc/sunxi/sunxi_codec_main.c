@@ -485,6 +485,7 @@ static struct snd_soc_dai_link cdc_dai = {
 	.codec_dai_name = "sunxi-codec-dai",
 	.cpu_dai_name = "1c22c00.codec",
 	.codec_name = "1c22c00.codec",
+	.platform_name = "1c22c00.codec",
 	//.init = tegra_wm8903_init,
 	//.ops = &tegra_wm8903_ops,
 	.dai_fmt = SND_SOC_DAIFMT_I2S,
@@ -495,8 +496,6 @@ static struct snd_soc_card snd_soc_sunxi_codec = {
 	.owner = THIS_MODULE,
 	.dai_link = &cdc_dai,
 	.num_links = 1,
-
-	.fully_routed = true,
 };
 
 static struct snd_soc_codec_driver dummy_codec = {
@@ -637,15 +636,15 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_clk_disable;
 
-	ret = snd_soc_of_parse_audio_routing(card, "routing");
-	if (ret)
-		goto err;
-
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
 		goto err_fini_utils;
 	}
+
+	ret = snd_soc_of_parse_audio_routing(card, "routing");
+	if (ret)
+		goto err;
 
 	return 0;
 
