@@ -1,5 +1,5 @@
 Bottom: bae139086b9de274400f2e5c29352b82708f7fd4
-Top:    12777dfddf9d17f32a74e6133d2451c7a5543b9c
+Top:    db303d9f333cd93ee88ae7b680e325ddc00531fa
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
@@ -8,14 +8,14 @@ Initial sound driver port
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index bed74a9..a347eff 100644
+index bed74a9..ed40c2e 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -137,6 +137,10 @@
  			status = "okay";
  		};
  
-+		codec@1c22c00 {
++		codec@01c22c00 {
 +			status = "okay";
 +		};
 +
