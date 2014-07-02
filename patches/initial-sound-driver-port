@@ -3,10 +3,11 @@ Top:    db303d9f333cd93ee88ae7b680e325ddc00531fa
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-06-24 08:33:34 -0400
 
-First pass at mainline driver for A20 on-chip codec
+Mainline driver for A20 on-chip codec
 This is first pass at a mainline driver for the A20 on-chip codec. This patch will boot and
  install the ALSA SOC driver. But it won't play any music. Something is wrong in either the
 DMA or clock code. Anyone want to give this a try and see if you can figure out what is wrong?
+The patch sits on top of Emilio's DMA driver for the A20.
 
 
 ---
