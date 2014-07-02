@@ -1,0 +1,85 @@
+Bottom: 2e848616f7562d3eb1dca6a8cc51e6875cb66b3e
+Top:    c0c45a14e3c8f416efbf07e3f1aad2da66431da7
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-02 13:14:14 -0400
+
+Refresh of initial-sound-driver-port
+
+---
+
+diff --git a/drivers/dma/sun4i-dma.c b/drivers/dma/sun4i-dma.c
+index 5c30ecd..a23b176 100644
+--- a/drivers/dma/sun4i-dma.c
++++ b/drivers/dma/sun4i-dma.c
+@@ -327,7 +327,6 @@ static void release_pchan(struct sun4i_ddma_dev *priv,
+ static void configure_pchan(struct sun4i_dma_pchan *pchan,
+ 			    struct sun4i_ddma_promise *d)
+ {
+-	printk("JDS - configure_pchan\n");
+ 	if (pchan->is_dedicated) {
+ 		/* Configure addresses and misc parameters */
+ 		writel_relaxed(d->src, pchan->base + DDMA_SRC_ADDR_REG);
+@@ -457,7 +456,6 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
+ 	struct sun4i_ddma_promise *promise;
+ 	int ret;
+ 
+-	printk("JDS - generate_ndma_promise\n");
+ 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
+ 	if (!promise)
+ 		return NULL;
+@@ -514,7 +512,6 @@ generate_ddma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
+ 	struct sun4i_ddma_promise *promise;
+ 	int ret;
+ 
+-	printk("JDS - generate_ddma_promise\n");
+ 	promise = kzalloc(sizeof(*promise), GFP_NOWAIT);
+ 	if (!promise)
+ 		return NULL;
+@@ -606,7 +603,6 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
+ 	struct sun4i_ddma_promise *promise;
+ 	struct sun4i_ddma_contract *contract;
+ 
+-	printk("JDS - sun4i_dma_prep_dma_memcpy\n");
+ 	contract = generate_ddma_contract();
+ 	if (!contract)
+ 		return NULL;
+@@ -651,7 +647,6 @@ static struct dma_async_tx_descriptor *sun4i_dma_prep_dma_cyclic(
+ 	struct sun4i_ddma_contract *contract;
+ 	dma_addr_t src, dest;
+ 
+-	printk("JDS - sun4i_dma_prep_dma_cyclic\n");
+ 	if (!is_slave_direction(dir)) {
+ 		dev_err(chan2dev(chan), "Invalid DMA direction\n");
+ 		return NULL;
+@@ -722,7 +717,6 @@ sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
+ 	u32 endpoints, para;
+ 	int i;
+ 
+-	printk("JDS - sun4i_dma_prep_slave_sg\n");
+ 	if (!sgl)
+ 		return NULL;
+ 
+@@ -795,7 +789,6 @@ static void sun4i_ddma_terminate_all(struct sun4i_dma_vchan *vchan)
+ 	u32 n_busy = NDMA_CFG_LOADING;
+ 
+ 
+-	printk("sun4i_ddma_terminate_all\n");
+ 	spin_lock_irqsave(&vchan->vc.lock, flags);
+ 	vchan_get_all_descriptors(&vchan->vc, &head);
+ 	spin_unlock_irqrestore(&vchan->vc.lock, flags);
+@@ -824,8 +817,6 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+ 	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
+ 	int ret = 0;
+ 
+-	printk("JDS - sun4i_dma_control cmd %d\n", cmd);
+-
+ 	switch (cmd) {
+ 	case DMA_RESUME:
+ 	case DMA_PAUSE:
+@@ -846,7 +837,6 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+ 		break;
+ 	}
+ 
+-	printk("JDS - sun4i_dma_control, %d\n", ret);
+ 	return ret;
+ }
