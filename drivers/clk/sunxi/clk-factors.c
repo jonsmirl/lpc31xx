@@ -42,7 +42,7 @@
 static unsigned long clk_factors_recalc_rate(struct clk_hw *hw,
 					     unsigned long parent_rate)
 {
-	u8 n = 1, k = 0, p = 0, m = 0;
+	u8 n = 1, k = 0, p = 0, m = 0, q = 0;
 	u32 reg;
 	unsigned long rate;
 	struct clk_factors *factors = to_clk_factors(hw);
@@ -60,9 +60,15 @@ static unsigned long clk_factors_recalc_rate(struct clk_hw *hw,
 		m = FACTOR_GET(config->mshift, config->mwidth, reg);
 	if (config->pwidth != SUNXI_FACTORS_NOT_APPLICABLE)
 		p = FACTOR_GET(config->pshift, config->pwidth, reg);
+	if (config->qwidth != SUNXI_FACTORS_NOT_APPLICABLE)
+		q = FACTOR_GET(config->qshift, config->qwidth, reg);
 
 	/* Calculate the rate */
-	rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
+	if (q == 0) 
+		rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
+	else
+		rate = (parent_rate * n) / m / q;
+	printk("JDS CLK n %d k %d m %d p %d q %d rate %lu\n", n, k, m, p, q, rate);
 
 	return rate;
 }
@@ -72,7 +78,7 @@ static long clk_factors_round_rate(struct clk_hw *hw, unsigned long rate,
 {
 	struct clk_factors *factors = to_clk_factors(hw);
 	factors->get_factors((u32 *)&rate, (u32)*parent_rate,
-			     NULL, NULL, NULL, NULL);
+			     NULL, NULL, NULL, NULL, NULL);
 
 	return rate;
 }
@@ -115,13 +121,13 @@ static long clk_factors_determine_rate(struct clk_hw *hw, unsigned long rate,
 static int clk_factors_set_rate(struct clk_hw *hw, unsigned long rate,
 				unsigned long parent_rate)
 {
-	u8 n = 0, k = 0, m = 0, p = 0;
+	u8 n = 0, k = 0, m = 0, p = 0, q = 0;
 	u32 reg;
 	struct clk_factors *factors = to_clk_factors(hw);
 	struct clk_factors_config *config = factors->config;
 	unsigned long flags = 0;
 
-	factors->get_factors((u32 *)&rate, (u32)parent_rate, &n, &k, &m, &p);
+	factors->get_factors((u32 *)&rate, (u32)parent_rate, &n, &k, &m, &p, &q);
 
 	if (factors->lock)
 		spin_lock_irqsave(factors->lock, flags);
@@ -134,6 +140,7 @@ static int clk_factors_set_rate(struct clk_hw *hw, unsigned long rate,
 	reg = FACTOR_SET(config->kshift, config->kwidth, reg, k);
 	reg = FACTOR_SET(config->mshift, config->mwidth, reg, m);
 	reg = FACTOR_SET(config->pshift, config->pwidth, reg, p);
+	reg = FACTOR_SET(config->qshift, config->qwidth, reg, q);
 
 	/* Apply them now */
 	writel(reg, factors->reg);
