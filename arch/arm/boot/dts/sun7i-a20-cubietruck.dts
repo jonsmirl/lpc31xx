@@ -112,6 +112,10 @@
 			status = "okay";
 		};
 
+		codec@01c22c00 {
+			status = "okay";
+		};
+
 		uart0: serial@01c28000 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins_a>;
