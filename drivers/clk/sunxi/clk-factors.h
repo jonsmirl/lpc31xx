@@ -15,13 +15,15 @@ struct clk_factors_config {
 	u8 mwidth;
 	u8 pshift;
 	u8 pwidth;
+	u8 qshift;
+	u8 qwidth;
 };
 
 struct clk_factors {
 	struct clk_hw hw;
 	void __iomem *reg;
 	struct clk_factors_config *config;
-	void (*get_factors) (u32 *rate, u32 parent, u8 *n, u8 *k, u8 *m, u8 *p);
+	void (*get_factors) (u32 *rate, u32 parent, u8 *n, u8 *k, u8 *m, u8 *p, u8 *q);
 	spinlock_t *lock;
 };
 
