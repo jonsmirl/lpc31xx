@@ -67,7 +67,7 @@ static unsigned long clk_factors_recalc_rate(struct clk_hw *hw,
 	if (q == 0) 
 		rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
 	else
-		rate = (parent_rate * n / m / q;
+		rate = (parent_rate * n) / m / q;
 	printk("JDS CLK n %d k %d m %d p %d q %d rate %lu\n", n, k, m, p, q, rate);
 
 	return rate;
@@ -78,7 +78,7 @@ static long clk_factors_round_rate(struct clk_hw *hw, unsigned long rate,
 {
 	struct clk_factors *factors = to_clk_factors(hw);
 	factors->get_factors((u32 *)&rate, (u32)*parent_rate,
-			     NULL, NULL, NULL, NULL);
+			     NULL, NULL, NULL, NULL, NULL);
 
 	return rate;
 }
