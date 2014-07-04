@@ -1,9 +1,10 @@
 Version: 1
-Previous: fc5939ff425764c01010a10c9a79e69abed3ca66
-Head: b419ca37a6dfb5140c3a32d6c5b3741eb2bbd93f
+Previous: ed95978fe6ba68f58abec8f6e66eec05f4a7c8d4
+Head: 70e3b13f5f4de5047340139f24451a625ad3c845
 Applied:
   copy: 5ee6a53d5c0180f987e223cb4a2faf35c5f06495
   clocks: b419ca37a6dfb5140c3a32d6c5b3741eb2bbd93f
+  refresh-temp: 70e3b13f5f4de5047340139f24451a625ad3c845
 Unapplied:
   initial-sound-driver-port: 06adfdbeb61e9cc6773cd2e3fc4c6f78b8688f80
 Hidden:
