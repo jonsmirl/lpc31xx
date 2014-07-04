@@ -35,7 +35,7 @@ static DEFINE_SPINLOCK(clk_lock);
  */
 
 static void sun4i_get_pll1_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div;
 
@@ -86,7 +86,7 @@ static void sun4i_get_pll1_factors(u32 *freq, u32 parent_rate,
  * parent_rate should always be 24MHz
  */
 static void sun6i_a31_get_pll1_factors(u32 *freq, u32 parent_rate,
-				       u8 *n, u8 *k, u8 *m, u8 *p)
+				       u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	/*
 	 * We can operate only on MHz, this will make our life easier
@@ -164,6 +164,29 @@ static void sun6i_a31_get_pll1_factors(u32 *freq, u32 parent_rate,
 }
 
 /**
+ * sun7i_get_pll2_factors()
+ * parent_rate is always 24Mhz
+ */
+
+static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
+{
+	/* we were called to round the frequency, we can now return */
+	if (n == NULL)
+		return;
+	
+	if (*freq == 22579200) {
+		*n = 79;
+		*m = 21;  /* Pre */
+		*q = 4;   /* Post */
+	} else  {
+		*n = 86;
+		*m = 21;  /* Pre */
+		*q = 4;   /* Post */
+	}
+}
+
+/**
  * sun4i_get_pll5_factors() - calculates n, k factors for PLL5
  * PLL5 rate is calculated as follows
  * rate = parent_rate * n * (k + 1)
@@ -171,7 +194,7 @@ static void sun6i_a31_get_pll1_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun4i_get_pll5_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div;
 
@@ -203,7 +226,7 @@ static void sun4i_get_pll5_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun6i_a31_get_pll6_factors(u32 *freq, u32 parent_rate,
-				       u8 *n, u8 *k, u8 *m, u8 *p)
+				       u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div;
 
@@ -235,7 +258,7 @@ static void sun6i_a31_get_pll6_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun4i_get_apb1_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 calcm, calcp;
 
@@ -278,7 +301,7 @@ static void sun4i_get_apb1_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun4i_get_mod0_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div, calcm, calcp;
 
@@ -319,7 +342,7 @@ static void sun4i_get_mod0_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun7i_a20_get_out_factors(u32 *freq, u32 parent_rate,
-				      u8 *n, u8 *k, u8 *m, u8 *p)
+				      u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div, calcm, calcp;
 
@@ -398,7 +421,7 @@ struct factors_data {
 	int enable;
 	int mux;
 	struct clk_factors_config *table;
-	void (*getter) (u32 *rate, u32 parent_rate, u8 *n, u8 *k, u8 *m, u8 *p);
+	void (*getter) (u32 *rate, u32 parent_rate, u8 *n, u8 *k, u8 *m, u8 *p, u8 *q);
 	const char *name;
 };
 
@@ -422,6 +445,15 @@ static struct clk_factors_config sun6i_a31_pll1_config = {
 	.mwidth = 2,
 };
 
+static struct clk_factors_config sun7i_pll2_config = {
+	.nshift = 8,
+	.nwidth = 7,
+	.mshift = 0,
+	.mwidth = 5,
+	.qshift = 26,
+	.qwidth = 4,
+};
+ 
 static struct clk_factors_config sun4i_pll5_config = {
 	.nshift = 8,
 	.nwidth = 5,
@@ -469,6 +501,12 @@ static const struct factors_data sun6i_a31_pll1_data __initconst = {
 	.enable = 31,
 	.table = &sun6i_a31_pll1_config,
 	.getter = sun6i_a31_get_pll1_factors,
+};
+
+static const struct factors_data sun7i_a20_pll2_data __initconst = {
+	.enable = 31,
+	.table = &sun7i_pll2_config,
+	.getter = sun7i_get_pll2_factors,
 };
 
 static const struct factors_data sun7i_a20_pll4_data __initconst = {
@@ -859,6 +897,10 @@ static const struct gates_data sun6i_a31_usb_gates_data __initconst = {
 	.reset_mask = BIT(2) | BIT(1) | BIT(0),
 };
 
+static const struct gates_data sunxi_codec_data __initconst = {
+	.mask = {BIT(31)},
+};
+
 static void __init sunxi_gates_clk_setup(struct device_node *node,
 					 struct gates_data *data)
 {
@@ -1102,6 +1144,7 @@ free_clkdata:
 static const struct of_device_id clk_factors_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-pll1-clk", .data = &sun4i_pll1_data,},
 	{.compatible = "allwinner,sun6i-a31-pll1-clk", .data = &sun6i_a31_pll1_data,},
+	{.compatible = "allwinner,sun7i-a20-pll2-clk", .data = &sun7i_a20_pll2_data,},
 	{.compatible = "allwinner,sun7i-a20-pll4-clk", .data = &sun7i_a20_pll4_data,},
 	{.compatible = "allwinner,sun6i-a31-pll6-clk", .data = &sun6i_a31_pll6_data,},
 	{.compatible = "allwinner,sun4i-a10-apb1-clk", .data = &sun4i_apb1_data,},
@@ -1155,6 +1198,7 @@ static const struct of_device_id clk_gates_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-usb-clk", .data = &sun4i_a10_usb_gates_data,},
 	{.compatible = "allwinner,sun5i-a13-usb-clk", .data = &sun5i_a13_usb_gates_data,},
 	{.compatible = "allwinner,sun6i-a31-usb-clk", .data = &sun6i_a31_usb_gates_data,},
+	{.compatible = "allwinner,sunxi-codec-clk", .data = &sunxi_codec_data,},
 	{}
 };
 
