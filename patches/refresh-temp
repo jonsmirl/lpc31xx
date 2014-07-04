@@ -1,0 +1,58 @@
+Bottom: b092ec8440f1287f5d3056cfd01cb650f75f6e9d
+Top:    d75eff4e919fbd3753eeadb91dd86d39edef9cc0
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-04 14:33:00 -0400
+
+Refresh of initial-sound-driver-port
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index 1b6ec30..37ebe7c 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -393,7 +393,7 @@
+ 		};
+ 
+ 		codec_clk: clk@01c20140 {
+-			#clock-cells = <0>;
++			#clock-cells = <1>;
+ 			compatible = "allwinner,sunxi-codec-clk";
+ 			reg = <0x01c20140 0x4>;
+ 			clocks = <&pll2>;
+@@ -926,7 +926,7 @@
+ 			compatible = "allwinner,sun7i-a20-codec";
+ 			reg = <0x01C22c00 0x40>;
+ 			interrupts = <0 30 4>;
+-			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk>;
++			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk 31>;
+ 			clock-names = "pll2", "apb", "codec";
+ 			dmas = <&dma 0 19>, <&dma 0 19>;
+ 			dma-names = "rx", "tx";
+diff --git a/drivers/clk/sunxi/clk-factors.h b/drivers/clk/sunxi/clk-factors.h
+index 825c75b..3c1114f 100644
+--- a/drivers/clk/sunxi/clk-factors.h
++++ b/drivers/clk/sunxi/clk-factors.h
+@@ -6,8 +6,6 @@
+ 
+ #define SUNXI_FACTORS_NOT_APPLICABLE	(0)
+ 
+-enum erate_adjust {NO_ADJUST = 0, N_FROM_ONE, PLL2_DIV};
+-
+ struct clk_factors_config {
+ 	u8 nshift;
+ 	u8 nwidth;
+diff --git a/drivers/clk/sunxi/clk-sunxi.c b/drivers/clk/sunxi/clk-sunxi.c
+index 95a0feb..3fab4d8 100644
+--- a/drivers/clk/sunxi/clk-sunxi.c
++++ b/drivers/clk/sunxi/clk-sunxi.c
+@@ -944,9 +944,6 @@ static void __init sunxi_gates_clk_setup(struct device_node *node,
+ 
+ 		j++;
+ 	}
+-	/* if there is a single gate, copy it to entry[0] so there is no requirement for phandle arg */
+-	if (j == 1)
+-		clk_data->clks[0] = clk_data->clks[i];
+ 
+ 	/* Adjust to the real max */
+ 	clk_data->clk_num = i;
