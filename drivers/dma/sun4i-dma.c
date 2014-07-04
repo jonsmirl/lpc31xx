@@ -340,8 +340,8 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
 		/* Figure out which contract we're working with today */
 		vd = vchan_next_desc(&vchan->vc);
 		if (!vd) {
-			dev_dbg(chan2dev(&vchan->vc.chan),
-				"No pending contract found");
+//			dev_dbg(chan2dev(&vchan->vc.chan),
+//				"No pending contract found");
 			ret = 0;
 			goto release_pchan;
 		}
@@ -565,6 +565,79 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
 	list_add_tail(&promise->list, &contract->demands);
 
 	/* And add it to the vchan */
+	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
+}
+
+static struct dma_async_tx_descriptor *sun4i_dma_prep_dma_cyclic(
+		struct dma_chan *chan, dma_addr_t buf, size_t len,
+		size_t period_len, enum dma_transfer_direction dir,
+		unsigned long flags, void *context) {
+	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
+	struct dma_slave_config *sconfig = &vchan->cfg;
+	struct sun4i_dma_promise *promise;
+	struct sun4i_dma_contract *contract;
+	dma_addr_t srcaddr, dstaddr;
+	u32 endpoints;
+
+	if (!is_slave_direction(dir)) {
+		dev_err(chan2dev(chan), "Invalid DMA direction\n");
+		return NULL;
+	}
+
+	contract = generate_dma_contract();
+	if (!contract)
+		return NULL;
+
+	/* Figure out endpoints */
+	if (vchan->is_dedicated && dir == DMA_MEM_TO_DEV) {
+		endpoints = DDMA_CFG_CONT_MODE | DDMA_CFG_SRC_DRQ_TYPE(DDMA_DRQ_TYPE_SDRAM) |
+			    DDMA_CFG_SRC_ADDR_MODE(DDMA_ADDR_MODE_LINEAR) |
+			    DDMA_CFG_DEST_DRQ_TYPE(vchan->endpoint) |
+			    DDMA_CFG_DEST_ADDR_MODE(DDMA_ADDR_MODE_IO);
+	} else if (!vchan->is_dedicated && dir == DMA_MEM_TO_DEV) {
+		endpoints = NDMA_CFG_CONT_MODE | NDMA_CFG_SRC_DRQ_TYPE(NDMA_DRQ_TYPE_SDRAM) |
+			    NDMA_CFG_DEST_DRQ_TYPE(vchan->endpoint) |
+			    NDMA_CFG_DEST_FIXED_ADDR;
+	} else if (vchan->is_dedicated) {
+		endpoints = DDMA_CFG_CONT_MODE | DDMA_CFG_SRC_DRQ_TYPE(vchan->endpoint) |
+			    DDMA_CFG_SRC_ADDR_MODE(DDMA_ADDR_MODE_IO) |
+			    DDMA_CFG_DEST_DRQ_TYPE(DDMA_DRQ_TYPE_SDRAM) |
+			    DDMA_CFG_DEST_ADDR_MODE(DDMA_ADDR_MODE_LINEAR);
+	} else {
+		endpoints = NDMA_CFG_CONT_MODE | NDMA_CFG_SRC_DRQ_TYPE(vchan->endpoint) |
+			    NDMA_CFG_SRC_FIXED_ADDR |
+			    NDMA_CFG_DEST_DRQ_TYPE(NDMA_DRQ_TYPE_SDRAM);
+	}
+
+	/* Figure out addresses */
+	if (dir == DMA_MEM_TO_DEV) {
+		srcaddr = buf;
+		dstaddr = sconfig->dst_addr;
+	} else {
+		srcaddr = sconfig->src_addr;
+		dstaddr = buf;
+	}
+
+	/* And make a suitable promise */
+	if (vchan->is_dedicated)
+		promise = generate_ddma_promise(chan, srcaddr, dstaddr,
+						len, sconfig);
+	else
+		promise = generate_ndma_promise(chan, srcaddr, dstaddr,
+						len, sconfig);
+
+	if (!promise)
+		return NULL; /* TODO */
+
+	promise->cfg |= endpoints;
+
+	/* Then add it to the contract */
+	list_add_tail(&promise->list, &contract->demands);
+
+	/*
+	 * Once we've got all the promise ready, add the contract
+	 * to the pending list on the vchan
+	 */
 	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
 }
 
@@ -876,6 +949,19 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int sun4i_dma_device_slave_caps(struct dma_chan *dchan,
+				      struct dma_slave_caps *caps)
+{
+	caps->src_addr_widths = 32;
+	caps->dstn_addr_widths = 32;
+	caps->directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
+	caps->cmd_pause = true;
+	caps->cmd_terminate = true;
+	caps->residue_granularity = DMA_RESIDUE_GRANULARITY_BURST;
+
+	return 0;
+}
+
 static int sun4i_dma_probe(struct platform_device *pdev)
 {
 	struct sun4i_dma_dev *priv;
@@ -918,7 +1004,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
 	priv->slave.device_issue_pending	= sun4i_dma_issue_pending;
 	priv->slave.device_prep_slave_sg	= sun4i_dma_prep_slave_sg;
 	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;
+	priv->slave.device_prep_dma_cyclic	= sun4i_dma_prep_dma_cyclic;
 	priv->slave.device_control		= sun4i_dma_control;
+	priv->slave.device_slave_caps 		= sun4i_dma_device_slave_caps;
 	priv->slave.chancnt			= DDMA_NR_MAX_VCHANS;
 
 	priv->slave.dev = &pdev->dev;
