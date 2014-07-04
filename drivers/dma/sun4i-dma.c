@@ -8,8 +8,6 @@
  * (at your option) any later version.
  */
 
-#define DEBUG
-
 #include <linux/bitmap.h>
 #include <linux/bitops.h>
 #include <linux/clk.h>
@@ -244,14 +242,12 @@ static struct sun4i_dma_pchan *find_and_use_pchan(struct sun4i_dma_dev *priv,
 		max = NDMA_NR_MAX_CHANNELS;
 	}
 
-	printk("JDS DMA find_and_use_pchan\n");
 	for_each_clear_bit_from(i, &priv->pchans_used, max) {
 		pchan = &pchans[i];
 		pchan->vchan = vchan;
 		set_bit(i, priv->pchans_used);
 		break;
 	}
-	printk("JDS DMA find_and_use_pchan %p\n", pchan);
 
 	spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -360,8 +356,6 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
 		}
 	} while (list_empty(&contract->demands));
 
-	printk("JDS DMA execute_vchan_pending\n");
-
 	/* Now find out what we need to do */
 	promise = list_first_entry(&contract->demands,
 				   struct sun4i_dma_promise, list);
@@ -369,7 +363,6 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
 
 	/* ... and make it reality */
 	if (promise) {
-		printk("JDS DMA execute_vchan_pending reality %p\n", vchan->pchan);
 		vchan->contract = contract;
 		set_pchan_interrupt(priv, pchan, 0, 1);
 		configure_pchan(pchan, promise);
@@ -839,8 +832,6 @@ static enum dma_status sun4i_dma_tx_status(struct dma_chan *chan,
 	enum dma_status ret;
 	size_t bytes = 0;
 
-
-	printk("JDS DMA sun4i_dma_tx_status\n");
 	ret = dma_cookie_status(chan, cookie, state);
 	if (ret == DMA_COMPLETE)
 		return ret;
@@ -905,7 +896,6 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
 	unsigned long pendirq, irqs;
 	int bit;
 
-	printk("JDS - sun4i_ddma_interrupt\n");
 	pendirq = readl_relaxed(priv->base + DMA_IRQ_PENDING_STATUS_REG);
 	irqs = readl_relaxed(priv->base + DMA_IRQ_ENABLE_REG);
 
