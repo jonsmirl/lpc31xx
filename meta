@@ -1,7 +1,8 @@
 Version: 1
-Previous: 9b8c7eaf8255f94c7f95fab9a6507a7bd20d5719
-Head: f97f72ee433f4b5c1ee1ba78abcec588cbe9565b
+Previous: ee49e503f49614dea8362b0aebf9cb17edd4e240
+Head: 525077957d820e049092388ff43626485973ac15
 Applied:
+  initial-sound-driver-port: 525077957d820e049092388ff43626485973ac15
 Unapplied:
   copy: 5ee6a53d5c0180f987e223cb4a2faf35c5f06495
 Hidden:
