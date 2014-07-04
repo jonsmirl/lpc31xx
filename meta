@@ -1,8 +1,9 @@
 Version: 1
-Previous: cf295fb7d1fc2c7845e794359d2091c691ea4d15
-Head: 5ee6a53d5c0180f987e223cb4a2faf35c5f06495
+Previous: fc5939ff425764c01010a10c9a79e69abed3ca66
+Head: b419ca37a6dfb5140c3a32d6c5b3741eb2bbd93f
 Applied:
   copy: 5ee6a53d5c0180f987e223cb4a2faf35c5f06495
+  clocks: b419ca37a6dfb5140c3a32d6c5b3741eb2bbd93f
 Unapplied:
   initial-sound-driver-port: 06adfdbeb61e9cc6773cd2e3fc4c6f78b8688f80
 Hidden:
