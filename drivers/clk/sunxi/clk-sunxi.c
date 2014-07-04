@@ -35,7 +35,7 @@ static DEFINE_SPINLOCK(clk_lock);
  */
 
 static void sun4i_get_pll1_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div;
 
@@ -86,7 +86,7 @@ static void sun4i_get_pll1_factors(u32 *freq, u32 parent_rate,
  * parent_rate should always be 24MHz
  */
 static void sun6i_a31_get_pll1_factors(u32 *freq, u32 parent_rate,
-				       u8 *n, u8 *k, u8 *m, u8 *p)
+				       u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	/*
 	 * We can operate only on MHz, this will make our life easier
@@ -171,7 +171,7 @@ static void sun6i_a31_get_pll1_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun4i_get_pll5_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div;
 
@@ -203,7 +203,7 @@ static void sun4i_get_pll5_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun6i_a31_get_pll6_factors(u32 *freq, u32 parent_rate,
-				       u8 *n, u8 *k, u8 *m, u8 *p)
+				       u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div;
 
@@ -235,7 +235,7 @@ static void sun6i_a31_get_pll6_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun4i_get_apb1_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 calcm, calcp;
 
@@ -278,7 +278,7 @@ static void sun4i_get_apb1_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun4i_get_mod0_factors(u32 *freq, u32 parent_rate,
-				   u8 *n, u8 *k, u8 *m, u8 *p)
+				   u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div, calcm, calcp;
 
@@ -319,7 +319,7 @@ static void sun4i_get_mod0_factors(u32 *freq, u32 parent_rate,
  */
 
 static void sun7i_a20_get_out_factors(u32 *freq, u32 parent_rate,
-				      u8 *n, u8 *k, u8 *m, u8 *p)
+				      u8 *n, u8 *k, u8 *m, u8 *p, u8 *q)
 {
 	u8 div, calcm, calcp;
 
@@ -398,7 +398,7 @@ struct factors_data {
 	int enable;
 	int mux;
 	struct clk_factors_config *table;
-	void (*getter) (u32 *rate, u32 parent_rate, u8 *n, u8 *k, u8 *m, u8 *p);
+	void (*getter) (u32 *rate, u32 parent_rate, u8 *n, u8 *k, u8 *m, u8 *p, u8 *q);
 	const char *name;
 };
 
