@@ -393,7 +393,7 @@
 		};
 
 		codec_clk: clk@01c20140 {
-			#clock-cells = <0>;
+			#clock-cells = <1>;
 			compatible = "allwinner,sunxi-codec-clk";
 			reg = <0x01c20140 0x4>;
 			clocks = <&pll2>;
@@ -926,7 +926,7 @@
 			compatible = "allwinner,sun7i-a20-codec";
 			reg = <0x01C22c00 0x40>;
 			interrupts = <0 30 4>;
-			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk>;
+			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk 31>;
 			clock-names = "pll2", "apb", "codec";
 			dmas = <&dma 0 19>, <&dma 0 19>;
 			dma-names = "rx", "tx";

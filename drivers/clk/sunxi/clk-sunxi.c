@@ -944,9 +944,6 @@ static void __init sunxi_gates_clk_setup(struct device_node *node,
 
 		j++;
 	}
-	/* if there is a single gate, copy it to entry[0] so there is no requirement for phandle arg */
-	if (j == 1)
-		clk_data->clks[0] = clk_data->clks[i];
 
 	/* Adjust to the real max */
 	clk_data->clk_num = i;

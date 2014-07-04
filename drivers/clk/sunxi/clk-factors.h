@@ -6,8 +6,6 @@
 
 #define SUNXI_FACTORS_NOT_APPLICABLE	(0)
 
-enum erate_adjust {NO_ADJUST = 0, N_FROM_ONE, PLL2_DIV};
-
 struct clk_factors_config {
 	u8 nshift;
 	u8 nwidth;
