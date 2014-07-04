@@ -1,11 +1,10 @@
 Version: 1
-Previous: bbf6d10f581d519ef792de2db14c1e8c2643702f
-Head: 936dc0d8acf044ed40d24152bc52199993a78122
+Previous: 2fc8d22a4d2b8584ea3eb467b9c4b89aa9ce715a
+Head: f1212ef913e2ae85d74cbfa0ecb58971f578886e
 Applied:
   copy: 5ee6a53d5c0180f987e223cb4a2faf35c5f06495
   clocks: 7c0b4c76ea142cbdfb8509fd6f721c5848cd694e
-  dma: 1c3a13bdb28b7de4da8880912c411261ff9e1289
-  refresh-temp: 936dc0d8acf044ed40d24152bc52199993a78122
+  dma: f1212ef913e2ae85d74cbfa0ecb58971f578886e
 Unapplied:
   initial-sound-driver-port: 06adfdbeb61e9cc6773cd2e3fc4c6f78b8688f80
 Hidden:
