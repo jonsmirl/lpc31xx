@@ -1,9 +1,8 @@
 Version: 1
-Previous: 5df112734c7b5a423c4dd5c64e7f75ecae4ab99b
-Head: 8722425c0e01e0a7528c962c6d9d9b5f60da0740
+Previous: a7908f46a210897e9cad7b6e6ebff061f702bcc7
+Head: c5ec4bbcaaf142ada6556046c4d2463893657750
 Applied:
-  initial-sound-driver-port: 94acde2df29c7c6aa3b93b3861f0d98e1cfb84ae
-  refresh-temp: 8722425c0e01e0a7528c962c6d9d9b5f60da0740
+  initial-sound-driver-port: c5ec4bbcaaf142ada6556046c4d2463893657750
 Unapplied:
   copy: 5ee6a53d5c0180f987e223cb4a2faf35c5f06495
 Hidden:
