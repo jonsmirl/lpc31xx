@@ -137,7 +137,7 @@
 			status = "okay";
 		};
 
-		codec@1c22c00 {
+		codec@01c22c00 {
 			status = "okay";
 		};
 

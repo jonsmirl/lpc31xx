@@ -8,9 +8,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
-#define DEBUG
-
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/module.h>
@@ -99,7 +96,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 	struct device_node *node;
 	struct clk *clk;
 	int ret;
-printk("JDS - asoc_simple_card_sub_parse_of\n");
+
 	/*
 	 * get node via "sound-dai = <&phandle port>"
 	 * it will be used as xxx_of_node on soc_bind_dai_link()
@@ -108,19 +105,16 @@ printk("JDS - asoc_simple_card_sub_parse_of\n");
 	if (!node)
 		return -ENODEV;
 	*p_node = node;
-printk("JDS - asoc_simple_card_sub_parse_of 1\n");
 
 	/* get dai->name */
 	ret = snd_soc_of_get_dai_name(np, name);
 	if (ret < 0)
 		return ret;
-printk("JDS - asoc_simple_card_sub_parse_of 2\n");
 
 	/* parse TDM slot */
 	ret = snd_soc_of_parse_tdm_slot(np, &dai->slots, &dai->slot_width);
 	if (ret)
 		return ret;
-printk("JDS - asoc_simple_card_sub_parse_of 3\n");
 
 	/*
 	 * bitclock-inversion, frame-inversion
@@ -141,7 +135,6 @@ printk("JDS - asoc_simple_card_sub_parse_of 3\n");
 		if (IS_ERR(clk)) {
 			ret = PTR_ERR(clk);
 			return ret;
-printk("JDS - asoc_simple_card_sub_parse_of 4\n");
 		}
 
 		dai->sysclk = clk_get_rate(clk);
@@ -155,7 +148,6 @@ printk("JDS - asoc_simple_card_sub_parse_of 4\n");
 			dai->sysclk = clk_get_rate(clk);
 	}
 
-printk("JDS - asoc_simple_card_sub_parse_of 5\n");
 	return 0;
 }
 
@@ -166,7 +158,7 @@ static int simple_card_cpu_codec_of(struct device_node *node,
 {
 	struct device_node *np;
 	int ret;
-printk("JDS - simple_card_cpu_codec_of\n");
+
 	/* CPU sub-node */
 	ret = -EINVAL;
 	np = of_get_child_by_name(node, "simple-audio-card,cpu");
@@ -177,7 +169,6 @@ printk("JDS - simple_card_cpu_codec_of\n");
 						&dai_link->cpu_dai_name);
 		of_node_put(np);
 	}
-printk("JDS - simple_card_cpu_codec_of  %d\n", ret);
 	if (ret < 0)
 		return ret;
 
@@ -191,7 +182,6 @@ printk("JDS - simple_card_cpu_codec_of  %d\n", ret);
 						&dai_link->codec_dai_name);
 		of_node_put(np);
 	}
-printk("JDS - simple_card_cpu_codec_of 2 %d\n", ret);
 	return ret;
 }
 
@@ -206,7 +196,7 @@ static int asoc_simple_card_parse_of(struct device_node *node,
 	char *name;
 	unsigned int daifmt;
 	int ret;
-printk("JDS - asoc_simple_card_parse_of 1\n");
+
 	/* parsing the card name from DT */
 	snd_soc_of_parse_card_name(&priv->snd_card, "simple-audio-card,name");
 
@@ -214,8 +204,7 @@ printk("JDS - asoc_simple_card_parse_of 1\n");
 	daifmt = snd_soc_of_parse_daifmt(node, "simple-audio-card,") &
 		(SND_SOC_DAIFMT_FORMAT_MASK | SND_SOC_DAIFMT_INV_MASK);
 
-printk("JDS - asoc_simple_card_parse_of 2\n");
-	/* off-codec widgets */ 
+	/* off-codec widgets */
 	if (of_property_read_bool(node, "simple-audio-card,widgets")) {
 		ret = snd_soc_of_parse_audio_simple_widgets(&priv->snd_card,
 					"simple-audio-card,widgets");
@@ -223,7 +212,6 @@ printk("JDS - asoc_simple_card_parse_of 2\n");
 			return ret;
 	}
 
-printk("JDS - asoc_simple_card_parse_of 3\n");
 	/* DAPM routes */
 	if (of_property_read_bool(node, "simple-audio-card,routing")) {
 		ret = snd_soc_of_parse_audio_routing(&priv->snd_card,
@@ -232,7 +220,6 @@ printk("JDS - asoc_simple_card_parse_of 3\n");
 			return ret;
 	}
 
-printk("JDS - asoc_simple_card_parse_of 4\n");
 	/* loop on the DAI links */
 	np = NULL;
 	for (;;) {
@@ -247,7 +234,6 @@ printk("JDS - asoc_simple_card_parse_of 4\n");
 		if (ret < 0)
 			goto err;
 
-printk("JDS - asoc_simple_card_parse_of 5\n");
 		/*
 		 * overwrite cpu_dai->fmt as its DAIFMT_MASTER bit is based on CODEC
 		 * while the other bits should be identical unless buggy SW/HW design.
@@ -297,7 +283,6 @@ printk("JDS - asoc_simple_card_parse_of 5\n");
 	return 0;
 
 err:
-printk("JDS - asoc_simple_card_parse_of err\n");
 	of_node_put(np);
 	return ret;
 }

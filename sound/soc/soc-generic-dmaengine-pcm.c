@@ -65,19 +65,15 @@ int snd_dmaengine_pcm_prepare_slave_config(struct snd_pcm_substream *substream,
 	struct snd_dmaengine_dai_dma_data *dma_data;
 	int ret;
 
-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config\n");
 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config 1\n");
 	ret = snd_hwparams_to_dma_slave_config(substream, params, slave_config);
 	if (ret)
 		return ret;
 
-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config 2\n");
 	snd_dmaengine_pcm_set_config_from_dai_data(substream, dma_data,
 		slave_config);
 
-	printk("JDS - snd_dmaengine_pcm_prepare_slave_config 3\n");
 	return 0;
 }
 EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_prepare_slave_config);
@@ -94,7 +90,6 @@ static int dmaengine_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct dma_slave_config slave_config;
 	int ret;
 
-	printk("JDS - dmaengine_pcm_hw_params pcm %p\n", pcm);
 	memset(&slave_config, 0, sizeof(slave_config));
 
 	if (!pcm->config)
@@ -112,7 +107,6 @@ static int dmaengine_pcm_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 	}
 
-	printk("JDS - dmaengine_pcm_hw_params ret\n");
 	return snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(params));
 }
 
@@ -127,14 +121,12 @@ static int dmaengine_pcm_set_runtime_hwparams(struct snd_pcm_substream *substrea
 	struct snd_pcm_hardware hw;
 	int ret;
 
-	printk("JDS - dmaengine_pcm_set_runtime_hwparams pcm %p\n", pcm);
 	if (pcm->config && pcm->config->pcm_hardware)
 		return snd_soc_set_runtime_hwparams(substream,
 				pcm->config->pcm_hardware);
 
 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
-	printk("JDS - dmaengine_pcm_set_runtime_hwparams dma_data %p\n", dma_data);
 	memset(&hw, 0, sizeof(hw));
 	hw.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
 			SNDRV_PCM_INFO_INTERLEAVED;
@@ -145,7 +137,6 @@ static int dmaengine_pcm_set_runtime_hwparams(struct snd_pcm_substream *substrea
 	hw.buffer_bytes_max = SIZE_MAX;
 	hw.fifo_size = dma_data->fifo_size;
 
-	printk("JDS - dmaengine_pcm_set_runtime_hwparams dma_data 2  %p\n", dma_data);
 	if (pcm->flags & SND_DMAENGINE_PCM_FLAG_NO_RESIDUE)
 		hw.info |= SNDRV_PCM_INFO_BATCH;
 
@@ -157,7 +148,6 @@ static int dmaengine_pcm_set_runtime_hwparams(struct snd_pcm_substream *substrea
 			hw.info |= SNDRV_PCM_INFO_BATCH;
 	}
 
-	printk("JDS - dmaengine_pcm_set_runtime_hwparams dma_data 3 %p\n", dma_data);
 	return snd_soc_set_runtime_hwparams(substream, &hw);
 }
 
@@ -168,7 +158,6 @@ static int dmaengine_pcm_open(struct snd_pcm_substream *substream)
 	struct dma_chan *chan = pcm->chan[substream->stream];
 	int ret;
 
-	printk("JDS - dmaengine_pcm_open\n");
 	ret = dmaengine_pcm_set_runtime_hwparams(substream);
 	if (ret)
 		return ret;
@@ -189,7 +178,6 @@ static struct dma_chan *dmaengine_pcm_compat_request_channel(
 	struct snd_dmaengine_dai_dma_data *dma_data;
 	dma_filter_fn fn = NULL;
 
-	printk("JDS - dmaengine_pcm_compat_request_channel\n");
 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
 	if ((pcm->flags & SND_DMAENGINE_PCM_FLAG_HALF_DUPLEX) && pcm->chan[0])
@@ -231,7 +219,6 @@ static int dmaengine_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	unsigned int i;
 	int ret;
 
-	printk("JDS - dmaengine_pcm_new\n");
 	if (config && config->prealloc_buffer_size) {
 		prealloc_buffer_size = config->prealloc_buffer_size;
 		max_buffer_size = config->pcm_hardware->buffer_bytes_max;
@@ -332,7 +319,6 @@ static int dmaengine_pcm_request_chan_of(struct dmaengine_pcm *pcm,
 	const char *name;
 	struct dma_chan *chan;
 
-	printk("JDS - dmaengine_pcm_request_chan_of\n");
 	if ((pcm->flags & (SND_DMAENGINE_PCM_FLAG_NO_DT |
 			   SND_DMAENGINE_PCM_FLAG_CUSTOM_CHANNEL_NAME)) ||
 	    !dev->of_node)
@@ -402,7 +388,6 @@ int snd_dmaengine_pcm_register(struct device *dev,
 	struct dmaengine_pcm *pcm;
 	int ret;
 
-	printk("JDS - snd_dmaengine_pcm_register\n");
 	pcm = kzalloc(sizeof(*pcm), GFP_KERNEL);
 	if (!pcm)
 		return -ENOMEM;

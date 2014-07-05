@@ -21,7 +21,7 @@
  *   o Add more codecs and platforms to ensure good API coverage.
  *   o Support TDM on PCM and I2S
  */
-#define DEBUG
+
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -4667,7 +4667,6 @@ int snd_soc_of_get_dai_name(struct device_node *of_node,
 	struct of_phandle_args args;
 	int ret;
 
-printk("JDS = snd_soc_of_get_dai_name\n");
 	ret = of_parse_phandle_with_args(of_node, "sound-dai",
 					 "#sound-dai-cells", 0, &args);
 	if (ret)
@@ -4675,13 +4674,11 @@ printk("JDS = snd_soc_of_get_dai_name\n");
 
 	ret = -EPROBE_DEFER;
 
-printk("JDS = snd_soc_of_get_dai_name a\n");
 	mutex_lock(&client_mutex);
 	list_for_each_entry(pos, &component_list, list) {
 		if (pos->dev->of_node != args.np)
 			continue;
 
-printk("JDS = snd_soc_of_get_dai_name b\n");
 		if (pos->driver->of_xlate_dai_name) {
 			ret = pos->driver->of_xlate_dai_name(pos, &args, dai_name);
 		} else {
@@ -4706,12 +4703,9 @@ printk("JDS = snd_soc_of_get_dai_name b\n");
 
 			ret = 0;
 
-printk("JDS = snd_soc_of_get_dai_name c\n");
 			*dai_name = pos->dai_drv[id].name;
-printk("JDS = snd_soc_of_get_dai_name name %s\n", *dai_name);
 			if (!*dai_name)
 				*dai_name = pos->name;
-printk("JDS = snd_soc_of_get_dai_name d *s\n", *dai_name);
 		}
 
 		break;
@@ -4719,7 +4713,6 @@ printk("JDS = snd_soc_of_get_dai_name d *s\n", *dai_name);
 	mutex_unlock(&client_mutex);
 
 	of_node_put(args.np);
-printk("JDS = snd_soc_of_get_dai_name e\n");
 
 	return ret;
 }

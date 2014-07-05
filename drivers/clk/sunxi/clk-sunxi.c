@@ -219,7 +219,6 @@ static void sun8i_a23_get_pll1_factors(u32 *freq, u32 parent_rate,
 static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
 				   u8 *n, u8 *k, u8 *m, u8 *p)
 {
-	printk("JDS - sun7i_get_pll2_factors %d\n", *freq);
 	/* we were called to round the frequency, we can now return */
 	if (n == NULL)
 		return;
@@ -503,7 +502,7 @@ static struct clk_factors_config sun8i_a23_pll1_config = {
 	.mwidth = 2,
 	.pshift = 16,
 	.pwidth = 2,
-	.n_from_one = 1,
+	.rate_adjust = N_FROM_ONE,
 };
 
 static struct clk_factors_config sun7i_pll2_config = {
@@ -513,6 +512,7 @@ static struct clk_factors_config sun7i_pll2_config = {
 	.kwidth = 4,
 	.mshift = 0,
 	.mwidth = 5,
+	.rate_adjust = PLL2_DIV,
 };
 
 static struct clk_factors_config sun4i_pll5_config = {
@@ -527,7 +527,7 @@ static struct clk_factors_config sun6i_a31_pll6_config = {
 	.nwidth = 5,
 	.kshift = 4,
 	.kwidth = 2,
-	.n_from_one = 1,
+	.rate_adjust = N_FROM_ONE,
 };
 
 static struct clk_factors_config sun4i_apb1_config = {
@@ -1018,16 +1018,18 @@ static void __init sunxi_gates_clk_setup(struct device_node *node,
 	for_each_set_bit(i, data->mask, SUNXI_GATES_MAX_SIZE) {
 		of_property_read_string_index(node, "clock-output-names",
 					      j, &clk_name);
-
 		clk_data->clks[i] = clk_register_gate(NULL, clk_name,
 						      clk_parent, 0,
 						      reg + 4 * (i/32), i % 32,
 						      0, &clk_lock);
 		WARN_ON(IS_ERR(clk_data->clks[i]));
 		clk_register_clkdev(clk_data->clks[i], clk_name, NULL);
-
 		j++;
 	}
+
+	/* if there is a single gate, copy it to entry[0] so there is no requirement for phandle arg */
+	if (j == 1)
+		clk_data->clks[0] = clk_data->clks[i];
 
 	/* Adjust to the real max */
 	clk_data->clk_num = i;
