@@ -164,6 +164,29 @@ static void sun6i_a31_get_pll1_factors(u32 *freq, u32 parent_rate,
 }
 
 /**
+ * sun7i_get_pll2_factors()
+ * parent_rate is always 24Mhz
+ */
+
+static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
+				   u8 *n, u8 *k, u8 *m, u8 *p)
+{
+	/* we were called to round the frequency, we can now return */
+	if (n == NULL)
+		return;
+	
+	if (*freq == 22579200) {
+		*n = 79;
+		*m = 21;  /* Pre */
+		*k = 4;   /* Post */
+	} else  {
+		*n = 86;
+		*m = 21;  /* Pre */
+		*k = 4;   /* Post */
+	}
+}
+
+/**
  * sun4i_get_pll5_factors() - calculates n, k factors for PLL5
  * PLL5 rate is calculated as follows
  * rate = parent_rate * n * (k + 1)
@@ -352,6 +375,35 @@ static void sun7i_a20_get_out_factors(u32 *freq, u32 parent_rate,
 }
 
 /**
+ * sunxi_audio_factors()
+ */
+
+static void sunxi_audio_factors(u32 *freq, u32 parent_rate,
+				   u8 *n, u8 *k, u8 *m, u8 *p)
+{
+	/* we were called to round the frequency, we can now return */
+	if (n == NULL)
+		return;
+
+	*n = 1;
+}
+
+/**
+ * sunxi_codec_factors()
+ */
+
+static void sunxi_codec_factors(u32 *freq, u32 parent_rate,
+				   u8 *n, u8 *k, u8 *m, u8 *p)
+{
+	/* we were called to round the frequency, we can now return */
+	if (n == NULL)
+		return;
+
+	*n = 1;
+}
+
+
+/**
  * clk_sunxi_mmc_phase_control() - configures MMC clock phase control
  */
 
@@ -422,6 +474,16 @@ static struct clk_factors_config sun6i_a31_pll1_config = {
 	.mwidth = 2,
 };
 
+static struct clk_factors_config sun7i_pll2_config = {
+	.nshift = 8,
+	.nwidth = 7,
+	.kshift = 26,
+	.kwidth = 4,
+	.mshift = 0,
+	.mwidth = 5,
+	.rate_adjust = PLL2_DIV,
+};
+
 static struct clk_factors_config sun4i_pll5_config = {
 	.nshift = 8,
 	.nwidth = 5,
@@ -459,6 +521,15 @@ static struct clk_factors_config sun7i_a20_out_config = {
 	.pwidth = 2,
 };
 
+static struct clk_factors_config sunxi_audio_config = {
+	.nshift = 16,
+	.nwidth = 2,
+};
+
+static struct clk_factors_config sunxi_codec_config = {
+};
+
+
 static const struct factors_data sun4i_pll1_data __initconst = {
 	.enable = 31,
 	.table = &sun4i_pll1_config,
@@ -469,6 +540,12 @@ static const struct factors_data sun6i_a31_pll1_data __initconst = {
 	.enable = 31,
 	.table = &sun6i_a31_pll1_config,
 	.getter = sun6i_a31_get_pll1_factors,
+};
+
+static const struct factors_data sun7i_a20_pll2_data __initconst = {
+	.enable = 31,
+	.table = &sun7i_pll2_config,
+	.getter = sun7i_get_pll2_factors,
 };
 
 static const struct factors_data sun7i_a20_pll4_data __initconst = {
@@ -514,6 +591,18 @@ static const struct factors_data sun7i_a20_out_data __initconst = {
 	.mux = 24,
 	.table = &sun7i_a20_out_config,
 	.getter = sun7i_a20_get_out_factors,
+};
+
+static const struct factors_data sunxi_audio_data __initconst = {
+	.enable = 31,
+	.table = &sunxi_audio_config,
+	.getter = sunxi_audio_factors,
+};
+
+static const struct factors_data sunxi_codec_data __initconst = {
+	.enable = 31,
+	.table = &sunxi_codec_config,
+	.getter = sunxi_codec_factors,
 };
 
 static struct clk * __init sunxi_factors_clk_setup(struct device_node *node,
@@ -598,6 +687,7 @@ static struct clk * __init sunxi_factors_clk_setup(struct device_node *node,
 		of_clk_add_provider(node, of_clk_src_simple_get, clk);
 		clk_register_clkdev(clk, clk_name, NULL);
 	}
+	printk("JDS CLK name %s clk %p\n", clk_name, clk);
 
 	return clk;
 }
@@ -1102,11 +1192,14 @@ free_clkdata:
 static const struct of_device_id clk_factors_match[] __initconst = {
 	{.compatible = "allwinner,sun4i-a10-pll1-clk", .data = &sun4i_pll1_data,},
 	{.compatible = "allwinner,sun6i-a31-pll1-clk", .data = &sun6i_a31_pll1_data,},
+	{.compatible = "allwinner,sun7i-a20-pll2-clk", .data = &sun7i_a20_pll2_data,},
 	{.compatible = "allwinner,sun7i-a20-pll4-clk", .data = &sun7i_a20_pll4_data,},
 	{.compatible = "allwinner,sun6i-a31-pll6-clk", .data = &sun6i_a31_pll6_data,},
 	{.compatible = "allwinner,sun4i-a10-apb1-clk", .data = &sun4i_apb1_data,},
 	{.compatible = "allwinner,sun4i-a10-mod0-clk", .data = &sun4i_mod0_data,},
 	{.compatible = "allwinner,sun7i-a20-out-clk", .data = &sun7i_a20_out_data,},
+	{.compatible = "allwinner,sunxi-codec-clk", .data = &sunxi_codec_data,},
+	{.compatible = "allwinner,sunxi-audio-clk", .data = &sunxi_audio_data,},
 	{}
 };
 
