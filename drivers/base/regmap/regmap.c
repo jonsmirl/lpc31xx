@@ -30,6 +30,7 @@
  * register I/O on a specific device.
  */
 #undef LOG_DEVICE
+#define LOG_DEVICE "1c22c00.codec"
 
 static int _regmap_update_bits(struct regmap *map, unsigned int reg,
 			       unsigned int mask, unsigned int val,
