@@ -1,6 +1,6 @@
 Version: 1
-Previous: 8b7cd5c9cf9366897d60e10d15945ef5236f96e0
-Head: 2769d6e49283a81c872f99331586df1612430221
+Previous: 791178ba07230a8a20a08d3983eb05ca6c69e30f
+Head: 1138ab5aec1fd5a277e01d0cabc7df3ee2faa20b
 Applied:
   0001-cpufreq-arm-sunxi-cpufreq-driver-from-linux-sunxi.patch: f09f9993bd346a5cc8f70798fc066f9d0ecf97aa
   0002-fixup-cpufreq-arm-sunxi-cpufreq-driver-from-linux-su.patch: 7f73e563c1311856f353a17622a43e1b0812339d
@@ -23,5 +23,6 @@ Applied:
   0019-ARM-sun7i-add-DMA-properties-to-UARTs.patch: 68445e2b87bd0e2662f0d0a82f3b55350edb6e97
   copy: 59a018c08f57a3380fbccd3a2ffaec45664ab34c
   config: 2769d6e49283a81c872f99331586df1612430221
+  clock-debug: 1138ab5aec1fd5a277e01d0cabc7df3ee2faa20b
 Unapplied:
 Hidden:
