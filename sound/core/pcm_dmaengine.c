@@ -133,10 +133,13 @@ static void dmaengine_pcm_dma_complete(void *arg)
 	struct snd_pcm_substream *substream = arg;
 	struct dmaengine_pcm_runtime_data *prtd = substream_to_prtd(substream);
 
+	printk("JDS DMA dmaengine_pcm_dma_complete %d\n", prtd->pos);
+
 	prtd->pos += snd_pcm_lib_period_bytes(substream);
 	if (prtd->pos >= snd_pcm_lib_buffer_bytes(substream))
 		prtd->pos = 0;
 
+	printk("JDS DMA dmaengine_pcm_dma_complete a %d\n", prtd->pos);
 	snd_pcm_period_elapsed(substream);
 }
 

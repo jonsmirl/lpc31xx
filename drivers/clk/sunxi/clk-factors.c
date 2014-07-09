@@ -14,6 +14,7 @@
 #include <linux/io.h>
 #include <linux/err.h>
 #include <linux/string.h>
+#include <linux/clk-private.h>
 
 #include <linux/delay.h>
 
@@ -29,6 +30,8 @@
  *        clk->rate = (parent->rate * N * (K + 1) >> P) / (M + 1)
  * parent - fixed parent.  No clk_set_parent support
  */
+
+#define writelx(val, reg) {printk("JDS CLK reg %p val %08x\n", reg, val);writel(val, reg);}
 
 #define to_clk_factors(_hw) container_of(_hw, struct clk_factors, hw)
 
@@ -61,9 +64,15 @@ static unsigned long clk_factors_recalc_rate(struct clk_hw *hw,
 	if (config->pwidth != SUNXI_FACTORS_NOT_APPLICABLE)
 		p = FACTOR_GET(config->pshift, config->pwidth, reg);
 
-	/* Calculate the rate */
-	rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
-
+ 	/* Calculate the rate */
+	switch (config->rate_adjust) {
+	case PLL2_DIV:
+		rate = parent_rate * n / k / m;
+		break;
+	default:
+ 		rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
+		break;
+	}
 	return rate;
 }
 
@@ -136,7 +145,8 @@ static int clk_factors_set_rate(struct clk_hw *hw, unsigned long rate,
 	reg = FACTOR_SET(config->pshift, config->pwidth, reg, p);
 
 	/* Apply them now */
-	writel(reg, factors->reg);
+	printk("JDS CLK %s\n", hw->clk->name);
+	writelx(reg, factors->reg);
 
 	/* delay 500us so pll stabilizes */
 	__delay((rate >> 20) * 500 / 2);
