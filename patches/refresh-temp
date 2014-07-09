@@ -1,0 +1,703 @@
+Bottom: 1a1cac63d435b53c2e7ae1dd04216364ddd3aa1f
+Top:    94a7612a0453b7aa05ceab699914d3eda0e643af
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-09 12:35:01 -0400
+
+Refresh of audio
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+index 4ef421f..c79b27f 100644
+--- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
++++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+@@ -112,6 +112,10 @@
+ 			status = "okay";
+ 		};
+ 
++		codec@01c22c00 {
++			status = "okay";
++		};
++
+ 		uart0: serial@01c28000 {
+ 			pinctrl-names = "default";
+ 			pinctrl-0 = <&uart0_pins_a>;
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index bd39b5d..d246932 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -91,6 +91,14 @@
+ 			clock-output-names = "pll1";
+ 		};
+ 
++		pll2: clk@01c20008 {
++			#clock-cells = <0>;
++			compatible = "allwinner,sun7i-a20-pll2-clk";
++			reg = <0x01c20008 0x4>;
++			clocks = <&osc24M>;
++			clock-output-names = "pll2";
++		};
++
+ 		pll4: clk@01c20018 {
+ 			#clock-cells = <0>;
+ 			compatible = "allwinner,sun7i-a20-pll4-clk";
+@@ -327,6 +335,30 @@
+ 			clock-output-names = "ir1";
+ 		};
+ 
++		i2s0_clk: clk@01c200b8 {
++			#clock-cells = <0>;
++			compatible = "allwinner,sunxi-audio-clk";
++			reg = <0x01c200b8 0x4>;
++			clocks = <&pll2>;
++			clock-output-names = "i2s0";
++		};
++
++		ac97_clk: clk@01c200bc {
++			#clock-cells = <0>;
++			compatible = "allwinner,sunxi-audio-clk";
++			reg = <0x01c200bc 0x4>;
++			clocks = <&pll2>;
++			clock-output-names = "ac97";
++		};
++
++		spdif_clk: clk@01c200c0 {
++			#clock-cells = <0>;
++			compatible = "allwinner,sunxi-audio-clk";
++			reg = <0x01c200c0 0x4>;
++			clocks = <&pll2>;
++			clock-output-names = "spdif";
++		};
++
+ 		usb_clk: clk@01c200cc {
+ 			#clock-cells = <1>;
+ 		        #reset-cells = <1>;
+@@ -344,6 +376,30 @@
+ 			clock-output-names = "spi3";
+ 		};
+ 
++		i2s1_clk: clk@01c200d8 {
++			#clock-cells = <0>;
++			compatible = "allwinner,sunxi-audio-clk";
++			reg = <0x01c200d8 0x4>;
++			clocks = <&pll2>;
++			clock-output-names = "i2s1";
++		};
++
++		i2s2_clk: clk@01c200dc {
++			#clock-cells = <0>;
++			compatible = "allwinner,sunxi-audio-clk";
++			reg = <0x01c200dc 0x4>;
++			clocks = <&pll2>;
++			clock-output-names = "i2s2";
++		};
++
++		codec_clk: clk@01c20140 {
++			#clock-cells = <0>;
++			compatible = "allwinner,sunxi-codec-clk";
++			reg = <0x01c20140 0x4>;
++			clocks = <&pll2>;
++			clock-output-names = "codec";
++		};
++
+ 		mbus_clk: clk@01c2015c {
+ 			#clock-cells = <0>;
+ 			compatible = "allwinner,sun4i-a10-mod0-clk";
+@@ -805,8 +861,80 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 16>;
+-			dmas = <&dma 0 8>, <&dma 0 8>;
++			/*dmas = <&dma 0 8>, <&dma 0 8>;
++			dma-names = "rx", "tx";*/
++			status = "disabled";
++		};
++		
++		spdif@01c21000 {
++			compatible = "allwinner,sun7i-a20-spdif";
++			reg = <0x01C21000 0x40>;
++			interrupts = <0 13 4>;
++			clocks = <&pll2>, <&apb0_gates 1>, <&spdif_clk>;
++			clock-names = "pll2", "apb", "spdif";
++			dmas = <&dma 0 2>, <&dma 0 2>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
++		ac97@01c21400 {
++			compatible = "allwinner,sun7i-a20-ac97";
++			reg = <0x01C21400 0x40>;
++			interrupts = <0 14 4>;
++			clocks = <&pll2>, <&apb0_gates 2>, <&ac97_clk>;
++			clock-names = "pll2", "apb", "ac97";
++			dmas = <&dma 0 5>, <&dma 0 5>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
++		i2s0: i2s@01c22000 {
++			compatible = "allwinner,sun7i-a20-i2s";
++			reg = <0x01C22000 0x40>;
++			interrupts = <0 16 4>;
++			clocks = <&pll2>, <&apb0_gates 3>, <&i2s0_clk>;
++			clock-names = "pll2", "apb", "i2s";
++			dmas = <&dma 0 3>, <&dma 0 3>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
++		i2s1: i2s@01c22400 {
++			compatible = "allwinner,sun7i-a20-i2s";
++			reg = <0x01C22400 0x40>;
++			interrupts = <0 87 4>;
++			clocks = <&pll2>, <&apb0_gates 4>, <&i2s1_clk>;
++			clock-names = "pll2", "apb", "i2s";
++			dmas = <&dma 0 4>, <&dma 0 4>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
++		i2s2: i2s@01c24400 {
++			compatible = "allwinner,sun7i-a20-i2s";
++			reg = <0x01C24400 0x40>;
++			interrupts = <0 90 4>;
++			clocks = <&pll2>, <&apb0_gates 8>, <&i2s2_clk>;
++			clock-names = "pll2", "apb", "i2s";
++			dmas = <&dma 0 6>, <&dma 0 6>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
++		codec: codec@01c22c00 {
++			#sound-dai-cells = <0>;
++			compatible = "allwinner,sun7i-a20-codec";
++			reg = <0x01C22c00 0x40>;
++			interrupts = <0 30 4>;
++			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk>;
++			clock-names = "pll2", "apb", "codec";
++			dmas = <&dma 0 19>, <&dma 0 19>;
+ 			dma-names = "rx", "tx";
++			routing =
++				"MIC_IN", "Microphone Jack",
++				"Microphone Jack", "Mic Bias",
++				"LINE_IN", "Line In Jack",
++				"Headphone Jack", "HP_OUT";
+ 			status = "disabled";
+ 		};
+ 
+diff --git a/drivers/base/regmap/regmap.c b/drivers/base/regmap/regmap.c
+index 74d8c06..0030710 100644
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -30,6 +30,7 @@
+  * register I/O on a specific device.
+  */
+ #undef LOG_DEVICE
++#define LOG_DEVICE "1c22c00.codec"
+ 
+ static int _regmap_update_bits(struct regmap *map, unsigned int reg,
+ 			       unsigned int mask, unsigned int val,
+diff --git a/drivers/clk/sunxi/Makefile b/drivers/clk/sunxi/Makefile
+index 762fd64..22e73c5 100644
+--- a/drivers/clk/sunxi/Makefile
++++ b/drivers/clk/sunxi/Makefile
+@@ -2,7 +2,7 @@
+ # Makefile for sunxi specific clk
+ #
+ 
+-obj-y += clk-sunxi.o clk-factors.o
++obj-y += clk-sunxi.o clk-factors.o ccu_dbg.o
+ obj-y += clk-a10-hosc.o
+ obj-y += clk-a20-gmac.o
+ 
+diff --git a/drivers/clk/sunxi/clk-factors.c b/drivers/clk/sunxi/clk-factors.c
+index 3806d97..4e554c4 100644
+--- a/drivers/clk/sunxi/clk-factors.c
++++ b/drivers/clk/sunxi/clk-factors.c
+@@ -14,6 +14,7 @@
+ #include <linux/io.h>
+ #include <linux/err.h>
+ #include <linux/string.h>
++#include <linux/clk-private.h>
+ 
+ #include <linux/delay.h>
+ 
+@@ -30,6 +31,8 @@
+  * parent - fixed parent.  No clk_set_parent support
+  */
+ 
++#define writelx(val, reg) {printk("JDS CLK reg %p val %08x\n", reg, val);writel(val, reg);}
++
+ #define to_clk_factors(_hw) container_of(_hw, struct clk_factors, hw)
+ 
+ #define SETMASK(len, pos)		(((1U << (len)) - 1) << (pos))
+@@ -61,9 +64,15 @@ static unsigned long clk_factors_recalc_rate(struct clk_hw *hw,
+ 	if (config->pwidth != SUNXI_FACTORS_NOT_APPLICABLE)
+ 		p = FACTOR_GET(config->pshift, config->pwidth, reg);
+ 
+-	/* Calculate the rate */
+-	rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
+-
++ 	/* Calculate the rate */
++	switch (config->rate_adjust) {
++	case PLL2_DIV:
++		rate = parent_rate * n / k / m;
++		break;
++	default:
++ 		rate = (parent_rate * n * (k + 1) >> p) / (m + 1);
++		break;
++	}
+ 	return rate;
+ }
+ 
+@@ -136,7 +145,8 @@ static int clk_factors_set_rate(struct clk_hw *hw, unsigned long rate,
+ 	reg = FACTOR_SET(config->pshift, config->pwidth, reg, p);
+ 
+ 	/* Apply them now */
+-	writel(reg, factors->reg);
++	printk("JDS CLK %s\n", hw->clk->name);
++	writelx(reg, factors->reg);
+ 
+ 	/* delay 500us so pll stabilizes */
+ 	__delay((rate >> 20) * 500 / 2);
+diff --git a/drivers/clk/sunxi/clk-factors.h b/drivers/clk/sunxi/clk-factors.h
+index 02e1a43..fe6c6f0 100644
+--- a/drivers/clk/sunxi/clk-factors.h
++++ b/drivers/clk/sunxi/clk-factors.h
+@@ -6,6 +6,8 @@
+ 
+ #define SUNXI_FACTORS_NOT_APPLICABLE	(0)
+ 
++enum erate_adjust {NO_ADJUST = 0, PLL2_DIV};
++
+ struct clk_factors_config {
+ 	u8 nshift;
+ 	u8 nwidth;
+@@ -15,6 +17,7 @@ struct clk_factors_config {
+ 	u8 mwidth;
+ 	u8 pshift;
+ 	u8 pwidth;
++	enum erate_adjust rate_adjust;
+ };
+ 
+ struct clk_factors {
+diff --git a/drivers/clk/sunxi/clk-sunxi.c b/drivers/clk/sunxi/clk-sunxi.c
+index fb2ce84..b63b7c7 100644
+--- a/drivers/clk/sunxi/clk-sunxi.c
++++ b/drivers/clk/sunxi/clk-sunxi.c
+@@ -164,6 +164,29 @@ static void sun6i_a31_get_pll1_factors(u32 *freq, u32 parent_rate,
+ }
+ 
+ /**
++ * sun7i_get_pll2_factors()
++ * parent_rate is always 24Mhz
++ */
++
++static void sun7i_get_pll2_factors(u32 *freq, u32 parent_rate,
++				   u8 *n, u8 *k, u8 *m, u8 *p)
++{
++	/* we were called to round the frequency, we can now return */
++	if (n == NULL)
++		return;
++	
++	if (*freq == 22579200) {
++		*n = 79;
++		*m = 21;  /* Pre */
++		*k = 4;   /* Post */
++	} else  {
++		*n = 86;
++		*m = 21;  /* Pre */
++		*k = 4;   /* Post */
++	}
++}
++
++/**
+  * sun4i_get_pll5_factors() - calculates n, k factors for PLL5
+  * PLL5 rate is calculated as follows
+  * rate = parent_rate * n * (k + 1)
+@@ -352,6 +375,35 @@ static void sun7i_a20_get_out_factors(u32 *freq, u32 parent_rate,
+ }
+ 
+ /**
++ * sunxi_audio_factors()
++ */
++
++static void sunxi_audio_factors(u32 *freq, u32 parent_rate,
++				   u8 *n, u8 *k, u8 *m, u8 *p)
++{
++	/* we were called to round the frequency, we can now return */
++	if (n == NULL)
++		return;
++
++	*n = 1;
++}
++
++/**
++ * sunxi_codec_factors()
++ */
++
++static void sunxi_codec_factors(u32 *freq, u32 parent_rate,
++				   u8 *n, u8 *k, u8 *m, u8 *p)
++{
++	/* we were called to round the frequency, we can now return */
++	if (n == NULL)
++		return;
++
++	*n = 1;
++}
++
++
++/**
+  * clk_sunxi_mmc_phase_control() - configures MMC clock phase control
+  */
+ 
+@@ -422,6 +474,16 @@ static struct clk_factors_config sun6i_a31_pll1_config = {
+ 	.mwidth = 2,
+ };
+ 
++static struct clk_factors_config sun7i_pll2_config = {
++	.nshift = 8,
++	.nwidth = 7,
++	.kshift = 26,
++	.kwidth = 4,
++	.mshift = 0,
++	.mwidth = 5,
++	.rate_adjust = PLL2_DIV,
++};
++
+ static struct clk_factors_config sun4i_pll5_config = {
+ 	.nshift = 8,
+ 	.nwidth = 5,
+@@ -459,6 +521,15 @@ static struct clk_factors_config sun7i_a20_out_config = {
+ 	.pwidth = 2,
+ };
+ 
++static struct clk_factors_config sunxi_audio_config = {
++	.nshift = 16,
++	.nwidth = 2,
++};
++
++static struct clk_factors_config sunxi_codec_config = {
++};
++
++
+ static const struct factors_data sun4i_pll1_data __initconst = {
+ 	.enable = 31,
+ 	.table = &sun4i_pll1_config,
+@@ -471,6 +542,12 @@ static const struct factors_data sun6i_a31_pll1_data __initconst = {
+ 	.getter = sun6i_a31_get_pll1_factors,
+ };
+ 
++static const struct factors_data sun7i_a20_pll2_data __initconst = {
++	.enable = 31,
++	.table = &sun7i_pll2_config,
++	.getter = sun7i_get_pll2_factors,
++};
++
+ static const struct factors_data sun7i_a20_pll4_data __initconst = {
+ 	.enable = 31,
+ 	.table = &sun4i_pll5_config,
+@@ -516,6 +593,18 @@ static const struct factors_data sun7i_a20_out_data __initconst = {
+ 	.getter = sun7i_a20_get_out_factors,
+ };
+ 
++static const struct factors_data sunxi_audio_data __initconst = {
++	.enable = 31,
++	.table = &sunxi_audio_config,
++	.getter = sunxi_audio_factors,
++};
++
++static const struct factors_data sunxi_codec_data __initconst = {
++	.enable = 31,
++	.table = &sunxi_codec_config,
++	.getter = sunxi_codec_factors,
++};
++
+ static struct clk * __init sunxi_factors_clk_setup(struct device_node *node,
+ 						const struct factors_data *data)
+ {
+@@ -598,6 +687,7 @@ static struct clk * __init sunxi_factors_clk_setup(struct device_node *node,
+ 		of_clk_add_provider(node, of_clk_src_simple_get, clk);
+ 		clk_register_clkdev(clk, clk_name, NULL);
+ 	}
++	printk("JDS CLK name %s clk %p\n", clk_name, clk);
+ 
+ 	return clk;
+ }
+@@ -1102,11 +1192,14 @@ free_clkdata:
+ static const struct of_device_id clk_factors_match[] __initconst = {
+ 	{.compatible = "allwinner,sun4i-a10-pll1-clk", .data = &sun4i_pll1_data,},
+ 	{.compatible = "allwinner,sun6i-a31-pll1-clk", .data = &sun6i_a31_pll1_data,},
++	{.compatible = "allwinner,sun7i-a20-pll2-clk", .data = &sun7i_a20_pll2_data,},
+ 	{.compatible = "allwinner,sun7i-a20-pll4-clk", .data = &sun7i_a20_pll4_data,},
+ 	{.compatible = "allwinner,sun6i-a31-pll6-clk", .data = &sun6i_a31_pll6_data,},
+ 	{.compatible = "allwinner,sun4i-a10-apb1-clk", .data = &sun4i_apb1_data,},
+ 	{.compatible = "allwinner,sun4i-a10-mod0-clk", .data = &sun4i_mod0_data,},
+ 	{.compatible = "allwinner,sun7i-a20-out-clk", .data = &sun7i_a20_out_data,},
++	{.compatible = "allwinner,sunxi-codec-clk", .data = &sunxi_codec_data,},
++	{.compatible = "allwinner,sunxi-audio-clk", .data = &sunxi_audio_data,},
+ 	{}
+ };
+ 
+diff --git a/drivers/dma/sun4i-dma.c b/drivers/dma/sun4i-dma.c
+index 24fa391..fb293d2 100644
+--- a/drivers/dma/sun4i-dma.c
++++ b/drivers/dma/sun4i-dma.c
+@@ -8,6 +8,8 @@
+  * (at your option) any later version.
+  */
+ 
++#define DEBUG
++
+ #include <linux/bitmap.h>
+ #include <linux/bitops.h>
+ #include <linux/clk.h>
+@@ -340,8 +342,8 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
+ 		/* Figure out which contract we're working with today */
+ 		vd = vchan_next_desc(&vchan->vc);
+ 		if (!vd) {
+-			dev_dbg(chan2dev(&vchan->vc.chan),
+-				"No pending contract found");
++//			dev_dbg(chan2dev(&vchan->vc.chan),
++//				"No pending contract found");
+ 			ret = 0;
+ 			goto release_pchan;
+ 		}
+@@ -356,6 +358,8 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
+ 		}
+ 	} while (list_empty(&contract->demands));
+ 
++	printk("JDS DMA execute_vchan_pending\n");
++
+ 	/* Now find out what we need to do */
+ 	promise = list_first_entry(&contract->demands,
+ 				   struct sun4i_dma_promise, list);
+@@ -363,6 +367,7 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
+ 
+ 	/* ... and make it reality */
+ 	if (promise) {
++		printk("JDS DMA execute_vchan_pending reality %p\n", vchan->pchan);
+ 		vchan->contract = contract;
+ 		set_pchan_interrupt(priv, pchan, 0, 1);
+ 		configure_pchan(pchan, promise);
+@@ -402,24 +407,28 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
+ 
+ 	/* Source burst */
+ 	ret = convert_burst(sconfig->src_maxburst);
++printk("JDS Src Burst %d %d\n", sconfig->src_maxburst, ret);
+ 	if (IS_ERR_VALUE(ret))
+ 		goto fail;
+ 	promise->cfg |= NDMA_CFG_SRC_BURST_LENGTH(ret);
+ 
+ 	/* Destination burst */
+ 	ret = convert_burst(sconfig->dst_maxburst);
++printk("JDS dst Burst %d %d\n", sconfig->dst_maxburst, ret);
+ 	if (IS_ERR_VALUE(ret))
+ 		goto fail;
+ 	promise->cfg |= NDMA_CFG_DEST_BURST_LENGTH(ret);
+ 
+ 	/* Source bus width */
+ 	ret = convert_buswidth(sconfig->src_addr_width);
++printk("JDS src addr %d %d\n", sconfig->src_addr_width, ret);
+ 	if (IS_ERR_VALUE(ret))
+ 		goto fail;
+ 	promise->cfg |= NDMA_CFG_SRC_DATA_WIDTH(ret);
+ 
+ 	/* Destination bus width */
+ 	ret = convert_buswidth(sconfig->dst_addr_width);
++printk("JDS dst addr %d %d\n", sconfig->dst_addr_width, ret);
+ 	if (IS_ERR_VALUE(ret))
+ 		goto fail;
+ 	promise->cfg |= NDMA_CFG_DEST_DATA_WIDTH(ret);
+@@ -568,6 +577,94 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
+ 	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
+ }
+ 
++static struct dma_async_tx_descriptor *sun4i_dma_prep_dma_cyclic(
++		struct dma_chan *chan, dma_addr_t buf, size_t len,
++		size_t period_len, enum dma_transfer_direction dir,
++		unsigned long flags, void *context) {
++	struct sun4i_dma_vchan *vchan = to_sun4i_dma_vchan(chan);
++	struct dma_slave_config *sconfig = &vchan->cfg;
++	struct sun4i_dma_promise *promise;
++	struct sun4i_dma_contract *contract;
++	u32 endpoints;
++	size_t bytes;
++	dma_addr_t srcaddr, dstaddr;
++
++	printk("JDS DMA sun4i_dma_prep_dma_cyclic len %x period_len %x\n", len, period_len);
++	if (!is_slave_direction(dir)) {
++		dev_err(chan2dev(chan), "Invalid DMA direction\n");
++		return NULL;
++	}
++
++	contract = generate_dma_contract();
++	if (!contract)
++		return NULL;
++
++	/* Figure out addresses */
++	if (dir == DMA_MEM_TO_DEV) {
++		srcaddr = buf;
++		dstaddr = sconfig->dst_addr;
++		if (sconfig->src_addr_width == DMA_SLAVE_BUSWIDTH_UNDEFINED) {
++			sconfig->src_addr_width = sconfig->dst_addr_width;
++			sconfig->src_maxburst = sconfig->dst_maxburst;
++		}
++	} else {
++		srcaddr = sconfig->src_addr;
++		dstaddr = buf;
++		if (sconfig->dst_addr_width == DMA_SLAVE_BUSWIDTH_UNDEFINED) {
++			sconfig->dst_addr_width = sconfig->src_addr_width;
++			sconfig->dst_maxburst = sconfig->src_maxburst;
++		}
++	}
++
++	/* Figure out endpoints */
++	if (vchan->is_dedicated && dir == DMA_MEM_TO_DEV) {
++		endpoints |= DDMA_CFG_SRC_DRQ_TYPE(DDMA_DRQ_TYPE_SDRAM) |
++			    DDMA_CFG_SRC_ADDR_MODE(DDMA_ADDR_MODE_LINEAR) |
++			    DDMA_CFG_DEST_DRQ_TYPE(vchan->endpoint) |
++			    DDMA_CFG_DEST_ADDR_MODE(DDMA_ADDR_MODE_IO);
++	} else if (!vchan->is_dedicated && dir == DMA_MEM_TO_DEV) {
++		endpoints |= NDMA_CFG_SRC_DRQ_TYPE(NDMA_DRQ_TYPE_SDRAM) |
++			    NDMA_CFG_DEST_DRQ_TYPE(vchan->endpoint) |
++			    NDMA_CFG_DEST_FIXED_ADDR;
++	} else if (vchan->is_dedicated) {
++		endpoints |= DDMA_CFG_SRC_DRQ_TYPE(vchan->endpoint) |
++			    DDMA_CFG_SRC_ADDR_MODE(DDMA_ADDR_MODE_IO) |
++			    DDMA_CFG_DEST_DRQ_TYPE(DDMA_DRQ_TYPE_SDRAM) |
++			    DDMA_CFG_DEST_ADDR_MODE(DDMA_ADDR_MODE_LINEAR);
++	} else {
++		endpoints |= NDMA_CFG_SRC_DRQ_TYPE(vchan->endpoint) |
++			    NDMA_CFG_SRC_FIXED_ADDR |
++			    NDMA_CFG_DEST_DRQ_TYPE(NDMA_DRQ_TYPE_SDRAM);
++	}
++
++	for (bytes = 0; bytes < len; bytes += period_len) {
++
++		if (dir == DMA_MEM_TO_DEV)
++			srcaddr += period_len;
++		else
++			dstaddr += period_len;
++
++		/* And make a suitable promise */
++		if (vchan->is_dedicated)
++			promise = generate_ddma_promise(chan, srcaddr, dstaddr, period_len, sconfig);
++		else
++			promise = generate_ndma_promise(chan, srcaddr, dstaddr, period_len, sconfig);
++
++		if (!promise) {
++			kfree(contract);
++			return NULL;
++		}
++
++		promise->cfg |= endpoints;
++
++		/* Then add it to the contract */
++		list_add_tail(&promise->list, &contract->demands);
++	}
++
++	/* And add it to the vchan */
++	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
++}
++
+ static struct dma_async_tx_descriptor *
+ sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
+ 			unsigned int sg_len, enum dma_transfer_direction dir,
+@@ -706,6 +803,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+ 
+ 	case DMA_SLAVE_CONFIG:
+ 		memcpy(&vchan->cfg, (void *)arg, sizeof(vchan->cfg));
++printk("JDS DMA slave config %d %d %d %d\n", vchan->cfg.src_maxburst, vchan->cfg.dst_maxburst, vchan->cfg.src_addr_width, vchan->cfg.dst_addr_width);
+ 		break;
+ 
+ 	default:
+@@ -759,6 +857,8 @@ static enum dma_status sun4i_dma_tx_status(struct dma_chan *chan,
+ 	enum dma_status ret;
+ 	size_t bytes = 0;
+ 
++
++	printk("JDS DMA sun4i_dma_tx_status\n");
+ 	ret = dma_cookie_status(chan, cookie, state);
+ 	if (ret == DMA_COMPLETE)
+ 		return ret;
+@@ -823,6 +923,7 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
+ 	unsigned long pendirq, irqs;
+ 	int bit;
+ 
++	printk("JDS - sun4i_ddma_interrupt\n");
+ 	pendirq = readl_relaxed(priv->base + DMA_IRQ_PENDING_STATUS_REG);
+ 	irqs = readl_relaxed(priv->base + DMA_IRQ_ENABLE_REG);
+ 
+@@ -876,6 +977,19 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
+ 	return IRQ_HANDLED;
+ }
+ 
++static int sun4i_dma_device_slave_caps(struct dma_chan *dchan,
++				      struct dma_slave_caps *caps)
++{
++	caps->src_addr_widths = 32;
++	caps->dstn_addr_widths = 32;
++	caps->directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
++	caps->cmd_pause = true;
++	caps->cmd_terminate = true;
++	caps->residue_granularity = DMA_RESIDUE_GRANULARITY_BURST;
++
++	return 0;
++}
++
+ static int sun4i_dma_probe(struct platform_device *pdev)
+ {
+ 	struct sun4i_dma_dev *priv;
+@@ -918,7 +1032,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
+ 	priv->slave.device_issue_pending	= sun4i_dma_issue_pending;
+ 	priv->slave.device_prep_slave_sg	= sun4i_dma_prep_slave_sg;
+ 	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;
++	priv->slave.device_prep_dma_cyclic	= sun4i_dma_prep_dma_cyclic;
+ 	priv->slave.device_control		= sun4i_dma_control;
++	priv->slave.device_slave_caps 		= sun4i_dma_device_slave_caps;
+ 	priv->slave.chancnt			= DDMA_NR_MAX_VCHANS;
+ 
+ 	priv->slave.dev = &pdev->dev;
+diff --git a/sound/core/pcm_dmaengine.c b/sound/core/pcm_dmaengine.c
+index 76cbb9e..2ff6264 100644
+--- a/sound/core/pcm_dmaengine.c
++++ b/sound/core/pcm_dmaengine.c
+@@ -133,10 +133,13 @@ static void dmaengine_pcm_dma_complete(void *arg)
+ 	struct snd_pcm_substream *substream = arg;
+ 	struct dmaengine_pcm_runtime_data *prtd = substream_to_prtd(substream);
+ 
++	printk("JDS DMA dmaengine_pcm_dma_complete %d\n", prtd->pos);
++
+ 	prtd->pos += snd_pcm_lib_period_bytes(substream);
+ 	if (prtd->pos >= snd_pcm_lib_buffer_bytes(substream))
+ 		prtd->pos = 0;
+ 
++	printk("JDS DMA dmaengine_pcm_dma_complete a %d\n", prtd->pos);
+ 	snd_pcm_period_elapsed(substream);
+ }
+ 
+diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
+index 0060b31..8f08e4b 100644
+--- a/sound/soc/Kconfig
++++ b/sound/soc/Kconfig
+@@ -52,6 +52,7 @@ source "sound/soc/s6000/Kconfig"
+ source "sound/soc/sh/Kconfig"
+ source "sound/soc/sirf/Kconfig"
+ source "sound/soc/spear/Kconfig"
++source "sound/soc/sunxi/Kconfig"
+ source "sound/soc/tegra/Kconfig"
+ source "sound/soc/txx9/Kconfig"
+ source "sound/soc/ux500/Kconfig"
+diff --git a/sound/soc/Makefile b/sound/soc/Makefile
+index 5f1df02..50c7ab3 100644
+--- a/sound/soc/Makefile
++++ b/sound/soc/Makefile
+@@ -29,6 +29,7 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
+ obj-$(CONFIG_SND_SOC)	+= sh/
+ obj-$(CONFIG_SND_SOC)	+= sirf/
+ obj-$(CONFIG_SND_SOC)	+= spear/
++obj-$(CONFIG_SND_SOC)	+= sunxi/
+ obj-$(CONFIG_SND_SOC)	+= tegra/
+ obj-$(CONFIG_SND_SOC)	+= txx9/
+ obj-$(CONFIG_SND_SOC)	+= ux500/
