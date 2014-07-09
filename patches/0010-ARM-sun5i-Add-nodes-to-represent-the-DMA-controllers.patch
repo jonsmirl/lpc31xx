@@ -1,0 +1,57 @@
+Bottom: 26bdde005a9e53be8473c55374d45c66f1428b31
+Top:    8a9f1483e98560eaafc49410fe0c45a622d18ede
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-07-01 15:57:21 -0300
+
+From 110887b6e435a1ebbb72eb4b3987c5c346d60289 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 10/19] ARM: sun5i: Add nodes to represent the DMA controllers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The A10S and A13 SoCs have sun4i-compatible DMA controllers. Let's add
+the corresponding nodes to represent them on the device tree.
+
+Signed-off-by: Emilio López <emilio@elopez.com.ar>
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun5i-a10s.dtsi b/arch/arm/boot/dts/sun5i-a10s.dtsi
+index b64f705..3708817 100644
+--- a/arch/arm/boot/dts/sun5i-a10s.dtsi
++++ b/arch/arm/boot/dts/sun5i-a10s.dtsi
+@@ -300,6 +300,14 @@
+ 		#size-cells = <1>;
+ 		ranges;
+ 
++	        dma: dma-controller@01c02000 {
++	                compatible = "allwinner,sun4i-a10-dma";
++	                reg = <0x01c02000 0x1000>;
++	                interrupts = <27>;
++	                clocks = <&ahb_gates 6>;
++			#dma-cells = <2>;
++	        };
++
+ 		spi0: spi@01c05000 {
+ 			compatible = "allwinner,sun4i-a10-spi";
+ 			reg = <0x01c05000 0x1000>;
+diff --git a/arch/arm/boot/dts/sun5i-a13.dtsi b/arch/arm/boot/dts/sun5i-a13.dtsi
+index 3b2a94c..1f1adf2 100644
+--- a/arch/arm/boot/dts/sun5i-a13.dtsi
++++ b/arch/arm/boot/dts/sun5i-a13.dtsi
+@@ -298,6 +298,14 @@
+ 		#size-cells = <1>;
+ 		ranges;
+ 
++	        dma: dma-controller@01c02000 {
++	                compatible = "allwinner,sun4i-a10-dma";
++	                reg = <0x01c02000 0x1000>;
++	                interrupts = <27>;
++	                clocks = <&ahb_gates 6>;
++			#dma-cells = <2>;
++	        };
++
+ 		spi0: spi@01c05000 {
+ 			compatible = "allwinner,sun4i-a10-spi";
+ 			reg = <0x01c05000 0x1000>;

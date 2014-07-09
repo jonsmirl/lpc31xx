@@ -1,0 +1,37 @@
+Bottom: 3fca1f95ca121d71fdacb9e4b6aaae79d76be56b
+Top:    26bdde005a9e53be8473c55374d45c66f1428b31
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-06-11 21:35:29 -0300
+
+From cb0345bf86c93f22d6de926b2e3b9eea04b54195 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 09/19] ARM: sun4i: Add node to represent the DMA controller
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Let's add a node to represent the A10 DMA controller on the device tree.
+
+Signed-off-by: Emilio López <emilio@elopez.com.ar>
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun4i-a10.dtsi b/arch/arm/boot/dts/sun4i-a10.dtsi
+index d96e179..f17cbeb 100644
+--- a/arch/arm/boot/dts/sun4i-a10.dtsi
++++ b/arch/arm/boot/dts/sun4i-a10.dtsi
+@@ -339,6 +339,14 @@
+ 		#size-cells = <1>;
+ 		ranges;
+ 
++	        dma: dma-controller@01c02000 {
++	                compatible = "allwinner,sun4i-a10-dma";
++	                reg = <0x01c02000 0x1000>;
++	                interrupts = <27>;
++	                clocks = <&ahb_gates 6>;
++			#dma-cells = <2>;
++	        };
++
+ 		spi0: spi@01c05000 {
+ 			compatible = "allwinner,sun4i-a10-spi";
+ 			reg = <0x01c05000 0x1000>;

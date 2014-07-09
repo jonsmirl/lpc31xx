@@ -1,0 +1,53 @@
+Bottom: f04b103a60c5371f99794f4a1d856fcb6393e7f8
+Top:    b0045b11c4f5794e9354a0cb9f8e193dd5939af6
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-06-11 21:47:02 -0300
+
+From 7b5c3d95ae9cb61ca65a572281ee2e6b08c8b715 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 15/19] ARM: sun4i: cubieboard: add an SPIdev device for
+ testing
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun4i-a10-cubieboard.dts b/arch/arm/boot/dts/sun4i-a10-cubieboard.dts
+index c200eac..c7a4c4e 100644
+--- a/arch/arm/boot/dts/sun4i-a10-cubieboard.dts
++++ b/arch/arm/boot/dts/sun4i-a10-cubieboard.dts
+@@ -71,6 +71,18 @@
+ 			status = "okay";
+ 		};
+ 
++		spi0: spi@01c05000 {
++			pinctrl-names = "default";
++			pinctrl-0 = <&spi0_pins_a>;
++			status = "okay";
++
++			dac0: dh2228@2 {
++				compatible = "rohm,dh2228fv";
++				reg = <2>;
++				spi-max-frequency = <100000>;
++			};
++		};
++
+ 		pinctrl@01c20800 {
+ 			led_pins_cubieboard: led_pins@0 {
+ 				allwinner,pins = "PH20", "PH21";
+diff --git a/arch/arm/boot/dts/sun4i-a10.dtsi b/arch/arm/boot/dts/sun4i-a10.dtsi
+index 56d02af..63c0ff6 100644
+--- a/arch/arm/boot/dts/sun4i-a10.dtsi
++++ b/arch/arm/boot/dts/sun4i-a10.dtsi
+@@ -585,6 +585,13 @@
+ 				allwinner,pull = <0>;
+ 			};
+ 
++			spi0_pins_a: spi0@0 {
++				allwinner,pins = "PI10", "PI11", "PI12", "PI13";
++				allwinner,function = "spi0";
++				allwinner,drive = <0>;
++				allwinner,pull = <0>;
++			};
++
+ 			emac_pins_a: emac0@0 {
+ 				allwinner,pins = "PA0", "PA1", "PA2",
+ 						"PA3", "PA4", "PA5", "PA6",

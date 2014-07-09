@@ -1,0 +1,63 @@
+Bottom: 44f64b5ccf199752ec0003fa4f1c62316bea6495
+Top:    1edb27a1b03f29e57259b6599663cd2234ac0f14
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-04-14 01:15:37 -0300
+
+From 7504870ca132c7e18ade0523d11d8b06120af441 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 02/19] fixup! cpufreq: arm: sunxi: cpufreq driver from
+ linux-sunxi
+
+Totally untested, and will most likely break things. Only here to
+keep it building.
+
+
+---
+
+diff --git a/drivers/cpufreq/sunxi/cpu-freq.c b/drivers/cpufreq/sunxi/cpu-freq.c
+index b18f0a7..c6aeb01 100644
+--- a/drivers/cpufreq/sunxi/cpu-freq.c
++++ b/drivers/cpufreq/sunxi/cpu-freq.c
+@@ -321,7 +321,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
+         freqs.cpu = 0;
+         freqs.old = cpu_cur.pll / 1000;
+         freqs.new = cpu_new.pll / 1000;
+-        cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
++        cpufreq_freq_transition_begin(policy, &freqs);
+     }
+ 
+     #ifdef CONFIG_CPU_FREQ_DVFS
+@@ -338,7 +338,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
+                 freqs.cpu = 0;
+                 freqs.old = freqs.new;
+                 freqs.new = cpu_cur.pll / 1000;
+-                cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
++                cpufreq_freq_transition_end(policy, &freqs, 1);
+             }
+             return -EINVAL;
+         }
+@@ -364,7 +364,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
+             freqs.cpu = 0;
+             freqs.old = freqs.new;
+             freqs.new = cpu_cur.pll / 1000;
+-            cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
++            cpufreq_freq_transition_end(policy, &freqs, 1);
+         }
+ 
+         return -EINVAL;
+@@ -386,7 +386,7 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
+ 
+     /* notify everyone we've done this */
+     if (policy) {
+-        cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
++        cpufreq_freq_transition_end(policy, &freqs, 0);
+     }
+ 
+     CPUFREQ_DBG("%s: finished\n", __func__);
+@@ -725,7 +725,7 @@ static int __init sun4i_cpufreq_initcall(void)
+     /* register cpu frequency driver */
+     ret = cpufreq_register_driver(&sun4i_cpufreq_driver);
+     /* register cpu frequency table to cpufreq core */
+-    cpufreq_frequency_table_get_attr(sun4i_freq_tbl, 0);
++    cpufreq_table_validate_and_show(NULL, sun4i_freq_tbl);
+     /* update policy for boot cpu */
+     cpufreq_update_policy(0);

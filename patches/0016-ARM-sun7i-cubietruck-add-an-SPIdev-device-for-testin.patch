@@ -1,0 +1,35 @@
+Bottom: b0045b11c4f5794e9354a0cb9f8e193dd5939af6
+Top:    def72ecb6e13a7fe26e7481d17a3479a8bc1c995
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-05-23 21:00:53 -0300
+
+From 65efbdce17335940e2f3820b7950b05fa811a82a Mon Sep 17 00:00:00 2001
+Subject: [PATCH 16/19] ARM: sun7i: cubietruck: add an SPIdev device for
+ testing
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+index b87fea9..4ef421f 100644
+--- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
++++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+@@ -66,6 +66,18 @@
+ 			status = "okay";
+ 		};
+ 
++		spi2: spi@01c17000 {
++			pinctrl-names = "default";
++			pinctrl-0 = <&spi2_pins_a>;
++			status = "okay";
++
++			dac0: dh2228@2 {
++				compatible = "rohm,dh2228fv";
++				reg = <2>;
++				spi-max-frequency = <100000>;
++			};
++		};
++
+ 		pinctrl@01c20800 {
+ 			mmc3_pins_a: mmc3@0 {
+ 				/* AP6210 requires pull-up */

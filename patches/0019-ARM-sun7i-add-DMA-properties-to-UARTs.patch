@@ -1,0 +1,94 @@
+Bottom: 771a127220fc4f4f77be59a5af218b115ee1b47a
+Top:    dafdece6d56194326cba291e299e953d00252c58
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-06-08 23:53:54 -0300
+
+From f97f72ee433f4b5c1ee1ba78abcec588cbe9565b Mon Sep 17 00:00:00 2001
+Subject: [PATCH 19/19] ARM: sun7i: add DMA properties to UARTs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Our UARTs also support DMA transfers, let's enable them for the sake of
+testing.
+
+Signed-off-by: Emilio López <emilio@elopez.com.ar>
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index 804dc01..bd39b5d 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -805,6 +805,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 16>;
++			dmas = <&dma 0 8>, <&dma 0 8>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -815,6 +817,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 17>;
++			dmas = <&dma 0 9>, <&dma 0 9>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -825,6 +829,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 18>;
++			dmas = <&dma 0 10>, <&dma 0 10>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -835,6 +841,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 19>;
++			dmas = <&dma 0 11>, <&dma 0 11>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -845,6 +853,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 20>;
++			dmas = <&dma 0 12>, <&dma 0 12>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -855,6 +865,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 21>;
++			dmas = <&dma 0 13>, <&dma 0 13>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -865,6 +877,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 22>;
++			dmas = <&dma 0 14>, <&dma 0 14>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -875,6 +889,8 @@
+ 			reg-shift = <2>;
+ 			reg-io-width = <4>;
+ 			clocks = <&apb1_gates 23>;
++			dmas = <&dma 0 15>, <&dma 0 15>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};

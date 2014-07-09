@@ -1,6 +1,25 @@
 Version: 1
-Previous: None
-Head: 110e4308f89fed7be824abb681d962eacc0bc319
+Previous: 4ca434002e9f1284dcfcd8d09a4d2ce89e3b69d4
+Head: 68445e2b87bd0e2662f0d0a82f3b55350edb6e97
 Applied:
+  0001-cpufreq-arm-sunxi-cpufreq-driver-from-linux-sunxi.patch: f09f9993bd346a5cc8f70798fc066f9d0ecf97aa
+  0002-fixup-cpufreq-arm-sunxi-cpufreq-driver-from-linux-su.patch: 7f73e563c1311856f353a17622a43e1b0812339d
+  0003-arm-configs-minimal-config-for-sunxi-SOCs.patch: 5af29e0249bba56e6dae85cdc6bc27f8285b8234
+  0004-Travis-CI-configuration.patch: 0c03f31b00d1cae32e3500ee8c5c704f2577c906
+  0005-Travis-Disable-initramfs-so-my-local-config-doesn-t-.patch: fc8be268b59f56b9d462ab5e76b5bdd5111cf355
+  0006-trivial-genirq-fix-reference-in-devm_request_threade.patch: 024f3fb44125ccc0e5464315c92a82bf3ffe561f
+  0007-dma-sun4i-Add-support-for-the-DMA-engine-on-sun-457-.patch: ab6327ec71075391549bb294496a40062862b27f
+  0008-spi-sun4i-add-DMA-support.patch: 53ab75f70b42bef2b0ada1cae1ec67c121597a6b
+  0009-ARM-sun4i-Add-node-to-represent-the-DMA-controller.patch: 289737fe086dfbbf694e1a7f1b6ff6560fd6e10e
+  0010-ARM-sun5i-Add-nodes-to-represent-the-DMA-controllers.patch: a2223dab66753561a074b8502bfdaf9bdea15264
+  0011-ARM-sun7i-Add-node-to-represent-the-DMA-controller.patch: a7a1e3dcbfe8897ceb6d2bc9d47b7af9d5d88699
+  0012-ARM-sun4i-enable-DMA-on-SPI.patch: 6881516044a50b3fe7ddd1a8ae023ac937566867
+  0013-ARM-sun5i-enable-DMA-on-SPI.patch: 6bee475c4db9e83a9eaebf82e495b03cc379da3d
+  0014-ARM-sun7i-enable-DMA-on-SPI.patch: 2ac8e2bfca58d203a59b83d79e770c6b7ed9002e
+  0015-ARM-sun4i-cubieboard-add-an-SPIdev-device-for-testin.patch: a614dfacbeec775425a3bea2d10f226a09ba3cce
+  0016-ARM-sun7i-cubietruck-add-an-SPIdev-device-for-testin.patch: 3f53df5812c7afa99a3c343d3bcda49c8ac4697b
+  0017-ARM-sun5i-a10s-olinuxino-micro-add-an-SPIdev-device-.patch: 4991e16ec0e506c06de71502cc33910c2b0ab597
+  0018-serial-8250_dw-support-DMA-on-the-OF-case.patch: 2dda757a4c5342a5c2a40c3e7a3e2fdecbe694cd
+  0019-ARM-sun7i-add-DMA-properties-to-UARTs.patch: 68445e2b87bd0e2662f0d0a82f3b55350edb6e97
 Unapplied:
 Hidden:

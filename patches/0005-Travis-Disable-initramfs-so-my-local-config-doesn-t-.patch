@@ -1,0 +1,25 @@
+Bottom: f894cfe10947313ebffb37f733b37d80a9f5ad72
+Top:    140a9bb8986c0c813d136be3756ba3480ec6310f
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-04-14 02:17:35 -0300
+
+From 3818e577976acdb1556a07b3ac975fcd9937f1c3 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 05/19] Travis: Disable initramfs so my local config doesn't
+ fail
+
+
+---
+
+diff --git a/.travis.yml b/.travis.yml
+index e7c242c..e20f71b 100644
+--- a/.travis.yml
++++ b/.travis.yml
+@@ -22,6 +22,8 @@ install:
+ before_script:
+   - ${CROSS_COMPILE}gcc -v
+   - make $BUILD_CONFIG
++  - sed -i '/.*INITR.*/d' .config
++  - yes "" | make oldconfig
+ 
+ script:
+   - make -j$J C=$C CONFIG_DEBUG_SECTION_MISMATCH=y $TARGETS

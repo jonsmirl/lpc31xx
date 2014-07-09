@@ -1,0 +1,53 @@
+Bottom: def72ecb6e13a7fe26e7481d17a3479a8bc1c995
+Top:    92e87f223f4bccb3525b20bb37e07d7d305f1b46
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-07-01 16:09:10 -0300
+
+From 5872d521efd9f0ae38e8db192050d4eaa64d5a76 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 17/19] ARM: sun5i: a10s-olinuxino-micro: add an SPIdev device
+ for testing
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun5i-a10s-olinuxino-micro.dts b/arch/arm/boot/dts/sun5i-a10s-olinuxino-micro.dts
+index ea9519d..3f19e57 100644
+--- a/arch/arm/boot/dts/sun5i-a10s-olinuxino-micro.dts
++++ b/arch/arm/boot/dts/sun5i-a10s-olinuxino-micro.dts
+@@ -68,6 +68,18 @@
+ 			status = "okay";
+ 		};
+ 
++		spi2: spi@01c17000 {
++			pinctrl-names = "default";
++			pinctrl-0 = <&spi2_pins_a>;
++			status = "okay";
++
++			dac0: dh2228@2 {
++				compatible = "rohm,dh2228fv";
++				reg = <2>;
++				spi-max-frequency = <100000>;
++			};
++		};
++
+ 		pinctrl@01c20800 {
+ 			mmc0_cd_pin_olinuxino_micro: mmc0_cd_pin@0 {
+ 				allwinner,pins = "PG1";
+diff --git a/arch/arm/boot/dts/sun5i-a10s.dtsi b/arch/arm/boot/dts/sun5i-a10s.dtsi
+index 12f26f3..814cddb 100644
+--- a/arch/arm/boot/dts/sun5i-a10s.dtsi
++++ b/arch/arm/boot/dts/sun5i-a10s.dtsi
+@@ -506,6 +506,13 @@
+ 				allwinner,drive = <2>;
+ 				allwinner,pull = <0>;
+ 			};
++
++			spi2_pins_a: spi2@0 {
++				allwinner,pins = "PB11", "PB12", "PB13", "PB14";
++				allwinner,function = "spi2";
++				allwinner,drive = <0>;
++				allwinner,pull = <0>;
++			};
+ 		};
+ 
+ 		timer@01c20c00 {

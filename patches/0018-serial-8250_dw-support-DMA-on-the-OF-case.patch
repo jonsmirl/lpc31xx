@@ -1,0 +1,49 @@
+Bottom: 92e87f223f4bccb3525b20bb37e07d7d305f1b46
+Top:    771a127220fc4f4f77be59a5af218b115ee1b47a
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-06-08 23:51:56 -0300
+
+From 6b28c3e4b4482b94bee46c07ea829ce45d53c622 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 18/19] serial: 8250_dw: support DMA on the OF case
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Currently, DMA properties on the DT are ignored when using the 8250_dw
+driver. With this patch, DMA will be used when available.
+
+Signed-off-by: Emilio López <emilio@elopez.com.ar>
+
+
+---
+
+diff --git a/drivers/tty/serial/8250/8250_dw.c b/drivers/tty/serial/8250/8250_dw.c
+index 51b307a..af78ef9 100644
+--- a/drivers/tty/serial/8250/8250_dw.c
++++ b/drivers/tty/serial/8250/8250_dw.c
+@@ -286,6 +286,8 @@ static int dw8250_probe_of(struct uart_port *p,
+ 			   struct dw8250_data *data)
+ {
+ 	struct device_node	*np = p->dev->of_node;
++	struct uart_8250_port	*up = container_of(p, struct uart_8250_port,
++						   port);
+ 	u32			val;
+ 	bool has_ucv = true;
+ 
+@@ -318,11 +320,15 @@ static int dw8250_probe_of(struct uart_port *p,
+ 		}
+ 	}
+ 	if (has_ucv)
+-		dw8250_setup_port(container_of(p, struct uart_8250_port, port));
++		dw8250_setup_port(up);
+ 
+ 	if (!of_property_read_u32(np, "reg-shift", &val))
+ 		p->regshift = val;
+ 
++	/* if dma is specified on the DT, try to use it */
++	if (of_get_property(np, "dmas", NULL))
++		up->dma = &data->dma;
++
+ 	/* clock got configured through clk api, all done */
+ 	if (p->uartclk)
+ 		return 0;

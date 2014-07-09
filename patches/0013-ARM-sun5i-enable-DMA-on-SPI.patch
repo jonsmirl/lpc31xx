@@ -1,0 +1,81 @@
+Bottom: 90b3acb110cd7250d76c0c6e4c308c882c57bbd1
+Top:    932b3593e185ab292ade040b4366d0d1281d0742
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-07-01 16:01:15 -0300
+
+From bdfee95732cccdaa2784e203a574dc57b3e856fa Mon Sep 17 00:00:00 2001
+Subject: [PATCH 13/19] ARM: sun5i: enable DMA on SPI
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+All of our SPI controllers support DMA transfers, so let's add the
+properties here so they can be used when it's best to do so.
+
+Signed-off-by: Emilio López <emilio@elopez.com.ar>
+
+
+---
+
+diff --git a/arch/arm/boot/dts/sun5i-a10s.dtsi b/arch/arm/boot/dts/sun5i-a10s.dtsi
+index 3708817..12f26f3 100644
+--- a/arch/arm/boot/dts/sun5i-a10s.dtsi
++++ b/arch/arm/boot/dts/sun5i-a10s.dtsi
+@@ -314,6 +314,8 @@
+ 			interrupts = <10>;
+ 			clocks = <&ahb_gates 20>, <&spi0_clk>;
+ 			clock-names = "ahb", "mod";
++			dmas = <&dma 1 27>, <&dma 1 26>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+@@ -325,6 +327,8 @@
+ 			interrupts = <11>;
+ 			clocks = <&ahb_gates 21>, <&spi1_clk>;
+ 			clock-names = "ahb", "mod";
++			dmas = <&dma 1 9>, <&dma 1 8>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+@@ -411,6 +415,8 @@
+ 			interrupts = <12>;
+ 			clocks = <&ahb_gates 22>, <&spi2_clk>;
+ 			clock-names = "ahb", "mod";
++			dmas = <&dma 1 29>, <&dma 1 28>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+diff --git a/arch/arm/boot/dts/sun5i-a13.dtsi b/arch/arm/boot/dts/sun5i-a13.dtsi
+index 1f1adf2..4bbf455 100644
+--- a/arch/arm/boot/dts/sun5i-a13.dtsi
++++ b/arch/arm/boot/dts/sun5i-a13.dtsi
+@@ -312,6 +312,8 @@
+ 			interrupts = <10>;
+ 			clocks = <&ahb_gates 20>, <&spi0_clk>;
+ 			clock-names = "ahb", "mod";
++			dmas = <&dma 1 27>, <&dma 1 26>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+@@ -323,6 +325,8 @@
+ 			interrupts = <11>;
+ 			clocks = <&ahb_gates 21>, <&spi1_clk>;
+ 			clock-names = "ahb", "mod";
++			dmas = <&dma 1 9>, <&dma 1 8>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+@@ -384,6 +388,8 @@
+ 			interrupts = <12>;
+ 			clocks = <&ahb_gates 22>, <&spi2_clk>;
+ 			clock-names = "ahb", "mod";
++			dmas = <&dma 1 29>, <&dma 1 28>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;

@@ -1,0 +1,32 @@
+Bottom: 140a9bb8986c0c813d136be3756ba3480ec6310f
+Top:    3ade6472c9753086f9bdacffcb54d8409fd71257
+Author: =?UTF-8?q?Emilio=20L=C3=B3pez?= <emilio@elopez.com.ar>
+Date:   2014-06-28 00:07:23 -0300
+
+From 69dc87b637e4bb0ae639c58c78322ef6e768bdb6 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 06/19] trivial: genirq: fix reference in
+ devm_request_threaded_irq comment
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+It should be request_threaded_irq, not request_irq
+
+Signed-off-by: Emilio López <emilio@elopez.com.ar>
+
+
+---
+
+diff --git a/kernel/irq/devres.c b/kernel/irq/devres.c
+index 1ef0606..d5d0f73 100644
+--- a/kernel/irq/devres.c
++++ b/kernel/irq/devres.c
+@@ -38,7 +38,7 @@ static int devm_irq_match(struct device *dev, void *res, void *data)
+  *
+  *	Except for the extra @dev argument, this function takes the
+  *	same arguments and performs the same function as
+- *	request_irq().  IRQs requested with this function will be
++ *	request_threaded_irq().  IRQs requested with this function will be
+  *	automatically freed on driver detach.
+  *
+  *	If an IRQ allocated with this function needs to be freed
