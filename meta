@@ -1,6 +1,6 @@
 Version: 1
-Previous: 4ca434002e9f1284dcfcd8d09a4d2ce89e3b69d4
-Head: 68445e2b87bd0e2662f0d0a82f3b55350edb6e97
+Previous: f3aa9f38ec5d561b0ed41b3a0fb91d7041c5c624
+Head: 59a018c08f57a3380fbccd3a2ffaec45664ab34c
 Applied:
   0001-cpufreq-arm-sunxi-cpufreq-driver-from-linux-sunxi.patch: f09f9993bd346a5cc8f70798fc066f9d0ecf97aa
   0002-fixup-cpufreq-arm-sunxi-cpufreq-driver-from-linux-su.patch: 7f73e563c1311856f353a17622a43e1b0812339d
@@ -21,5 +21,6 @@ Applied:
   0017-ARM-sun5i-a10s-olinuxino-micro-add-an-SPIdev-device-.patch: 4991e16ec0e506c06de71502cc33910c2b0ab597
   0018-serial-8250_dw-support-DMA-on-the-OF-case.patch: 2dda757a4c5342a5c2a40c3e7a3e2fdecbe694cd
   0019-ARM-sun7i-add-DMA-properties-to-UARTs.patch: 68445e2b87bd0e2662f0d0a82f3b55350edb6e97
+  copy: 59a018c08f57a3380fbccd3a2ffaec45664ab34c
 Unapplied:
 Hidden:
