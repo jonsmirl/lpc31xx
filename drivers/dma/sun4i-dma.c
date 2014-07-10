@@ -523,6 +523,7 @@ static void sun4i_dma_free_contract(struct virt_dma_desc *vd)
 	struct sun4i_dma_contract *contract = to_sun4i_dma_contract(vd);
 	struct sun4i_dma_promise *promise;
 
+	printk("JDS DMA sun4i_dma_free_contract\n");
 	/* Free all the demands and completed demands */
 	list_for_each_entry(promise, &contract->demands, list) {
 		kfree(promise);
@@ -937,21 +938,22 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
 		if (bit & 1) {
 			spin_lock(&vchan->vc.lock);
 			if (contract->cyclic) {
-				vchan_cyclic_callback(&contract->vd);
-
 				/* move promise to back of list */
-				list_del(&vchan->processing->list);
+				list_del_init(&vchan->processing->list);
 				list_add_tail(&vchan->processing->list, &contract->demands);
+				vchan->processing = NULL;
+
+				vchan_cyclic_callback(&contract->vd);
 			} else {
 				/*
 				 * Move the promise into the completed list now that
 				 * we're done with it
 				 */
-				list_del(&vchan->processing->list);
+				list_del_init(&vchan->processing->list);
 				list_add_tail(&vchan->processing->list, &contract->completed_demands);
 				vchan->pchan = NULL;
+				vchan->processing = NULL;
 			}
-			vchan->processing = NULL;
 			spin_unlock(&vchan->vc.lock);
 
 			irqs &= ~BIT(bit);
