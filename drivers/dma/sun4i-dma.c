@@ -160,6 +160,7 @@ struct sun4i_dma_contract {
 	struct virt_dma_desc		vd;
 	struct list_head		demands;
 	struct list_head		completed_demands;
+	bool cyclic;
 };
 
 struct sun4i_dma_dev {
@@ -407,28 +408,24 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
 
 	/* Source burst */
 	ret = convert_burst(sconfig->src_maxburst);
-printk("JDS Src Burst %d %d\n", sconfig->src_maxburst, ret);
 	if (IS_ERR_VALUE(ret))
 		goto fail;
 	promise->cfg |= NDMA_CFG_SRC_BURST_LENGTH(ret);
 
 	/* Destination burst */
 	ret = convert_burst(sconfig->dst_maxburst);
-printk("JDS dst Burst %d %d\n", sconfig->dst_maxburst, ret);
 	if (IS_ERR_VALUE(ret))
 		goto fail;
 	promise->cfg |= NDMA_CFG_DEST_BURST_LENGTH(ret);
 
 	/* Source bus width */
 	ret = convert_buswidth(sconfig->src_addr_width);
-printk("JDS src addr %d %d\n", sconfig->src_addr_width, ret);
 	if (IS_ERR_VALUE(ret))
 		goto fail;
 	promise->cfg |= NDMA_CFG_SRC_DATA_WIDTH(ret);
 
 	/* Destination bus width */
 	ret = convert_buswidth(sconfig->dst_addr_width);
-printk("JDS dst addr %d %d\n", sconfig->dst_addr_width, ret);
 	if (IS_ERR_VALUE(ret))
 		goto fail;
 	promise->cfg |= NDMA_CFG_DEST_DATA_WIDTH(ret);
@@ -598,6 +595,7 @@ static struct dma_async_tx_descriptor *sun4i_dma_prep_dma_cyclic(
 	contract = generate_dma_contract();
 	if (!contract)
 		return NULL;
+	contract->cyclic = true;
 
 	/* Figure out addresses */
 	if (dir == DMA_MEM_TO_DEV) {
@@ -938,14 +936,22 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
 		 */
 		if (bit & 1) {
 			spin_lock(&vchan->vc.lock);
-			/*
-			 * Move the promise into the completed list now that
-			 * we're done with it
-			 */
-			list_del(&vchan->processing->list);
-			list_add_tail(&vchan->processing->list, &contract->completed_demands);
+			if (contract->cyclic) {
+				vchan_cyclic_callback(&contract->vd);
+
+				/* move promise to back of list */
+				list_del(&vchan->processing->list);
+				list_add_tail(&vchan->processing->list, &contract->demands);
+			} else {
+				/*
+				 * Move the promise into the completed list now that
+				 * we're done with it
+				 */
+				list_del(&vchan->processing->list);
+				list_add_tail(&vchan->processing->list, &contract->completed_demands);
+				vchan->pchan = NULL;
+			}
 			vchan->processing = NULL;
-			vchan->pchan = NULL;
 			spin_unlock(&vchan->vc.lock);
 
 			irqs &= ~BIT(bit);

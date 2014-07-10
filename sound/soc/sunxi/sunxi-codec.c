@@ -118,6 +118,7 @@ static int codec_play_start(struct sunxi_priv *priv)
 	regmap_update_bitsx(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_FIFO_FLUSH, 0x1 << DAC_FIFO_FLUSH);
 	//enable dac drq
 	regmap_update_bitsx(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_DRQ, 0x1 << DAC_DRQ);
+	regmap_update_bitsx(priv->regmap, SUNXI_DAC_ACTL, 0x1 << PA_MUTE, 0x1 << PA_MUTE);
 	return 0;
 }
 
