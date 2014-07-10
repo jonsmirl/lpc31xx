@@ -1,5 +1,5 @@
 Bottom: 1a1cac63d435b53c2e7ae1dd04216364ddd3aa1f
-Top:    31e5f10e3308e1ef3ce3ff2b413c4dfbf6fbd2be
+Top:    84bbea7c0e115f152706579f56b36b61dea90111
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-09 12:17:13 -0400
 
@@ -441,7 +441,7 @@ index fb2ce84..b63b7c7 100644
  };
  
 diff --git a/drivers/dma/sun4i-dma.c b/drivers/dma/sun4i-dma.c
-index 24fa391..fb293d2 100644
+index 24fa391..db6579d 100644
 --- a/drivers/dma/sun4i-dma.c
 +++ b/drivers/dma/sun4i-dma.c
 @@ -8,6 +8,8 @@
@@ -453,7 +453,15 @@ index 24fa391..fb293d2 100644
  #include <linux/bitmap.h>
  #include <linux/bitops.h>
  #include <linux/clk.h>
-@@ -340,8 +342,8 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
+@@ -158,6 +160,7 @@ struct sun4i_dma_contract {
+ 	struct virt_dma_desc		vd;
+ 	struct list_head		demands;
+ 	struct list_head		completed_demands;
++	bool cyclic;
+ };
+ 
+ struct sun4i_dma_dev {
+@@ -340,8 +343,8 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
  		/* Figure out which contract we're working with today */
  		vd = vchan_next_desc(&vchan->vc);
  		if (!vd) {
@@ -464,7 +472,7 @@ index 24fa391..fb293d2 100644
  			ret = 0;
  			goto release_pchan;
  		}
-@@ -356,6 +358,8 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
+@@ -356,6 +359,8 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
  		}
  	} while (list_empty(&contract->demands));
  
@@ -473,7 +481,7 @@ index 24fa391..fb293d2 100644
  	/* Now find out what we need to do */
  	promise = list_first_entry(&contract->demands,
  				   struct sun4i_dma_promise, list);
-@@ -363,6 +367,7 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
+@@ -363,6 +368,7 @@ static int execute_vchan_pending(struct sun4i_dma_dev *priv,
  
  	/* ... and make it reality */
  	if (promise) {
@@ -481,36 +489,7 @@ index 24fa391..fb293d2 100644
  		vchan->contract = contract;
  		set_pchan_interrupt(priv, pchan, 0, 1);
  		configure_pchan(pchan, promise);
-@@ -402,24 +407,28 @@ generate_ndma_promise(struct dma_chan *chan, dma_addr_t src, dma_addr_t dest,
- 
- 	/* Source burst */
- 	ret = convert_burst(sconfig->src_maxburst);
-+printk("JDS Src Burst %d %d\n", sconfig->src_maxburst, ret);
- 	if (IS_ERR_VALUE(ret))
- 		goto fail;
- 	promise->cfg |= NDMA_CFG_SRC_BURST_LENGTH(ret);
- 
- 	/* Destination burst */
- 	ret = convert_burst(sconfig->dst_maxburst);
-+printk("JDS dst Burst %d %d\n", sconfig->dst_maxburst, ret);
- 	if (IS_ERR_VALUE(ret))
- 		goto fail;
- 	promise->cfg |= NDMA_CFG_DEST_BURST_LENGTH(ret);
- 
- 	/* Source bus width */
- 	ret = convert_buswidth(sconfig->src_addr_width);
-+printk("JDS src addr %d %d\n", sconfig->src_addr_width, ret);
- 	if (IS_ERR_VALUE(ret))
- 		goto fail;
- 	promise->cfg |= NDMA_CFG_SRC_DATA_WIDTH(ret);
- 
- 	/* Destination bus width */
- 	ret = convert_buswidth(sconfig->dst_addr_width);
-+printk("JDS dst addr %d %d\n", sconfig->dst_addr_width, ret);
- 	if (IS_ERR_VALUE(ret))
- 		goto fail;
- 	promise->cfg |= NDMA_CFG_DEST_DATA_WIDTH(ret);
-@@ -568,6 +577,94 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
+@@ -568,6 +574,95 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
  	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
  }
  
@@ -535,6 +514,7 @@ index 24fa391..fb293d2 100644
 +	contract = generate_dma_contract();
 +	if (!contract)
 +		return NULL;
++	contract->cyclic = true;
 +
 +	/* Figure out addresses */
 +	if (dir == DMA_MEM_TO_DEV) {
@@ -605,7 +585,7 @@ index 24fa391..fb293d2 100644
  static struct dma_async_tx_descriptor *
  sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
  			unsigned int sg_len, enum dma_transfer_direction dir,
-@@ -706,6 +803,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+@@ -706,6 +801,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
  
  	case DMA_SLAVE_CONFIG:
  		memcpy(&vchan->cfg, (void *)arg, sizeof(vchan->cfg));
@@ -613,7 +593,7 @@ index 24fa391..fb293d2 100644
  		break;
  
  	default:
-@@ -759,6 +857,8 @@ static enum dma_status sun4i_dma_tx_status(struct dma_chan *chan,
+@@ -759,6 +855,8 @@ static enum dma_status sun4i_dma_tx_status(struct dma_chan *chan,
  	enum dma_status ret;
  	size_t bytes = 0;
  
@@ -622,7 +602,7 @@ index 24fa391..fb293d2 100644
  	ret = dma_cookie_status(chan, cookie, state);
  	if (ret == DMA_COMPLETE)
  		return ret;
-@@ -823,6 +923,7 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
+@@ -823,6 +921,7 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
  	unsigned long pendirq, irqs;
  	int bit;
  
@@ -630,7 +610,37 @@ index 24fa391..fb293d2 100644
  	pendirq = readl_relaxed(priv->base + DMA_IRQ_PENDING_STATUS_REG);
  	irqs = readl_relaxed(priv->base + DMA_IRQ_ENABLE_REG);
  
-@@ -876,6 +977,19 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
+@@ -837,14 +936,22 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
+ 		 */
+ 		if (bit & 1) {
+ 			spin_lock(&vchan->vc.lock);
+-			/*
+-			 * Move the promise into the completed list now that
+-			 * we're done with it
+-			 */
+-			list_del(&vchan->processing->list);
+-			list_add_tail(&vchan->processing->list, &contract->completed_demands);
++			if (contract->cyclic) {
++				vchan_cyclic_callback(&contract->vd);
++
++				/* move promise to back of list */
++				list_del(&vchan->processing->list);
++				list_add_tail(&vchan->processing->list, &contract->demands);
++			} else {
++				/*
++				 * Move the promise into the completed list now that
++				 * we're done with it
++				 */
++				list_del(&vchan->processing->list);
++				list_add_tail(&vchan->processing->list, &contract->completed_demands);
++				vchan->pchan = NULL;
++			}
+ 			vchan->processing = NULL;
+-			vchan->pchan = NULL;
+ 			spin_unlock(&vchan->vc.lock);
+ 
+ 			irqs &= ~BIT(bit);
+@@ -876,6 +983,19 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
  	return IRQ_HANDLED;
  }
  
@@ -650,7 +660,7 @@ index 24fa391..fb293d2 100644
  static int sun4i_dma_probe(struct platform_device *pdev)
  {
  	struct sun4i_dma_dev *priv;
-@@ -918,7 +1032,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
+@@ -918,7 +1038,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
  	priv->slave.device_issue_pending	= sun4i_dma_issue_pending;
  	priv->slave.device_prep_slave_sg	= sun4i_dma_prep_slave_sg;
  	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;
@@ -723,10 +733,10 @@ index 0000000..b8950d3
 +
 diff --git a/sound/soc/sunxi/sunxi-codec.c b/sound/soc/sunxi/sunxi-codec.c
 new file mode 100644
-index 0000000..aa2f2e2
+index 0000000..b6c81eb
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-codec.c
-@@ -0,0 +1,724 @@
+@@ -0,0 +1,725 @@
 +/*
 + *
 + * Licensed under the GPL-2.
@@ -847,6 +857,7 @@ index 0000000..aa2f2e2
 +	regmap_update_bitsx(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_FIFO_FLUSH, 0x1 << DAC_FIFO_FLUSH);
 +	//enable dac drq
 +	regmap_update_bitsx(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_DRQ, 0x1 << DAC_DRQ);
++	regmap_update_bitsx(priv->regmap, SUNXI_DAC_ACTL, 0x1 << PA_MUTE, 0x1 << PA_MUTE);
 +	return 0;
 +}
 +
