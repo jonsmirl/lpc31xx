@@ -1,5 +1,5 @@
 Bottom: 1a1cac63d435b53c2e7ae1dd04216364ddd3aa1f
-Top:    84bbea7c0e115f152706579f56b36b61dea90111
+Top:    aa8f70a5a4e7bc141fd2ab499718aa266dfa2afa
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-09 12:17:13 -0400
 
@@ -441,7 +441,7 @@ index fb2ce84..b63b7c7 100644
  };
  
 diff --git a/drivers/dma/sun4i-dma.c b/drivers/dma/sun4i-dma.c
-index 24fa391..db6579d 100644
+index 24fa391..ca33f8c 100644
 --- a/drivers/dma/sun4i-dma.c
 +++ b/drivers/dma/sun4i-dma.c
 @@ -8,6 +8,8 @@
@@ -489,7 +489,15 @@ index 24fa391..db6579d 100644
  		vchan->contract = contract;
  		set_pchan_interrupt(priv, pchan, 0, 1);
  		configure_pchan(pchan, promise);
-@@ -568,6 +574,95 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
+@@ -517,6 +523,7 @@ static void sun4i_dma_free_contract(struct virt_dma_desc *vd)
+ 	struct sun4i_dma_contract *contract = to_sun4i_dma_contract(vd);
+ 	struct sun4i_dma_promise *promise;
+ 
++	printk("JDS DMA sun4i_dma_free_contract\n");
+ 	/* Free all the demands and completed demands */
+ 	list_for_each_entry(promise, &contract->demands, list) {
+ 		kfree(promise);
+@@ -568,6 +575,95 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
  	return vchan_tx_prep(&vchan->vc, &contract->vd, flags);
  }
  
@@ -585,7 +593,7 @@ index 24fa391..db6579d 100644
  static struct dma_async_tx_descriptor *
  sun4i_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
  			unsigned int sg_len, enum dma_transfer_direction dir,
-@@ -706,6 +801,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+@@ -706,6 +802,7 @@ static int sun4i_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
  
  	case DMA_SLAVE_CONFIG:
  		memcpy(&vchan->cfg, (void *)arg, sizeof(vchan->cfg));
@@ -593,7 +601,7 @@ index 24fa391..db6579d 100644
  		break;
  
  	default:
-@@ -759,6 +855,8 @@ static enum dma_status sun4i_dma_tx_status(struct dma_chan *chan,
+@@ -759,6 +856,8 @@ static enum dma_status sun4i_dma_tx_status(struct dma_chan *chan,
  	enum dma_status ret;
  	size_t bytes = 0;
  
@@ -602,7 +610,7 @@ index 24fa391..db6579d 100644
  	ret = dma_cookie_status(chan, cookie, state);
  	if (ret == DMA_COMPLETE)
  		return ret;
-@@ -823,6 +921,7 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
+@@ -823,6 +922,7 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
  	unsigned long pendirq, irqs;
  	int bit;
  
@@ -610,7 +618,7 @@ index 24fa391..db6579d 100644
  	pendirq = readl_relaxed(priv->base + DMA_IRQ_PENDING_STATUS_REG);
  	irqs = readl_relaxed(priv->base + DMA_IRQ_ENABLE_REG);
  
-@@ -837,14 +936,22 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
+@@ -837,14 +937,23 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
  		 */
  		if (bit & 1) {
  			spin_lock(&vchan->vc.lock);
@@ -620,27 +628,29 @@ index 24fa391..db6579d 100644
 -			 */
 -			list_del(&vchan->processing->list);
 -			list_add_tail(&vchan->processing->list, &contract->completed_demands);
+-			vchan->processing = NULL;
+-			vchan->pchan = NULL;
 +			if (contract->cyclic) {
-+				vchan_cyclic_callback(&contract->vd);
-+
 +				/* move promise to back of list */
-+				list_del(&vchan->processing->list);
++				list_del_init(&vchan->processing->list);
 +				list_add_tail(&vchan->processing->list, &contract->demands);
++				vchan->processing = NULL;
++
++				vchan_cyclic_callback(&contract->vd);
 +			} else {
 +				/*
 +				 * Move the promise into the completed list now that
 +				 * we're done with it
 +				 */
-+				list_del(&vchan->processing->list);
++				list_del_init(&vchan->processing->list);
 +				list_add_tail(&vchan->processing->list, &contract->completed_demands);
 +				vchan->pchan = NULL;
++				vchan->processing = NULL;
 +			}
- 			vchan->processing = NULL;
--			vchan->pchan = NULL;
  			spin_unlock(&vchan->vc.lock);
  
  			irqs &= ~BIT(bit);
-@@ -876,6 +983,19 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
+@@ -876,6 +985,19 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
  	return IRQ_HANDLED;
  }
  
@@ -660,7 +670,7 @@ index 24fa391..db6579d 100644
  static int sun4i_dma_probe(struct platform_device *pdev)
  {
  	struct sun4i_dma_dev *priv;
-@@ -918,7 +1038,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
+@@ -918,7 +1040,9 @@ static int sun4i_dma_probe(struct platform_device *pdev)
  	priv->slave.device_issue_pending	= sun4i_dma_issue_pending;
  	priv->slave.device_prep_slave_sg	= sun4i_dma_prep_slave_sg;
  	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;

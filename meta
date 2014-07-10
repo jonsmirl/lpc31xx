@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9a3630abe468bd34de355a3764c14f783bc93f8f
-Head: e6f3b0bc304f7102cfbb60277a280c5d52c1398a
+Previous: e1978ee6ad348294395147df451909b0015e57c0
+Head: 2e157bbcf86f0ae395b3ed8e963bcce4db111b26
 Applied:
   0001-cpufreq-arm-sunxi-cpufreq-driver-from-linux-sunxi.patch: f09f9993bd346a5cc8f70798fc066f9d0ecf97aa
   0002-fixup-cpufreq-arm-sunxi-cpufreq-driver-from-linux-su.patch: 7f73e563c1311856f353a17622a43e1b0812339d
@@ -24,7 +24,6 @@ Applied:
   copy: 59a018c08f57a3380fbccd3a2ffaec45664ab34c
   config: 2769d6e49283a81c872f99331586df1612430221
   clock-debug: 1138ab5aec1fd5a277e01d0cabc7df3ee2faa20b
-  audio: dcbab1749af5fd82a65d72670a7a77f7ee734ba8
-  refresh-temp: e6f3b0bc304f7102cfbb60277a280c5d52c1398a
+  audio: 2e157bbcf86f0ae395b3ed8e963bcce4db111b26
 Unapplied:
 Hidden:
