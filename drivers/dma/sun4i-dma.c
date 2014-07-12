@@ -209,6 +209,19 @@ static int convert_buswidth(enum dma_slave_buswidth addr_width)
 	return (addr_width >> 1);
 }
 
+static int choose_optimal_buswidth(dma_addr_t addr)
+{
+	/* On 32 bit aligned addresses, we can use a 32 bit bus width */
+	if (addr % 4 == 0)
+		return DMA_SLAVE_BUSWIDTH_4_BYTES;
+	/* On 16 bit aligned addresses, we can use a 16 bit bus width */
+	else if (addr % 2 == 0)
+		return DMA_SLAVE_BUSWIDTH_2_BYTES;
+
+	/* Worst-case scenario, we need to do byte aligned reads */
+	return DMA_SLAVE_BUSWIDTH_1_BYTE;
+}
+
 static int sun4i_dma_alloc_chan_resources(struct dma_chan *chan)
 {
 	return 0;
@@ -542,6 +555,16 @@ sun4i_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
 	contract = generate_dma_contract();
 	if (!contract)
 		return NULL;
+
+	/*
+	 * We can only do the copy to bus aligned addresses, so
+	 * choose the best one so we get decent performance. We also
+	 * maximize the burst size for this same reason.
+	 */
+	sconfig->src_addr_width = choose_optimal_buswidth(src);
+	sconfig->dst_addr_width = choose_optimal_buswidth(dest);
+	sconfig->src_maxburst = 8;
+	sconfig->dst_maxburst = 8;
 
 	if (vchan->is_dedicated)
 		promise = generate_ddma_promise(chan, src, dest, len, sconfig);
@@ -918,6 +941,7 @@ static int sun4i_dma_probe(struct platform_device *pdev)
 	priv->slave.device_prep_dma_memcpy	= sun4i_dma_prep_dma_memcpy;
 	priv->slave.device_control		= sun4i_dma_control;
 	priv->slave.chancnt			= DDMA_NR_MAX_VCHANS;
+	priv->slave.copy_align			= DMA_SLAVE_BUSWIDTH_4_BYTES;
 
 	priv->slave.dev = &pdev->dev;
 
