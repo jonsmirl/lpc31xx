@@ -826,6 +826,23 @@
 			status = "disabled";
 		};
 
+		codec: codec@01c22c00 {
+			#sound-dai-cells = <0>;
+			compatible = "allwinner,sun7i-a20-codec";
+			reg = <0x01c22c00 0x40>;
+			interrupts = <0 30 4>;
+			clocks = <&pll2>, <&apb0_gates 0>, <&codec_clk>;
+			clock-names = "pll2", "apb", "codec";
+			dmas = <&dma 0 19>, <&dma 0 19>;
+			dma-names = "rx", "tx";
+			routing =
+				"MIC_IN", "Microphone Jack",
+				"Microphone Jack", "Mic Bias",
+				"LINE_IN", "Line In Jack",
+				"Headphone Jack", "HP_OUT";
+			status = "disabled";
+		};
+
 		ir1: ir@01c21c00 {
 			compatible = "allwinner,sun4i-a10-ir";
 			clocks = <&apb0_gates 7>, <&ir1_clk>;
