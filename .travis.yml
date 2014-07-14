@@ -1,0 +1,37 @@
+language: c
+
+compiler:
+  - gcc
+
+env:
+  - ARCH=arm LOADADDR=0x40008000 CROSS_COMPILE="arm-linux-gnueabihf-" BUILD_CONFIG=sunxi_defconfig TARGETS="uImage dtbs" J=1 C=2
+  - ARCH=arm LOADADDR=0x40008000 CROSS_COMPILE="arm-linux-gnueabihf-" BUILD_CONFIG=sunxi_full_defconfig TARGETS="uImage dtbs" J=1 C=2
+  - ARCH=arm LOADADDR=0x40008000 CROSS_COMPILE="arm-linux-gnueabihf-" BUILD_CONFIG=multi_v7_defconfig TARGETS="uImage dtbs modules" J=1 C=2
+  - BUILD_CONFIG=allyesconfig TARGETS="bzImage" J=8 C=0
+  - BUILD_CONFIG=allnoconfig TARGETS="bzImage" J=8 C=0
+  - BUILD_CONFIG=allmodconfig TARGETS="bzImage modules" J=8 C=0
+
+before_install:
+  - sudo sed -i 's/^.*rabbit.*$//' /etc/apt/sources.list
+  - sudo apt-get update -qq
+
+install:
+  - sudo apt-get install -qq bc
+  - sh -c '[ "$C" != "0" ] && sudo apt-get install -qq llvm-3.4-dev && export PATH="/usr/lib/llvm-3.4/bin:$PATH" && wget http://codemonkey.org.uk/projects/git-snapshots/sparse/sparse-latest.tar.xz -O sparse-latest.tar.xz && tar -xJf sparse-latest.tar.xz && cd sparse-*/ && sed -i "s#PREFIX=.*#PREFIX=/usr#" Makefile && make && sudo make install || exit 0'
+  - sh -c '[ -n "$ARCH" ] && sudo apt-get install -qq u-boot-tools gcc-arm-linux-gnueabihf || exit 0'
+
+before_script:
+  - ${CROSS_COMPILE}gcc -v
+  - make $BUILD_CONFIG
+  - sed -i '/.*INITR.*/d' .config
+  - yes "" | make oldconfig
+
+script:
+  - make -j$J C=$C CONFIG_DEBUG_SECTION_MISMATCH=y $TARGETS
+
+notifications:
+  email:
+    recipients:
+      - travis@elopez.com.ar
+    on_success: change
+    on_failure: always
