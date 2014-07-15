@@ -510,6 +510,7 @@ static struct sun4i_dma_contract *generate_dma_contract(void)
 		return NULL;
 
 	INIT_LIST_HEAD(&contract->demands);
+printk("JDS DMA demands init next %p prev %p\n", contract->demands.next, contract->demands.prev);
 	INIT_LIST_HEAD(&contract->completed_demands);
 
 	return contract;
@@ -939,6 +940,8 @@ static irqreturn_t sun4i_dma_interrupt(int irq, void *dev_id)
 			spin_lock(&vchan->vc.lock);
 			if (contract->cyclic) {
 				/* move promise to back of list */
+
+printk("JDS DMA demands next %p prev %p\n", contract->demands.next, contract->demands.prev);
 				list_del_init(&vchan->processing->list);
 				list_add_tail(&vchan->processing->list, &contract->demands);
 				vchan->processing = NULL;
