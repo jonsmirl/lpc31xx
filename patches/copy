@@ -1,0 +1,22 @@
+Bottom: 8cfe94ae5374f87ce614ddd46a9a5de0847672d6
+Top:    68fcc40ba27158eef824062724d100a3d503eb50
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-15 14:05:34 -0400
+
+copy
+
+
+---
+
+diff --git a/cop b/cop
+new file mode 100755
+index 0000000..42d5878
+--- /dev/null
++++ b/cop
+@@ -0,0 +1,6 @@
++#!/bin/sh
++
++
++make zImage uImage dtbs
++#cp /work/hans/sound/soc/sunxi/sunxi-codec.ko /work/root/lib/modules/3.15.0+/kernel/sound/soc/sunxi
++
