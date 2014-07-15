@@ -1,6 +1,18 @@
 /*
+ * Copyright 2014 Emilio López <emilio@elopez.com.ar>
+ * Copyright 2014 Jon Smirl <jonsmirl@gmail.com>
  *
- * Licensed under the GPL-2.
+ * Based on the Allwinner SDK driver, released under the GPL.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  */
 
 #include <linux/init.h>
@@ -23,24 +35,58 @@
 #include <sound/initval.h>
 #include <sound/dmaengine_pcm.h>
 
-//Codec Register
-#define SUNXI_DAC_DPC                (0x00)
-#define SUNXI_DAC_FIFOC              (0x04)
-#define SUNXI_DAC_FIFOS              (0x08)
-#define SUNXI_DAC_TXDATA             (0x0c)
-#define SUNXI_DAC_ACTL               (0x10)
-#define SUNXI_DAC_TUNE               (0x14)
-#define SUNXI_DAC_DEBUG              (0x18)
-#define SUNXI_ADC_FIFOC              (0x1c)
-#define SUNXI_ADC_FIFOS              (0x20)
-#define SUNXI_ADC_RXDATA             (0x24)
-#define SUNXI_ADC_ACTL               (0x28)
-#define SUNXI_ADC_DEBUG              (0x2c)
-#define SUNXI_DAC_TXCNT              (0x30)
-#define SUNXI_ADC_RXCNT              (0x34)
-#define SUNXI_BIAS_CRT               (0x38)
-#define SUNXI_MIC_CRT                (0x3c)
-#define SUNXI_CODEC_REGS_NUM         (13)
+/* Codec register offsets and bit fields */
+#define SUNXI_DAC_DPC		(0x00)
+#define DAC_EN				(31)
+#define DIGITAL_VOL			(12)
+#define DAC_VERSION			(23) /* For CODEC OLD VERSION */
+#define SUNXI_DAC_FIFOC		(0x04)
+#define LAST_SE				(26)
+#define TX_FIFO_MODE			(24)
+#define DRA_LEVEL			(21)
+#define TX_TRI_LEVEL			(8)
+#define DAC_MODE			(6)			//not used yet
+#define TASR				(5)			//not used yet
+#define DAC_DRQ				(4)
+#define DAC_FIFO_FLUSH			(0)
+#define SUNXI_DAC_FIFOS		(0x08)
+#define SUNXI_DAC_TXDATA	(0x0c)
+#define SUNXI_DAC_ACTL		(0x10)
+#define VOLUME				(0)
+#define PA_MUTE				(6)
+#define MIXPAS				(7)
+#define DACPAS				(8)
+#define MIXEN				(29)
+#define DACAEN_L			(30)
+#define DACAEN_R			(31)
+#define SUNXI_DAC_TUNE		(0x14)
+#define SUNXI_DAC_DEBUG		(0x18)
+#define SUNXI_ADC_FIFOC		(0x1c)
+#define ADC_DIG_EN			(28)
+#define RX_FIFO_MODE			(24)
+#define RX_TRI_LEVEL			(8)
+#define ADC_MODE			(7)
+#define RASR				(6)
+#define ADC_DRQ				(4)
+#define ADC_FIFO_FLUSH			(0)
+#define SUNXI_ADC_FIFOS		(0x20)
+#define SUNXI_ADC_RXDATA	(0x24)
+#define SUNXI_ADC_ACTL		(0x28)
+#define ADC_LF_EN			(31)
+#define ADC_RI_EN			(30)
+#define ADC_EN				(30)
+#define MIC1_EN				(29)
+#define MIC2_EN				(28)
+#define VMIC_EN				(27)
+#define MIC_GAIN			(25)
+#define ADC_SELECT			(17)
+#define PA_ENABLE			(4)
+#define HP_DIRECT			(3)
+#define SUNXI_ADC_DEBUG		(0x2c)
+#define SUNXI_DAC_TXCNT		(0x30)
+#define SUNXI_ADC_RXCNT		(0x34)
+#define SUNXI_BIAS_CRT		(0x38)
+#define SUNXI_MIC_CRT		(0x3c)
 
 #define DAIFMT_16BITS             (16)
 #define DAIFMT_20BITS             (20)
@@ -49,48 +95,7 @@
 #define DAIFMT_BITS_MASK          (~(1<<5))		//FIFO Bits select mask,not used yet.
 #define SAMPLE_RATE_MASK          (~(7<<29))  	//Sample Rate slect mask
 
-#define DAC_EN                    (31)
-#define DIGITAL_VOL               (12)
-//For CODEC OLD VERSION
-#define DAC_VERSION               (23)
-
 #define DAC_CHANNEL		  (6)
-#define LAST_SE                   (26)
-#define TX_FIFO_MODE              (24)
-#define DRA_LEVEL                 (21)
-#define TX_TRI_LEVEL              (8)
-#define DAC_MODE                  (6)			//not used yet
-#define TASR                      (5)			//not used yet
-#define DAC_DRQ                   (4)
-#define DAC_FIFO_FLUSH            (0)
-
-#define VOLUME                    (0)
-#define PA_MUTE                   (6)
-#define MIXPAS                    (7)
-#define DACPAS                    (8)
-#define MIXEN                     (29)
-#define DACAEN_L                  (30)
-#define DACAEN_R                  (31)
-
-#define ADC_DIG_EN                (28)
-#define RX_FIFO_MODE              (24)
-#define RX_TRI_LEVEL              (8)
-#define ADC_MODE                  (7)
-#define RASR                      (6)
-#define ADC_DRQ                   (4)
-#define ADC_FIFO_FLUSH            (0)
-
-#define  ADC_LF_EN                (31)
-#define  ADC_RI_EN                (30)
-#define  ADC_EN                   (30)
-#define  MIC1_EN                  (29)
-#define  MIC2_EN                  (28)
-#define  VMIC_EN                  (27)
-#define  MIC_GAIN                 (25)
-#define  ADC_SELECT               (17)
-#define  PA_ENABLE                (4)
-#define  HP_DIRECT                (3)
-
 
 enum sunxi_device_id {SUN4A, SUN4I, SUN5I, SUN7I};
 
@@ -715,7 +720,7 @@ static struct platform_driver sunxi_codec_driver = {
 };
 module_platform_driver(sunxi_codec_driver);
 
-MODULE_ALIAS("platform:sunxi-codec");
-MODULE_DESCRIPTION("sunxi CODEC ALSA codec driver");
-MODULE_AUTHOR("software");
-MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("sunxi codec ASoC driver");
+MODULE_AUTHOR("Emilio López <emilio@elopez.com.ar>");
+MODULE_AUTHOR("Jon Smirl <jonsmirl@gmail.com>");
+MODULE_LICENSE("GPL");
