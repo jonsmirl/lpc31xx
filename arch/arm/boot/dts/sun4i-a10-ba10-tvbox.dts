@@ -1,7 +1,5 @@
 /*
- * Copyright 2013 Maxime Ripard
- *
- * Maxime Ripard <maxime.ripard@free-electrons.com>
+ * Copyright 2014 Hans de Goede <hdegoede@redhat.com>
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -12,14 +10,29 @@
  */
 
 /dts-v1/;
-/include/ "sun7i-a20.dtsi"
+/include/ "sun4i-a10.dtsi"
 /include/ "sunxi-common-regulators.dtsi"
 
 / {
-	model = "Cubietech Cubieboard2";
-	compatible = "cubietech,cubieboard2", "allwinner,sun7i-a20";
+	model = "BA10 tvbox";
+	compatible = "allwinner,ba10-tvbox", "allwinner,sun4i-a10";
 
 	soc@01c00000 {
+		emac: ethernet@01c0b000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&emac_pins_a>;
+			phy = <&phy1>;
+			status = "okay";
+		};
+
+		mdio@01c0b080 {
+			status = "okay";
+
+			phy1: ethernet-phy@1 {
+				reg = <1>;
+			};
+		};
+
 		mmc0: mmc@01c0f000 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&mmc0_pins_a>, <&mmc0_cd_pin_reference_design>;
@@ -44,11 +57,6 @@
 			status = "okay";
 		};
 
-		ahci: sata@01c18000 {
-			target-supply = <&reg_ahci_5v>;
-			status = "okay";
-		};
-
 		ehci1: usb@01c1c000 {
 			status = "okay";
 		};
@@ -58,11 +66,8 @@
 		};
 
 		pinctrl@01c20800 {
-			led_pins_cubieboard2: led_pins@0 {
-				allwinner,pins = "PH20", "PH21";
-				allwinner,function = "gpio_out";
-				allwinner,drive = <0>;
-				allwinner,pull = <0>;
+			usb2_vbus_pin_a: usb2_vbus_pin@0 {
+				allwinner,pins = "PH12";
 			};
 		};
 
@@ -86,51 +91,12 @@
 			axp209: pmic@34 {
 				compatible = "x-powers,axp209";
 				reg = <0x34>;
-				interrupt-parent = <&nmi_intc>;
-				interrupts = <0 8>;
+				interrupts = <0>;
 
 				interrupt-controller;
 				#interrupt-cells = <1>;
 			};
 		};
-
-		i2c1: i2c@01c2b000 {
-			pinctrl-names = "default";
-			pinctrl-0 = <&i2c1_pins_a>;
-			status = "okay";
-		};
-
-		gmac: ethernet@01c50000 {
-			pinctrl-names = "default";
-			pinctrl-0 = <&gmac_pins_mii_a>;
-			phy = <&phy1>;
-			phy-mode = "mii";
-			status = "okay";
-
-			phy1: ethernet-phy@1 {
-				reg = <1>;
-			};
-		};
-	};
-
-	leds {
-		compatible = "gpio-leds";
-		pinctrl-names = "default";
-		pinctrl-0 = <&led_pins_cubieboard2>;
-
-		blue {
-			label = "cubieboard2:blue:usr";
-			gpios = <&pio 7 21 0>;
-		};
-
-		green {
-			label = "cubieboard2:green:usr";
-			gpios = <&pio 7 20 0>;
-		};
-	};
-
-	reg_ahci_5v: ahci-5v {
-		status = "okay";
 	};
 
 	reg_usb1_vbus: usb1-vbus {
@@ -138,6 +104,7 @@
 	};
 
 	reg_usb2_vbus: usb2-vbus {
+		gpio = <&pio 7 12 0>;
 		status = "okay";
 	};
 };
