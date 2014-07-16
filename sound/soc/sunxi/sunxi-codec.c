@@ -287,11 +287,11 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
-	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
+	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 	int is_mono = !!(params_channels(params) == 1);
 	unsigned int rate = params_rate(params);
 	unsigned int hwrate;
@@ -672,6 +672,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	}
 	if (clk_prepare_enable(priv->clk_apb)) {
 		dev_err(dev, "try to enable clk_apb failed\n");
+		clk_disable_unprepare(priv->clk_pll2);
 		return -EINVAL;
 	}
 
@@ -716,7 +717,7 @@ err_clk_disable:
 	return ret;
 }
 
-static int sunxi_codec_dev_remove(struct platform_device *pdev)
+static int sunxi_codec_remove(struct platform_device *pdev)
 {
 	struct sunxi_priv *priv = platform_get_drvdata(pdev);
 
@@ -734,7 +735,7 @@ static struct platform_driver sunxi_codec_driver = {
 		.of_match_table = sunxi_codec_of_match,
 	},
 	.probe = sunxi_codec_probe,
-	.remove = sunxi_codec_dev_remove,
+	.remove = sunxi_codec_remove,
 };
 module_platform_driver(sunxi_codec_driver);
 
