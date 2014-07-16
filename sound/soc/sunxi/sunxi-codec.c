@@ -48,7 +48,7 @@
 #define DAC_DRQ_CLR_CNT			(21)
 #define TX_TRIG_LEVEL			(8)
 #define DAC_MONO_EN			(6)
-#define TX_SAMPLE_BITS			(5) /* not yet in use */
+#define TX_SAMPLE_BITS			(5)
 #define DAC_DRQ_EN			(4)
 #define DAC_FIFO_FLUSH			(0)
 #define SUNXI_DAC_FIFOS		(0x08)
@@ -246,8 +246,8 @@ static int sunxi_codec_prepare(struct snd_pcm_substream *substream,
 		} else {
 			regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << FIR_VERSION, 0x1 << FIR_VERSION);
 		}
-		/* set TX FIFO MODE */
-		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << TX_FIFO_MODE, 0x1 << TX_FIFO_MODE);
+		/* set TX FIFO MODE - 0 works for both 16 and 24 bits */
+		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << TX_FIFO_MODE, 0x0 << TX_FIFO_MODE);
 		/* send last sample when DAC FIFO under run */
 		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << SEND_LASAT, 0x0 << SEND_LASAT);
 		/* enable dac analog */
@@ -293,6 +293,7 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 	int is_mono = !!(params_channels(params) == 1);
+	int is_24bit = !!(hw_param_interval(params, SNDRV_PCM_HW_PARAM_SAMPLE_BITS)->min == 32);
 	unsigned int rate = params_rate(params);
 	unsigned int hwrate;
 
@@ -361,6 +362,11 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 7 << DAC_FS, hwrate << DAC_FS);
 		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << DAC_MONO_EN, is_mono << DAC_MONO_EN);
+		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << TX_SAMPLE_BITS, is_24bit << TX_SAMPLE_BITS);
+		if (is_24bit)
+			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		else
+			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	} else  {
 		regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 7 << 29, hwrate << 29);
 		regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 1 << ADC_MONO_EN, is_mono << ADC_MONO_EN);
@@ -495,7 +501,7 @@ static struct snd_soc_dai_driver sunxi_codec_dai = {
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE),
 
 		.rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_11025 |\
 			 SNDRV_PCM_RATE_22050| SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 |\
@@ -552,15 +558,8 @@ static struct snd_soc_codec_driver dummy_codec = {
 };
 
 #define STUB_RATES	SNDRV_PCM_RATE_8000_192000
-#define STUB_FORMATS	(SNDRV_PCM_FMTBIT_S8 | \
-			SNDRV_PCM_FMTBIT_U8 | \
-			SNDRV_PCM_FMTBIT_S16_LE | \
-			SNDRV_PCM_FMTBIT_U16_LE | \
-			SNDRV_PCM_FMTBIT_S24_LE | \
-			SNDRV_PCM_FMTBIT_U24_LE | \
-			SNDRV_PCM_FMTBIT_S32_LE | \
-			SNDRV_PCM_FMTBIT_U32_LE | \
-			SNDRV_PCM_FMTBIT_IEC958_SUBFRAME_LE)
+#define STUB_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | \
+			SNDRV_PCM_FMTBIT_S24_LE)
 
 static struct snd_soc_dai_driver dummy_dai = {
 	.name = "sunxi-codec-dai",
