@@ -211,7 +211,7 @@ static int sunxi_codec_trigger(struct snd_pcm_substream *substream, int cmd,
 			codec_capture_start(priv);
 		else
 			codec_play_start(priv);
-		break;		break;
+		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
@@ -223,6 +223,7 @@ static int sunxi_codec_trigger(struct snd_pcm_substream *substream, int cmd,
 	default:
 		return -EINVAL;
 	}
+
 	return 0;
 }
 
@@ -235,7 +236,7 @@ static int sunxi_codec_prepare(struct snd_pcm_substream *substream,
 	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 0x1 << EN_DA, 0x1 << EN_DA);
 		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 0x1 << DAC_FIFO_FLUSH, 0x1 << DAC_FIFO_FLUSH);
 		/* set TX FIFO send DRQ level */
@@ -278,6 +279,7 @@ static int sunxi_codec_prepare(struct snd_pcm_substream *substream,
 		/* enable adc1 analog */
 		regmap_update_bits(priv->regmap, SUNXI_ADC_ACTL, 0x3 << ADCLEN, 0x3 << ADCLEN);
 	}
+
 	return 0;
 }
 
@@ -436,13 +438,8 @@ static int sunxi_codec_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
-	int ret;
 
-	ret = clk_prepare_enable(priv->clk_module);
-	if (ret)
-		return ret;
-
-	return 0;
+	return clk_prepare_enable(priv->clk_module);
 }
 
 static void sunxi_codec_shutdown(struct snd_pcm_substream *substream,
