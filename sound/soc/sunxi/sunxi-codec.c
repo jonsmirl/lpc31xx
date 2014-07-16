@@ -461,35 +461,24 @@ static int codec_init(struct sunxi_priv *priv)
 	regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 1 << EN_DA, 1 << EN_DA);
 
 	regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << FIR_VERSION, 1 << FIR_VERSION);
+
 	/* set digital volume to maximum */
 	if (priv->id == SUN4A)
 		regmap_update_bits(priv->regmap, SUNXI_DAC_DPC, 0x3F << DVOL, 0 << DVOL);
+
 	/* PA mute */
 	regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 1 << PA_MUTE, 0 << PA_MUTE);
+
 	/* enable PA */
 	regmap_update_bits(priv->regmap, SUNXI_ADC_ACTL, 1 << PA_EN, 1 << PA_EN);
 	regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 3 << DAC_DRQ_CLR_CNT, 3 << DAC_DRQ_CLR_CNT);
+
 	/* set volume */
-	if ((priv->id == SUN4I) || (priv->id == SUN4A)) {
-		int rc;
-		int device_lr_change = 0;
-		if (priv->id == SUN4A) {
-			regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x3f << PAVOL, 1 << PAVOL);
-		} else {
- 			regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x3f << PAVOL, 0x3b << PAVOL);
-		}
-#ifdef JDS
-		rc = script_parser_fetch("audio_para", "audio_lr_change", &device_lr_change, 1);
-		if (rc != SCRIPT_AUDIO_OK) {
-			pr_err("No audio_lr_change in fex audio_para\n");
-			return -1;
-		}
-		if (device_lr_change)
-			regmap_update_bits(priv->regmap, SUNXI_DAC_DEBUG, 1 << DAC_CHANNEL, 1 << DAC_CHANNEL);
-#endif
-	} else {
+	if (priv->id == SUN4A)
+		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x3f << PAVOL, 1 << PAVOL);
+	else
 		regmap_update_bits(priv->regmap, SUNXI_DAC_ACTL, 0x3f << PAVOL, 0x3b << PAVOL);
-	}
+
 	return 0;
 }
 
