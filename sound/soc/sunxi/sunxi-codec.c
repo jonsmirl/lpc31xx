@@ -634,7 +634,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		return PTR_ERR(base);
 
 	priv->regmap = devm_regmap_init_mmio(&pdev->dev, base,
-					    &sunxi_codec_regmap_config);
+					     &sunxi_codec_regmap_config);
 	if (IS_ERR(priv->regmap))
 		return PTR_ERR(priv->regmap);
 
@@ -647,31 +647,31 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	/* Clock */
 	priv->clk_apb = devm_clk_get(dev, "apb");
 	if (IS_ERR(priv->clk_apb)) {
-		dev_err(dev, "failed to get apb clock.\n");
+		dev_err(dev, "failed to get apb clock\n");
 		return PTR_ERR(priv->clk_apb);
 	}
 	priv->clk_pll2 = devm_clk_get(dev, "pll2");
 	if (IS_ERR(priv->clk_pll2)) {
-		dev_err(dev, "failed to get pll2 clock.\n");
+		dev_err(dev, "failed to get pll2 clock\n");
 		return PTR_ERR(priv->clk_pll2);
 	}
 	priv->clk_module = devm_clk_get(dev, "codec");
 	if (IS_ERR(priv->clk_module)) {
-		dev_err(dev, "failed to get codec clock.\n");
+		dev_err(dev, "failed to get codec clock\n");
 		return PTR_ERR(priv->clk_module);
 	}
 
 	ret = clk_set_rate(priv->clk_pll2, 24576000);
 	if (ret) {
-		dev_err(dev, "set codec base clock rate failed!\n");
+		dev_err(dev, "failed to set codec base clock rate\n");
 		return ret;
 	}
 	if (clk_prepare_enable(priv->clk_pll2)) {
-		dev_err(dev, "try to enable clk_pll2 failed\n");
+		dev_err(dev, "failed to enable pll2 clock\n");
 		return -EINVAL;
 	}
 	if (clk_prepare_enable(priv->clk_apb)) {
-		dev_err(dev, "try to enable clk_apb failed\n");
+		dev_err(dev, "failed to enable apb clock\n");
 		clk_disable_unprepare(priv->clk_pll2);
 		return -EINVAL;
 	}
