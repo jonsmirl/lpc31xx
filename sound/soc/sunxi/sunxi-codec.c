@@ -633,7 +633,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
-	/* Clock */
+	/* Get the clocks from the DT */
 	priv->clk_apb = devm_clk_get(dev, "apb");
 	if (IS_ERR(priv->clk_apb)) {
 		dev_err(dev, "failed to get apb clock\n");
@@ -650,6 +650,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->clk_module);
 	}
 
+	/* Enable PLL2 on a basic rate */
 	ret = clk_set_rate(priv->clk_pll2, 24576000);
 	if (ret) {
 		dev_err(dev, "failed to set codec base clock rate\n");
@@ -659,16 +660,20 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to enable pll2 clock\n");
 		return -EINVAL;
 	}
+
+	/* Enable the bus clock */
 	if (clk_prepare_enable(priv->clk_apb)) {
 		dev_err(dev, "failed to enable apb clock\n");
 		clk_disable_unprepare(priv->clk_pll2);
 		return -EINVAL;
 	}
 
+	/* DMA configuration for TX FIFO */
 	priv->playback_dma_data.addr = res->start + SUNXI_DAC_TXDATA;
 	priv->playback_dma_data.maxburst = 4;
 	priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
+	/* DMA configuration for RX FIFO */
 	priv->capture_dma_data.addr = res->start + SUNXI_ADC_RXDATA;
 	priv->capture_dma_data.maxburst = 4;
 	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
@@ -700,7 +705,6 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 err_fini_utils:
 err:
 err_clk_disable:
-	clk_disable_unprepare(priv->clk_module);
 	clk_disable_unprepare(priv->clk_apb);
 	clk_disable_unprepare(priv->clk_pll2);
 	return ret;
@@ -710,7 +714,6 @@ static int sunxi_codec_remove(struct platform_device *pdev)
 {
 	struct sunxi_priv *priv = platform_get_drvdata(pdev);
 
-	clk_disable_unprepare(priv->clk_module);
 	clk_disable_unprepare(priv->clk_apb);
 	clk_disable_unprepare(priv->clk_pll2);
 
