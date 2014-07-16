@@ -283,14 +283,16 @@ static int sunxi_codec_prepare(struct snd_pcm_substream *substream, struct snd_s
 static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
+	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
-	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
+	int is_mono = !!(params_channels(params) == 1);
 	unsigned int rate = params_rate(params);
+	unsigned int hwrate;
 
-	switch (params_rate(params)) {
+	switch (rate) {
 	case 176400:
 	case 88200:
 	case 44100:
@@ -316,56 +318,50 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	switch (params_rate(params)) {
+	switch (rate) {
 	case 192000:
 	case 176400:
-		rate = 6;
+		hwrate = 6;
 		break;
 	case 96000:
 	case 88200:
-		rate = 7;
+		hwrate = 7;
 		break;
 	default:
 	case 48000:
 	case 44100:
-		rate = 0;
+		hwrate = 0;
 		break;
 	case 32000:
 	case 33075:
-		rate = 1;
+		hwrate = 1;
 		break;
 	case 24000:
 	case 22050:
-		rate = 2;
+		hwrate = 2;
 		break;
 	case 16000:
 	case 14700:
-		rate = 3;
+		hwrate = 3;
 		break;
 	case 12000:
 	case 11025:
-		rate = 4;
+		hwrate = 4;
 		break;
 	case 8000:
 	case 7350:
-		rate = 5;
+		hwrate = 5;
 		break;
 	}
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 7 << DAC_FS, rate << DAC_FS);
-		if (substream->runtime->channels == 1) {
-			regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << DAC_MONO_EN, 1 << DAC_MONO_EN);
-		} else {
-			regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << DAC_MONO_EN, 0 << DAC_MONO_EN);
-		}
+		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 7 << DAC_FS, hwrate << DAC_FS);
+		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << DAC_MONO_EN, is_mono << DAC_MONO_EN);
 	} else  {
-		regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 7 << 29, rate << 29);
-		if (substream->runtime->channels == 1) {
-			regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 1 << ADC_MONO_EN, 1 << ADC_MONO_EN);
-		} else {
-			regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 1 << ADC_MONO_EN, 0 << ADC_MONO_EN);
-		}
+		regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 7 << 29, hwrate << 29);
+		regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 1 << ADC_MONO_EN, is_mono << ADC_MONO_EN);
 	}
+
 	return 0;
 }
 
