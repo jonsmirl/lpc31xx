@@ -353,14 +353,14 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 	}
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 7 << DAC_FS, rate << DAC_FS);
-		if (substream->runtime->channels == 1) {
+		if (params_channels(params) == 1) {
 			regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << DAC_MONO_EN, 1 << DAC_MONO_EN);
 		} else {
 			regmap_update_bits(priv->regmap, SUNXI_DAC_FIFOC, 1 << DAC_MONO_EN, 0 << DAC_MONO_EN);
 		}
 	} else  {
 		regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 7 << 29, rate << 29);
-		if (substream->runtime->channels == 1) {
+		if (params_channels(params) == 1) {
 			regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 1 << ADC_MONO_EN, 1 << ADC_MONO_EN);
 		} else {
 			regmap_update_bits(priv->regmap, SUNXI_ADC_FIFOC, 1 << ADC_MONO_EN, 0 << ADC_MONO_EN);
