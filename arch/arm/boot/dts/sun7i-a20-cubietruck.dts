@@ -112,13 +112,19 @@
 			status = "okay";
 		};
 
-		codec@01c22c00 {
-			status = "okay";
-		};
-
 		ir0: ir@01c21800 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir0_pins_a>;
+			status = "okay";
+		};
+
+		iis0: iis@01c22000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2s0_pins_a>;
+			status = "okay";
+		};
+
+		codec: codec@01c22c00 {
 			status = "okay";
 		};
 
@@ -148,6 +154,24 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins_a>;
 			status = "okay";
+
+			tas5716: tas5716@36 {
+				compatible = "ti,tas5716";
+				reg = <0x36>;
+				#sound-dai-cells = <0>;
+
+				power-down = <&pio 6 1 0>;
+				reset = <&pio 6 3 0>;
+				mute = <&pio 6 5 0>;
+				/*ti,hpsel = <&pio 0 0 0>;*/
+			};
+
+			sgtl5000: sgtl5000@a {
+				compatible = "fsl,sgtl5000";
+				reg = <0x0a>;
+				clocks = <&iis0>;
+				#sound-dai-cells = <0>;
+			};
 		};
 
 		i2c2: i2c@01c2b400 {
@@ -168,6 +192,21 @@
 			};
 		};
 	};
+
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <256>;
+
+		simple-audio-card,cpu {
+			sound-dai = <&iis0>;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&sgtl5000>;
+		};
+	};
+
 
 	leds {
 		compatible = "gpio-leds";
