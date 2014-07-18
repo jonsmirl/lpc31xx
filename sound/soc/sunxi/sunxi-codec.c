@@ -98,7 +98,7 @@ enum sunxi_soc_family {
 
 struct sunxi_priv {
 	struct regmap *regmap;
-	struct clk *clk_apb, *clk_pll2, *clk_module;
+	struct clk *clk_apb, *clk_module;
 
 	enum sunxi_soc_family revision;
 
@@ -292,7 +292,7 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 	case 11025:
 	case 7350:
 	default:
-		clk_set_rate(priv->clk_pll2, 22579200);
+//		clk_set_rate(priv->clk_pll2, 22579200);
 		clk_set_rate(priv->clk_module, 22579200);
 		break;
 	case 192000:
@@ -303,7 +303,7 @@ static int sunxi_codec_hw_params(struct snd_pcm_substream *substream,
 	case 16000:
 	case 12000:
 	case 8000:
-		clk_set_rate(priv->clk_pll2, 24576000);
+//		clk_set_rate(priv->clk_pll2, 24576000);
 		clk_set_rate(priv->clk_module, 24576000);
 		break;
 	}
@@ -616,24 +616,24 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to get apb clock\n");
 		return PTR_ERR(priv->clk_apb);
 	}
-	priv->clk_pll2 = devm_clk_get(dev, "pll");
+/*	priv->clk_pll2 = devm_clk_get(dev, "pll");
 	if (IS_ERR(priv->clk_pll2)) {
 		dev_err(dev, "failed to get pll2 clock\n");
 		return PTR_ERR(priv->clk_pll2);
 	}
-	priv->clk_module = devm_clk_get(dev, "codec");
+*/	priv->clk_module = devm_clk_get(dev, "codec");
 	if (IS_ERR(priv->clk_module)) {
 		dev_err(dev, "failed to get codec clock\n");
 		return PTR_ERR(priv->clk_module);
 	}
 
 	/* Enable PLL2 on a basic rate */
-	ret = clk_set_rate(priv->clk_pll2, 24576000);
+	ret = clk_set_rate(priv->clk_module, 24576000);
 	if (ret) {
 		dev_err(dev, "failed to set codec base clock rate\n");
 		return ret;
 	}
-	if (clk_prepare_enable(priv->clk_pll2)) {
+	if (clk_prepare_enable(priv->clk_module)) {
 		dev_err(dev, "failed to enable pll2 clock\n");
 		return -EINVAL;
 	}
@@ -641,7 +641,7 @@ static int sunxi_codec_probe(struct platform_device *pdev)
 	/* Enable the bus clock */
 	if (clk_prepare_enable(priv->clk_apb)) {
 		dev_err(dev, "failed to enable apb clock\n");
-		clk_disable_unprepare(priv->clk_pll2);
+//		clk_disable_unprepare(priv->clk_pll2);
 		return -EINVAL;
 	}
 
@@ -683,7 +683,7 @@ err_fini_utils:
 err:
 err_clk_disable:
 	clk_disable_unprepare(priv->clk_apb);
-	clk_disable_unprepare(priv->clk_pll2);
+//	clk_disable_unprepare(priv->clk_pll2);
 	return ret;
 }
 
@@ -692,7 +692,7 @@ static int sunxi_codec_remove(struct platform_device *pdev)
 	struct sunxi_priv *priv = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(priv->clk_apb);
-	clk_disable_unprepare(priv->clk_pll2);
+//	clk_disable_unprepare(priv->clk_pll2);
 
 	return 0;
 }
