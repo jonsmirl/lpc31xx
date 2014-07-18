@@ -874,6 +874,42 @@
 			status = "disabled";
 		};
 
+		iis0: iis@01c22000 {
+			#sound-dai-cells = <0>;
+			compatible = "allwinner,sun7i-a20-iis";
+			reg = <0x01C22000 0x40>;
+			interrupts = <0 16 4>;
+			clocks = <&pll2 0>, <&apb0_gates 3>, <&iis0_clk>;
+			clock-names = "pll2", "apb", "iis";
+			dmas = <&dma 0 3>, <&dma 0 3>;
+			dma-names = "rx", "tx";
+			status = "disabled";
+		};
+
+		iis1: iis@01c22400 {
+			#sound-dai-cells = <0>;
+			compatible = "allwinner,sun7i-a20-iis";
+			reg = <0x01C22400 0x40>;
+			interrupts = <0 87 4>;
+			clocks = <&pll2 0>, <&apb0_gates 4>, <&iis1_clk>;
+			clock-names = "pll2", "apb", "iis";
+			dmas = <&dma 0 4>, <&dma 0 4>;
+			dma-names = "rx", "tx";
+			status = "disabled";
+		};
+
+		iis2: iis@01c24400 {
+			#sound-dai-cells = <0>;
+			compatible = "allwinner,sun7i-a20-iis";
+			reg = <0x01C24400 0x40>;
+			interrupts = <0 90 4>;
+			clocks = <&pll2 0>, <&apb0_gates 8>, <&iis2_clk>;
+			clock-names = "pll2", "apb", "iis";
+			dmas = <&dma 0 6>, <&dma 0 6>;
+			dma-names = "rx", "tx";
+			status = "disabled";
+		};
+
 		codec: codec@01c22c00 {
 			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-codec";

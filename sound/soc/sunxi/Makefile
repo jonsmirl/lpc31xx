@@ -1,2 +1,5 @@
 obj-$(CONFIG_SND_SUNXI_SOC_CODEC) += sunxi-codec.o
-
+obj-$(CONFIG_SND_SUNXI_SOC_I2S) += sunxi-i2s.o
+obj-$(CONFIG_SND_SUNXI_SOC_HDMI_INTERFACE) += hdmiaudio/
+obj-$(CONFIG_SND_SUNXI_SOC_SPDIF_INTERFACE) += spdif/
+obj-$(CONFIG_SND_SUNXI_SOC_I2S_INTERFACE) += i2s/
