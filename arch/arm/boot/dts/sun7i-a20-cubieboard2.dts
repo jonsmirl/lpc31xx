@@ -72,6 +72,16 @@
 			status = "okay";
 		};
 
+		i2s0: i2s@01c22000 {
+			pinctrl-names = "default";
+			/*pinctrl-0 = <&i2s0_pins_a>;*/
+			status = "okay";
+		};
+
+		codec: codec@01c22c00 {
+			status = "okay";
+		};
+
 		uart0: serial@01c28000 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins_a>;
@@ -98,6 +108,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins_a>;
 			status = "okay";
+
+			tas5716: tas5716@36 {
+				compatible = "ti,tas5716";
+				reg = <0x36>;
+				#sound-dai-cells = <0>;
+			};
 		};
 
 		gmac: ethernet@01c50000 {
@@ -112,6 +128,33 @@
 			};
 		};
 	};
+
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,routing =
+			"Headphone Jack", "HPL",
+			"Headphone Jack", "HPR",
+			"Speaker", "SPKOUT",
+			"Speaker", "SPKOUTN",
+			"MIC1", "Mic Jack",
+			"MIC2", "Mic Jack";
+		simple-audio-card,widgets =
+			"Headphone", "Headphone Jack",
+			"Speaker", "Speaker",
+			"Microphone", "Mic Jack";
+
+		simple-audio-card,mclk-fs = <256>;
+
+		simple-audio-card,cpu {
+			sound-dai = <&i2s0>;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&tas5716>;
+		};
+	};
+
 
 	leds {
 		compatible = "gpio-leds";

@@ -4,3 +4,9 @@ config SND_SUNXI_SOC_CODEC
 	select REGMAP_MMIO
 	default y
 
+config SND_SUNXI_SOC_I2S
+	tristate "Sunxi I2S support"
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	select REGMAP_MMIO
+	default y
+
