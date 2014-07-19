@@ -1,5 +1,5 @@
 Bottom: d50ef3d15c4938a4d95465ec29777931f0df5b20
-Top:    832d4d29ddcfcadae6359c9486479a1b13665b5e
+Top:    7e1a7913abfb62c16ff3e553317773b82feb7b1e
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-18 14:38:45 -0400
 
@@ -8,74 +8,6 @@ TAS5716 support for Tyler
 
 ---
 
-diff --git a/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts b/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts
-index 5368098..549d94f 100644
---- a/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts
-+++ b/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts
-@@ -72,6 +72,16 @@
- 			status = "okay";
- 		};
- 
-+		i2s0: i2s@01c22000 {
-+			pinctrl-names = "default";
-+			/*pinctrl-0 = <&i2s0_pins_a>;*/
-+			status = "okay";
-+		};
-+
-+		codec: codec@01c22c00 {
-+			status = "okay";
-+		};
-+
- 		uart0: serial@01c28000 {
- 			pinctrl-names = "default";
- 			pinctrl-0 = <&uart0_pins_a>;
-@@ -98,6 +108,12 @@
- 			pinctrl-names = "default";
- 			pinctrl-0 = <&i2c1_pins_a>;
- 			status = "okay";
-+
-+			tas5716: tas5716@36 {
-+				compatible = "ti,tas5716";
-+				reg = <0x36>;
-+				#sound-dai-cells = <0>;
-+			};
- 		};
- 
- 		gmac: ethernet@01c50000 {
-@@ -113,6 +129,33 @@
- 		};
- 	};
- 
-+	sound {
-+		compatible = "simple-audio-card";
-+		simple-audio-card,format = "i2s";
-+		simple-audio-card,routing =
-+			"Headphone Jack", "HPL",
-+			"Headphone Jack", "HPR",
-+			"Speaker", "SPKOUT",
-+			"Speaker", "SPKOUTN",
-+			"MIC1", "Mic Jack",
-+			"MIC2", "Mic Jack";
-+		simple-audio-card,widgets =
-+			"Headphone", "Headphone Jack",
-+			"Speaker", "Speaker",
-+			"Microphone", "Mic Jack";
-+
-+		simple-audio-card,mclk-fs = <256>;
-+
-+		simple-audio-card,cpu {
-+			sound-dai = <&i2s0>;
-+		};
-+
-+		simple-audio-card,codec {
-+			sound-dai = <&tas5716>;
-+		};
-+	};
-+
-+
- 	leds {
- 		compatible = "gpio-leds";
- 		pinctrl-names = "default";
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 index e316509..3c913e4 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
