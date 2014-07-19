@@ -74,7 +74,11 @@
 
 		i2s0: i2s@01c22000 {
 			pinctrl-names = "default";
-			pinctrl-0 = <&i2s0_pins_a>;
+			/*pinctrl-0 = <&i2s0_pins_a>;*/
+			status = "okay";
+		};
+
+		codec: codec@01c22c00 {
 			status = "okay";
 		};
 
@@ -112,7 +116,7 @@
 			};
 		};
 
-\		gmac: ethernet@01c50000 {
+		gmac: ethernet@01c50000 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&gmac_pins_mii_a>;
 			phy = <&phy1>;
