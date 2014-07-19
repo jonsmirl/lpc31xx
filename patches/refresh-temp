@@ -1,0 +1,245 @@
+Bottom: a02f559c894824796e892a91675827e63f1e7636
+Top:    832d4d29ddcfcadae6359c9486479a1b13665b5e
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-18 20:49:00 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+index e316509..3c913e4 100644
+--- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
++++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+@@ -122,6 +122,16 @@
+ 			status = "okay";
+ 		};
+ 
++		i2s0: i2s@01c22000 {
++			pinctrl-names = "default";
++			/*pinctrl-0 = <&i2s0_pins_a>;*/
++			status = "okay";
++		};
++
++		codec: codec@01c22c00 {
++			status = "okay";
++		};
++
+ 		uart0: serial@01c28000 {
+ 			pinctrl-names = "default";
+ 			pinctrl-0 = <&uart0_pins_a>;
+@@ -148,6 +158,12 @@
+ 			pinctrl-names = "default";
+ 			pinctrl-0 = <&i2c1_pins_a>;
+ 			status = "okay";
++
++			tas5716: tas5716@36 {
++				compatible = "ti,tas5716";
++				reg = <0x36>;
++				#sound-dai-cells = <0>;
++			};
+ 		};
+ 
+ 		i2c2: i2c@01c2b400 {
+@@ -169,6 +185,33 @@
+ 		};
+ 	};
+ 
++	sound {
++		compatible = "simple-audio-card";
++		simple-audio-card,format = "i2s";
++		simple-audio-card,routing =
++			"Headphone Jack", "HPL",
++			"Headphone Jack", "HPR",
++			"Speaker", "SPKOUT",
++			"Speaker", "SPKOUTN",
++			"MIC1", "Mic Jack",
++			"MIC2", "Mic Jack";
++		simple-audio-card,widgets =
++			"Headphone", "Headphone Jack",
++			"Speaker", "Speaker",
++			"Microphone", "Mic Jack";
++
++		simple-audio-card,mclk-fs = <256>;
++
++		simple-audio-card,cpu {
++			sound-dai = <&i2s0>;
++		};
++
++		simple-audio-card,codec {
++			sound-dai = <&tas5716>;
++		};
++	};
++
++
+ 	leds {
+ 		compatible = "gpio-leds";
+ 		pinctrl-names = "default";
+diff --git a/include/sound/tas5716.h b/include/sound/tas5716.h
+index ae118b8..33e1be3 100644
+--- a/include/sound/tas5716.h
++++ b/include/sound/tas5716.h
+@@ -1,5 +1,5 @@
+ /*
+- * Platform data for ST TAS5716 ASoC codec driver.
++ * Platform data for TI TAS5716 ASoC codec driver.
+  *
+  * Copyright: 2014 Raumfeld GmbH
+  * Author: Sven Brandau <info@brandau.biz>
+diff --git a/sound/soc/codecs/tas5716.c b/sound/soc/codecs/tas5716.c
+index ed760a3..37947cd 100644
+--- a/sound/soc/codecs/tas5716.c
++++ b/sound/soc/codecs/tas5716.c
+@@ -1216,6 +1216,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
+ 	struct tas5716_priv *tas5716;
+ 	int ret, i;
+ 
++	printk("JDS - tas5716_i2c_probe\n");
+ 	tas5716 = devm_kzalloc(dev, sizeof(struct tas5716_priv), GFP_KERNEL);
+ 	if (!tas5716)
+ 		return -ENOMEM;
+@@ -1231,6 +1232,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
+ 	}
+ #endif
+ 
++	printk("JDS - tas5716_i2c_probe a\n");
+ 	/* GPIOs */
+ 	tas5716->gpiod_nreset = devm_gpiod_get(dev, "reset");
+ 	if (IS_ERR(tas5716->gpiod_nreset)) {
+@@ -1243,6 +1245,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
+ 		gpiod_direction_output(tas5716->gpiod_nreset, 0);
+ 	}
+ 
++	printk("JDS - tas5716_i2c_probe b\n");
+ 	tas5716->gpiod_power_down = devm_gpiod_get(dev, "power-down");
+ 	if (IS_ERR(tas5716->gpiod_power_down)) {
+ 		ret = PTR_ERR(tas5716->gpiod_power_down);
+@@ -1265,6 +1268,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
+ 		return ret;
+ 	}
+ 
++	printk("JDS - tas5716_i2c_probe c\n");
+ 	tas5716->regmap = devm_regmap_init_i2c(i2c, &tas5716_regmap);
+ 	if (IS_ERR(tas5716->regmap)) {
+ 		ret = PTR_ERR(tas5716->regmap);
+@@ -1274,10 +1278,12 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
+ 
+ 	i2c_set_clientdata(i2c, tas5716);
+ 
++	printk("JDS - tas5716_i2c_probe d\n");
+ 	ret = snd_soc_register_codec(dev, &tas5716_codec, &tas5716_dai, 1);
+ 	if (ret < 0)
+ 		dev_err(dev, "Failed to register codec (%d)\n", ret);
+ 
++	printk("JDS - tas5716_i2c_probe e\n");
+ 	return ret;
+ }
+ 
+@@ -1297,7 +1303,7 @@ static struct i2c_driver tas5716_i2c_driver = {
+ 	.driver = {
+ 		.name = "tas5716",
+ 		.owner = THIS_MODULE,
+-		.of_match_table = of_match_ptr(st350_dt_ids),
++		.of_match_table = of_match_ptr(tas5716_dt_ids),
+ 	},
+ 	.probe =    tas5716_i2c_probe,
+ 	.remove =   tas5716_i2c_remove,
+diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
+index 46ab5c2..5156e59 100644
+--- a/sound/soc/sunxi/sunxi-i2s.c
++++ b/sound/soc/sunxi/sunxi-i2s.c
+@@ -196,9 +196,9 @@ static int sunxi_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
+ 			       struct snd_soc_dai *dai)
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
+-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
+-	struct snd_soc_card *card = i2s->card;
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_codec *codec = codec_dai->codec;
++	struct snd_soc_card *card = codec->card;
+ 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
+ 
+ 	switch (cmd) {
+@@ -229,9 +229,9 @@ static int sunxi_i2s_prepare(struct snd_pcm_substream *substream,
+ 			       struct snd_soc_dai *dai)
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
+-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
+-	struct snd_soc_card *card = i2s->card;
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_codec *codec = codec_dai->codec;
++	struct snd_soc_card *card = codec->card;
+ 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
+ 
+ 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+@@ -286,9 +286,9 @@ static int sunxi_i2s_hw_params(struct snd_pcm_substream *substream,
+ 				 struct snd_soc_dai *dai)
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
+-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
+-	struct snd_soc_card *card = i2s->card;
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_codec *codec = codec_dai->codec;
++	struct snd_soc_card *card = codec->card;
+ 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
+ 	int is_mono = !!(params_channels(params) == 1);
+ 	int is_24bit = !!(hw_param_interval(params, SNDRV_PCM_HW_PARAM_SAMPLE_BITS)->min == 32);
+@@ -438,9 +438,9 @@ static int sunxi_i2s_startup(struct snd_pcm_substream *substream,
+ 			       struct snd_soc_dai *dai)
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
+-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
+-	struct snd_soc_card *card = i2s->card;
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_codec *codec = codec_dai->codec;
++	struct snd_soc_card *card = codec->card;
+ 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
+ 
+ 	return clk_prepare_enable(priv->clk_module);
+@@ -450,9 +450,9 @@ static void sunxi_i2s_shutdown(struct snd_pcm_substream *substream,
+ 				 struct snd_soc_dai *dai)
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
+-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
+-	struct snd_soc_card *card = i2s->card;
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_codec *codec = codec_dai->codec;
++	struct snd_soc_card *card = codec->card;
+ 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
+ 
+ 	clk_disable_unprepare(priv->clk_module);
+@@ -532,9 +532,9 @@ static const struct snd_soc_dapm_widget i2s_dapm_widgets[] = {
+ static struct snd_soc_dai_link cdc_dai = {
+ 	.name = "cdc",
+ 	.stream_name = "CDC PCM",
+-	.i2s_dai_name = "sunxi-i2s-dai",
++	.codec_dai_name = "sunxi-i2s-dai",
+ 	.cpu_dai_name = "1c22c00.i2s",
+-	.i2s_name = "1c22c00.i2s",
++	.codec_name = "1c22c00.i2s",
+ 	.platform_name = "1c22c00.i2s",
+ 	//.init = tegra_wm8903_init,
+ 	//.ops = &tegra_wm8903_ops,
+@@ -548,7 +548,7 @@ static struct snd_soc_card snd_soc_sunxi_i2s = {
+ 	.num_links = 1,
+ };
+ 
+-static struct snd_soc_i2s_driver dummy_i2s = {
++static struct snd_soc_codec_driver dummy_codec = {
+ 	.controls = sun7i_dac_ctls,
+ 	.num_controls = ARRAY_SIZE(sun7i_dac_ctls),
+ 	.dapm_widgets = i2s_dapm_widgets,
+@@ -675,7 +675,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
+ 	priv->capture_dma_data.maxburst = 4;
+ 	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+ 
+-	ret = snd_soc_register_i2s(&pdev->dev, &dummy_i2s, &dummy_dai, 1);
++	ret = snd_soc_register_codec(&pdev->dev, &dummy_codec, &dummy_dai, 1);
+ 
+ 	ret = devm_snd_soc_register_component(&pdev->dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
+ 	if (ret)
