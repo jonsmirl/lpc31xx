@@ -196,9 +196,9 @@ static int sunxi_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 			       struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
-	struct snd_soc_card *card = i2s->card;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
 	switch (cmd) {
@@ -229,9 +229,9 @@ static int sunxi_i2s_prepare(struct snd_pcm_substream *substream,
 			       struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
-	struct snd_soc_card *card = i2s->card;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
@@ -286,9 +286,9 @@ static int sunxi_i2s_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
-	struct snd_soc_card *card = i2s->card;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 	int is_mono = !!(params_channels(params) == 1);
 	int is_24bit = !!(hw_param_interval(params, SNDRV_PCM_HW_PARAM_SAMPLE_BITS)->min == 32);
@@ -438,9 +438,9 @@ static int sunxi_i2s_startup(struct snd_pcm_substream *substream,
 			       struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
-	struct snd_soc_card *card = i2s->card;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
 	return clk_prepare_enable(priv->clk_module);
@@ -450,9 +450,9 @@ static void sunxi_i2s_shutdown(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *i2s_dai = rtd->i2s_dai;
-	struct snd_soc_i2s *i2s = i2s_dai->i2s;
-	struct snd_soc_card *card = i2s->card;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
 	struct sunxi_priv *priv = snd_soc_card_get_drvdata(card);
 
 	clk_disable_unprepare(priv->clk_module);
@@ -532,9 +532,9 @@ static const struct snd_soc_dapm_widget i2s_dapm_widgets[] = {
 static struct snd_soc_dai_link cdc_dai = {
 	.name = "cdc",
 	.stream_name = "CDC PCM",
-	.i2s_dai_name = "sunxi-i2s-dai",
+	.codec_dai_name = "sunxi-i2s-dai",
 	.cpu_dai_name = "1c22c00.i2s",
-	.i2s_name = "1c22c00.i2s",
+	.codec_name = "1c22c00.i2s",
 	.platform_name = "1c22c00.i2s",
 	//.init = tegra_wm8903_init,
 	//.ops = &tegra_wm8903_ops,
@@ -548,7 +548,7 @@ static struct snd_soc_card snd_soc_sunxi_i2s = {
 	.num_links = 1,
 };
 
-static struct snd_soc_i2s_driver dummy_i2s = {
+static struct snd_soc_codec_driver dummy_codec = {
 	.controls = sun7i_dac_ctls,
 	.num_controls = ARRAY_SIZE(sun7i_dac_ctls),
 	.dapm_widgets = i2s_dapm_widgets,
@@ -675,7 +675,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	priv->capture_dma_data.maxburst = 4;
 	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
-	ret = snd_soc_register_i2s(&pdev->dev, &dummy_i2s, &dummy_dai, 1);
+	ret = snd_soc_register_codec(&pdev->dev, &dummy_codec, &dummy_dai, 1);
 
 	ret = devm_snd_soc_register_component(&pdev->dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
 	if (ret)

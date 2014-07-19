@@ -1216,6 +1216,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 	struct tas5716_priv *tas5716;
 	int ret, i;
 
+	printk("JDS - tas5716_i2c_probe\n");
 	tas5716 = devm_kzalloc(dev, sizeof(struct tas5716_priv), GFP_KERNEL);
 	if (!tas5716)
 		return -ENOMEM;
@@ -1231,6 +1232,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 	}
 #endif
 
+	printk("JDS - tas5716_i2c_probe a\n");
 	/* GPIOs */
 	tas5716->gpiod_nreset = devm_gpiod_get(dev, "reset");
 	if (IS_ERR(tas5716->gpiod_nreset)) {
@@ -1243,6 +1245,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 		gpiod_direction_output(tas5716->gpiod_nreset, 0);
 	}
 
+	printk("JDS - tas5716_i2c_probe b\n");
 	tas5716->gpiod_power_down = devm_gpiod_get(dev, "power-down");
 	if (IS_ERR(tas5716->gpiod_power_down)) {
 		ret = PTR_ERR(tas5716->gpiod_power_down);
@@ -1265,6 +1268,7 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
+	printk("JDS - tas5716_i2c_probe c\n");
 	tas5716->regmap = devm_regmap_init_i2c(i2c, &tas5716_regmap);
 	if (IS_ERR(tas5716->regmap)) {
 		ret = PTR_ERR(tas5716->regmap);
@@ -1274,10 +1278,12 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 
 	i2c_set_clientdata(i2c, tas5716);
 
+	printk("JDS - tas5716_i2c_probe d\n");
 	ret = snd_soc_register_codec(dev, &tas5716_codec, &tas5716_dai, 1);
 	if (ret < 0)
 		dev_err(dev, "Failed to register codec (%d)\n", ret);
 
+	printk("JDS - tas5716_i2c_probe e\n");
 	return ret;
 }
 
@@ -1297,7 +1303,7 @@ static struct i2c_driver tas5716_i2c_driver = {
 	.driver = {
 		.name = "tas5716",
 		.owner = THIS_MODULE,
-		.of_match_table = of_match_ptr(st350_dt_ids),
+		.of_match_table = of_match_ptr(tas5716_dt_ids),
 	},
 	.probe =    tas5716_i2c_probe,
 	.remove =   tas5716_i2c_remove,

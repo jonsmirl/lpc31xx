@@ -1,5 +1,5 @@
 /*
- * Platform data for ST TAS5716 ASoC codec driver.
+ * Platform data for TI TAS5716 ASoC codec driver.
  *
  * Copyright: 2014 Raumfeld GmbH
  * Author: Sven Brandau <info@brandau.biz>
