@@ -1,5 +1,5 @@
 Bottom: d50ef3d15c4938a4d95465ec29777931f0df5b20
-Top:    f4277ac0e5d458e51392bc6274489f54feed4c00
+Top:    d36276ef78a75a467df835da9e19cb140f565f8c
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-18 14:38:45 -0400
 
@@ -9,23 +9,27 @@ TAS5716 support for Tyler
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts b/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts
-index 5368098..8b1edcd 100644
+index 5368098..549d94f 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubieboard2.dts
-@@ -72,6 +72,12 @@
+@@ -72,6 +72,16 @@
  			status = "okay";
  		};
  
 +		i2s0: i2s@01c22000 {
 +			pinctrl-names = "default";
-+			pinctrl-0 = <&i2s0_pins_a>;
++			/*pinctrl-0 = <&i2s0_pins_a>;*/
++			status = "okay";
++		};
++
++		codec: codec@01c22c00 {
 +			status = "okay";
 +		};
 +
  		uart0: serial@01c28000 {
  			pinctrl-names = "default";
  			pinctrl-0 = <&uart0_pins_a>;
-@@ -98,9 +104,15 @@
+@@ -98,6 +108,12 @@
  			pinctrl-names = "default";
  			pinctrl-0 = <&i2c1_pins_a>;
  			status = "okay";
@@ -37,12 +41,8 @@ index 5368098..8b1edcd 100644
 +			};
  		};
  
--		gmac: ethernet@01c50000 {
-+\		gmac: ethernet@01c50000 {
- 			pinctrl-names = "default";
- 			pinctrl-0 = <&gmac_pins_mii_a>;
- 			phy = <&phy1>;
-@@ -113,6 +125,33 @@
+ 		gmac: ethernet@01c50000 {
+@@ -113,6 +129,33 @@
  		};
  	};
  
@@ -221,7 +221,7 @@ index 0b9571c..94a6bc8 100644
  	tristate
  
 diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
-index 1bd6e1c..293c215 100644
+index 1bd6e1c..dc18e5d 100644
 --- a/sound/soc/codecs/Makefile
 +++ b/sound/soc/codecs/Makefile
 @@ -93,6 +93,7 @@ snd-soc-sta350-objs := sta350.o
@@ -232,6 +232,14 @@ index 1bd6e1c..293c215 100644
  snd-soc-tlv320aic23-objs := tlv320aic23.o
  snd-soc-tlv320aic23-i2c-objs := tlv320aic23-i2c.o
  snd-soc-tlv320aic23-spi-objs := tlv320aic23-spi.o
+@@ -256,6 +257,7 @@ obj-$(CONFIG_SND_SOC_STA350)   += snd-soc-sta350.o
+ obj-$(CONFIG_SND_SOC_STA529)   += snd-soc-sta529.o
+ obj-$(CONFIG_SND_SOC_STAC9766)	+= snd-soc-stac9766.o
+ obj-$(CONFIG_SND_SOC_TAS5086)	+= snd-soc-tas5086.o
++obj-$(CONFIG_SND_SOC_TAS5716)	+= snd-soc-tas5716.o
+ obj-$(CONFIG_SND_SOC_TLV320AIC23)	+= snd-soc-tlv320aic23.o
+ obj-$(CONFIG_SND_SOC_TLV320AIC23_I2C)	+= snd-soc-tlv320aic23-i2c.o
+ obj-$(CONFIG_SND_SOC_TLV320AIC23_SPI)	+= snd-soc-tlv320aic23-spi.o
 diff --git a/sound/soc/codecs/tas5716.c b/sound/soc/codecs/tas5716.c
 new file mode 100644
 index 0000000..ed760a3
@@ -1794,14 +1802,14 @@ index 0000000..c90dd50
 +
 +#endif /* _ASOC_TAS_5716_H */
 diff --git a/sound/soc/sunxi/Kconfig b/sound/soc/sunxi/Kconfig
-index 1891043..be99ad4 100644
+index 1891043..9f01df6 100644
 --- a/sound/soc/sunxi/Kconfig
 +++ b/sound/soc/sunxi/Kconfig
 @@ -4,3 +4,9 @@ config SND_SUNXI_SOC_CODEC
  	select REGMAP_MMIO
  	default y
  
-+config SND_SUNXI_SOC_I2s
++config SND_SUNXI_SOC_I2S
 +	tristate "Sunxi I2S support"
 +	select SND_SOC_GENERIC_DMAENGINE_PCM
 +	select REGMAP_MMIO
