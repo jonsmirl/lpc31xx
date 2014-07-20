@@ -112,17 +112,13 @@
 			status = "okay";
 		};
 
-		codec@01c22c00 {
-			status = "okay";
-		};
-
 		ir0: ir@01c21800 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir0_pins_a>;
 			status = "okay";
 		};
 
-		i2s0: i2s@01c22000 {
+		iis0: iis@01c22000 {
 			pinctrl-names = "default";
 			/*pinctrl-0 = <&i2s0_pins_a>;*/
 			status = "okay";
