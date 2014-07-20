@@ -1,5 +1,5 @@
 Bottom: 4e66e9c5a88e22a68319fdf2517ebee1954ad140
-Top:    e3f7e24fc1ef2127d19368e5a4b040f029b3a0e1
+Top:    43fbcc5410fdb6dea4a55a49b86a3463b4db247d
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-18 14:38:45 -0400
 
@@ -9,27 +9,33 @@ TAS5716 support for Tyler
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index e316509..3c913e4 100644
+index e316509..dd03c64 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-@@ -122,6 +122,16 @@
+@@ -112,13 +112,19 @@
  			status = "okay";
  		};
  
-+		i2s0: i2s@01c22000 {
+-		codec@01c22c00 {
++		ir0: ir@01c21800 {
 +			pinctrl-names = "default";
++			pinctrl-0 = <&ir0_pins_a>;
+ 			status = "okay";
+ 		};
+ 
+-		ir0: ir@01c21800 {
++		iis0: iis@01c22000 {
+ 			pinctrl-names = "default";
+-			pinctrl-0 = <&ir0_pins_a>;
 +			/*pinctrl-0 = <&i2s0_pins_a>;*/
 +			status = "okay";
 +		};
 +
 +		codec: codec@01c22c00 {
-+			status = "okay";
-+		};
-+
- 		uart0: serial@01c28000 {
- 			pinctrl-names = "default";
- 			pinctrl-0 = <&uart0_pins_a>;
-@@ -148,6 +158,12 @@
+ 			status = "okay";
+ 		};
+ 
+@@ -148,6 +154,12 @@
  			pinctrl-names = "default";
  			pinctrl-0 = <&i2c1_pins_a>;
  			status = "okay";
@@ -42,7 +48,7 @@ index e316509..3c913e4 100644
  		};
  
  		i2c2: i2c@01c2b400 {
-@@ -169,6 +185,33 @@
+@@ -169,6 +181,33 @@
  		};
  	};
  
@@ -76,6 +82,50 @@ index e316509..3c913e4 100644
  	leds {
  		compatible = "gpio-leds";
  		pinctrl-names = "default";
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index b06f9b0..61928aa 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -874,6 +874,39 @@
+ 			status = "disabled";
+ 		};
+ 
++		iis0: iis@01c22000 {
++			compatible = "allwinner,sun7i-a20-iis";
++			reg = <0x01C22000 0x40>;
++			interrupts = <0 16 4>;
++			clocks = <&pll2>, <&apb0_gates 3>, <&iis0_clk>;
++			clock-names = "pll2", "apb", "iis";
++			dmas = <&dma 0 3>, <&dma 0 3>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
++		iis1: iis@01c22400 {
++			compatible = "allwinner,sun7i-a20-iis";
++			reg = <0x01C22400 0x40>;
++			interrupts = <0 87 4>;
++			clocks = <&pll2>, <&apb0_gates 4>, <&iis1_clk>;
++			clock-names = "pll2", "apb", "iis";
++			dmas = <&dma 0 4>, <&dma 0 4>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
++		iis2: iis@01c24400 {
++			compatible = "allwinner,sun7i-a20-iis";
++			reg = <0x01C24400 0x40>;
++			interrupts = <0 90 4>;
++			clocks = <&pll2>, <&apb0_gates 8>, <&iis2_clk>;
++			clock-names = "pll2", "apb", "iis";
++			dmas = <&dma 0 6>, <&dma 0 6>;
++			dma-names = "rx", "tx";
++			status = "disabled";
++		};
++
+ 		codec: codec@01c22c00 {
+ 			#sound-dai-cells = <0>;
+ 			compatible = "allwinner,sun7i-a20-codec";
 diff --git a/include/sound/tas5716.h b/include/sound/tas5716.h
 new file mode 100644
 index 0000000..33e1be3
