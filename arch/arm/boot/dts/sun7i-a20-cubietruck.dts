@@ -120,7 +120,7 @@
 
 		iis0: iis@01c22000 {
 			pinctrl-names = "default";
-			/*pinctrl-0 = <&i2s0_pins_a>;*/
+			/*pinctrl-0 = <&iis0_pins_a>;*/
 			status = "okay";
 		};
 
@@ -199,7 +199,7 @@
 		simple-audio-card,mclk-fs = <256>;
 
 		simple-audio-card,cpu {
-			sound-dai = <&i2s0>;
+			sound-dai = <&iis0>;
 		};
 
 		simple-audio-card,codec {

@@ -530,10 +530,10 @@ static const struct snd_soc_dapm_widget i2s_dapm_widgets[] = {
 };
 
 static const struct of_device_id sunxi_i2s_of_match[] = {
-	{ .compatible = "allwinner,sun4i-a10a-i2s", .data = (void *)SUN4A},
-	{ .compatible = "allwinner,sun4i-a10-i2s", .data = (void *)SUN4I},
-	{ .compatible = "allwinner,sun5i-a13-i2s", .data = (void *)SUN5I},
-	{ .compatible = "allwinner,sun7i-a20-i2s", .data = (void *)SUN7I},
+	{ .compatible = "allwinner,sun4i-a10a-iis", .data = (void *)SUN4A},
+	{ .compatible = "allwinner,sun4i-a10-iis", .data = (void *)SUN4I},
+	{ .compatible = "allwinner,sun5i-a13-iis", .data = (void *)SUN5I},
+	{ .compatible = "allwinner,sun7i-a20-iis", .data = (void *)SUN7I},
 	{}
 };
 MODULE_DEVICE_TABLE(of, sunxi_i2s_of_match);
@@ -588,9 +588,9 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to get pll2 clock\n");
 		return PTR_ERR(priv->clk_pll2);
 	}
-	priv->clk_module = devm_clk_get(dev, "i2s");
+	priv->clk_module = devm_clk_get(dev, "iis");
 	if (IS_ERR(priv->clk_module)) {
-		dev_err(dev, "failed to get i2s clock\n");
+		dev_err(dev, "failed to get iis clock\n");
 		return PTR_ERR(priv->clk_module);
 	}
 
