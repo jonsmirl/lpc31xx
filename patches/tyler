@@ -1,5 +1,5 @@
 Bottom: 4e66e9c5a88e22a68319fdf2517ebee1954ad140
-Top:    43fbcc5410fdb6dea4a55a49b86a3463b4db247d
+Top:    f8f468f2d480812a7b628603961f0cb10eb3e9eb
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-18 14:38:45 -0400
 
@@ -9,7 +9,7 @@ TAS5716 support for Tyler
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index e316509..dd03c64 100644
+index e316509..df6414e 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -112,13 +112,19 @@
@@ -27,7 +27,7 @@ index e316509..dd03c64 100644
 +		iis0: iis@01c22000 {
  			pinctrl-names = "default";
 -			pinctrl-0 = <&ir0_pins_a>;
-+			/*pinctrl-0 = <&i2s0_pins_a>;*/
++			/*pinctrl-0 = <&iis0_pins_a>;*/
 +			status = "okay";
 +		};
 +
@@ -70,7 +70,7 @@ index e316509..dd03c64 100644
 +		simple-audio-card,mclk-fs = <256>;
 +
 +		simple-audio-card,cpu {
-+			sound-dai = <&i2s0>;
++			sound-dai = <&iis0>;
 +		};
 +
 +		simple-audio-card,codec {
@@ -83,18 +83,19 @@ index e316509..dd03c64 100644
  		compatible = "gpio-leds";
  		pinctrl-names = "default";
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index b06f9b0..61928aa 100644
+index b06f9b0..db6d51b 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
-@@ -874,6 +874,39 @@
+@@ -874,6 +874,42 @@
  			status = "disabled";
  		};
  
 +		iis0: iis@01c22000 {
++			#sound-dai-cells = <0>;
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C22000 0x40>;
 +			interrupts = <0 16 4>;
-+			clocks = <&pll2>, <&apb0_gates 3>, <&iis0_clk>;
++			clocks = <&pll2 0>, <&apb0_gates 3>, <&iis0_clk>;
 +			clock-names = "pll2", "apb", "iis";
 +			dmas = <&dma 0 3>, <&dma 0 3>;
 +			dma-names = "rx", "tx";
@@ -102,10 +103,11 @@ index b06f9b0..61928aa 100644
 +		};
 +
 +		iis1: iis@01c22400 {
++			#sound-dai-cells = <0>;
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C22400 0x40>;
 +			interrupts = <0 87 4>;
-+			clocks = <&pll2>, <&apb0_gates 4>, <&iis1_clk>;
++			clocks = <&pll2 0>, <&apb0_gates 4>, <&iis1_clk>;
 +			clock-names = "pll2", "apb", "iis";
 +			dmas = <&dma 0 4>, <&dma 0 4>;
 +			dma-names = "rx", "tx";
@@ -113,10 +115,11 @@ index b06f9b0..61928aa 100644
 +		};
 +
 +		iis2: iis@01c24400 {
++			#sound-dai-cells = <0>;
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C24400 0x40>;
 +			interrupts = <0 90 4>;
-+			clocks = <&pll2>, <&apb0_gates 8>, <&iis2_clk>;
++			clocks = <&pll2 0>, <&apb0_gates 8>, <&iis2_clk>;
 +			clock-names = "pll2", "apb", "iis";
 +			dmas = <&dma 0 6>, <&dma 0 6>;
 +			dma-names = "rx", "tx";
@@ -1826,7 +1829,7 @@ index b8950d3..d87b4c1 100644
  
 diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
 new file mode 100644
-index 0000000..3b3873a
+index 0000000..edba590
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.c
 @@ -0,0 +1,667 @@
@@ -2362,10 +2365,10 @@ index 0000000..3b3873a
 +};
 +
 +static const struct of_device_id sunxi_i2s_of_match[] = {
-+	{ .compatible = "allwinner,sun4i-a10a-i2s", .data = (void *)SUN4A},
-+	{ .compatible = "allwinner,sun4i-a10-i2s", .data = (void *)SUN4I},
-+	{ .compatible = "allwinner,sun5i-a13-i2s", .data = (void *)SUN5I},
-+	{ .compatible = "allwinner,sun7i-a20-i2s", .data = (void *)SUN7I},
++	{ .compatible = "allwinner,sun4i-a10a-iis", .data = (void *)SUN4A},
++	{ .compatible = "allwinner,sun4i-a10-iis", .data = (void *)SUN4I},
++	{ .compatible = "allwinner,sun5i-a13-iis", .data = (void *)SUN5I},
++	{ .compatible = "allwinner,sun7i-a20-iis", .data = (void *)SUN7I},
 +	{}
 +};
 +MODULE_DEVICE_TABLE(of, sunxi_i2s_of_match);
@@ -2420,9 +2423,9 @@ index 0000000..3b3873a
 +		dev_err(dev, "failed to get pll2 clock\n");
 +		return PTR_ERR(priv->clk_pll2);
 +	}
-+	priv->clk_module = devm_clk_get(dev, "i2s");
++	priv->clk_module = devm_clk_get(dev, "iis");
 +	if (IS_ERR(priv->clk_module)) {
-+		dev_err(dev, "failed to get i2s clock\n");
++		dev_err(dev, "failed to get iis clock\n");
 +		return PTR_ERR(priv->clk_module);
 +	}
 +
