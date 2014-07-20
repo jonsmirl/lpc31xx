@@ -1,0 +1,117 @@
+Bottom: 7e1a7913abfb62c16ff3e553317773b82feb7b1e
+Top:    3737d2ba3d6c56c066fdb40036140c2671934898
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-20 12:00:06 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
+index 5156e59..3b3873a 100644
+--- a/sound/soc/sunxi/sunxi-i2s.c
++++ b/sound/soc/sunxi/sunxi-i2s.c
+@@ -529,54 +529,6 @@ static const struct snd_soc_dapm_widget i2s_dapm_widgets[] = {
+ 	SND_SOC_DAPM_INPUT("LINE_IN"),
+ };
+ 
+-static struct snd_soc_dai_link cdc_dai = {
+-	.name = "cdc",
+-	.stream_name = "CDC PCM",
+-	.codec_dai_name = "sunxi-i2s-dai",
+-	.cpu_dai_name = "1c22c00.i2s",
+-	.codec_name = "1c22c00.i2s",
+-	.platform_name = "1c22c00.i2s",
+-	//.init = tegra_wm8903_init,
+-	//.ops = &tegra_wm8903_ops,
+-	.dai_fmt = SND_SOC_DAIFMT_I2S,
+-};
+-
+-static struct snd_soc_card snd_soc_sunxi_i2s = {
+-	.name = "sunxi-i2s",
+-	.owner = THIS_MODULE,
+-	.dai_link = &cdc_dai,
+-	.num_links = 1,
+-};
+-
+-static struct snd_soc_codec_driver dummy_codec = {
+-	.controls = sun7i_dac_ctls,
+-	.num_controls = ARRAY_SIZE(sun7i_dac_ctls),
+-	.dapm_widgets = i2s_dapm_widgets,
+-	.num_dapm_widgets = ARRAY_SIZE(i2s_dapm_widgets),
+-};
+-
+-#define STUB_RATES	SNDRV_PCM_RATE_8000_192000
+-#define STUB_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | \
+-			SNDRV_PCM_FMTBIT_S24_LE)
+-
+-static struct snd_soc_dai_driver dummy_dai = {
+-	.name = "sunxi-i2s-dai",
+-	.playback = {
+-		.stream_name	= "Playback",
+-		.channels_min	= 1,
+-		.channels_max	= 2,
+-		.rates		= STUB_RATES,
+-		.formats	= STUB_FORMATS,
+-	},
+-	.capture = {
+-		.stream_name	= "Capture",
+-		.channels_min	= 1,
+-		.channels_max	= 2,
+-		.rates 		= STUB_RATES,
+-		.formats 	= STUB_FORMATS,
+-	 },
+-};
+-
+ static const struct of_device_id sunxi_i2s_of_match[] = {
+ 	{ .compatible = "allwinner,sun4i-a10a-i2s", .data = (void *)SUN4A},
+ 	{ .compatible = "allwinner,sun4i-a10-i2s", .data = (void *)SUN4I},
+@@ -589,7 +541,6 @@ MODULE_DEVICE_TABLE(of, sunxi_i2s_of_match);
+ static int sunxi_i2s_probe(struct platform_device *pdev)
+ {
+ 	struct device_node *np = pdev->dev.of_node;
+-	struct snd_soc_card *card = &snd_soc_sunxi_i2s;
+ 	const struct of_device_id *of_id;
+ 	struct device *dev = &pdev->dev;
+ 	struct sunxi_priv *priv;
+@@ -608,10 +559,6 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
+ 	if (!priv)
+ 		return -ENOMEM;
+ 
+-	card->dev = &pdev->dev;
+-	platform_set_drvdata(pdev, card);
+-	snd_soc_card_set_drvdata(card, priv);
+-
+ 	priv->id = (int)of_id->data;
+ 
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+@@ -675,8 +622,6 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
+ 	priv->capture_dma_data.maxburst = 4;
+ 	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+ 
+-	ret = snd_soc_register_codec(&pdev->dev, &dummy_codec, &dummy_dai, 1);
+-
+ 	ret = devm_snd_soc_register_component(&pdev->dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
+ 	if (ret)
+ 		goto err_clk_disable;
+@@ -687,20 +632,8 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
+ 
+ 	i2s_init(priv);
+ 
+-	ret = snd_soc_register_card(card);
+-	if (ret) {
+-		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
+-		goto err_fini_utils;
+-	}
+-
+-	ret = snd_soc_of_parse_audio_routing(card, "routing");
+-	if (ret)
+-		goto err;
+-
+ 	return 0;
+ 
+-err_fini_utils:
+-err:
+ err_clk_disable:
+ 	clk_disable_unprepare(priv->clk_apb);
+ 	clk_disable_unprepare(priv->clk_pll2);
