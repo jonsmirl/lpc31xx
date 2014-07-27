@@ -13,5 +13,8 @@ config SND_SUNXI_SOC_I2S
 	select REGMAP_MMIO
 	default y
 
+source "sound/soc/sunxi/i2s/Kconfig"
+
+
 endmenu
 
