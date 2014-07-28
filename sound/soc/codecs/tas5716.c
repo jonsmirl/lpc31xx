@@ -1,5 +1,5 @@
 /*
- * Codec driver for ST TAS5716 2.1-channel high-efficiency digital audio system
+ * Codec driver for TI TAS5716 2.1-channel high-efficiency digital audio system
  *
  * Copyright: 2014 Raumfeld GmbH
  * Author: Sven Brandau <info@brandau.biz>
@@ -1224,13 +1224,11 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 	mutex_init(&tas5716->coeff_lock);
 	tas5716->pdata = dev_get_platdata(dev);
 
-#ifdef CONFIG_OF
 	if (dev->of_node) {
 		ret = tas5716_probe_dt(dev, tas5716);
 		if (ret < 0)
 			return ret;
 	}
-#endif
 
 	printk("JDS - tas5716_i2c_probe a\n");
 	/* GPIOs */

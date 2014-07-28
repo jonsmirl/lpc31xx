@@ -40,10 +40,10 @@ void sunxi_snd_txctrl_i2s(struct sunxi_priv *priv, struct snd_pcm_substream *sub
 {
 	u32 reg_val;
 
-	regmap_update_bits(priv->regmap, SUNXI_TXCHSEL, 0x7 << SUNXI_TXCHSEL_CHNUM, 
-				(substream->runtime->channels - 1) << SUNXI_TXCHSEL_CHNUM);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_TXCHSEL, SUNXI_I2STXCHSEL_CHNUM_MASK, 
+				(substream->runtime->channels - 1) << SUNXI_I2STXCHSEL_CHNUM_SHIFT);
 
-	regmap_raw_read(priv->regmap, SUNXI_TXCHMAP, &reg_val, sizeof(reg_val));
+	regmap_raw_read(priv->regmap, SUNXI_I2S_TXCHMAP, &reg_val, sizeof(reg_val));
 	reg_val = 0;
 	if (priv->revision == SUN4I) {
 		if(substream->runtime->channels == 1) {
@@ -58,100 +58,97 @@ void sunxi_snd_txctrl_i2s(struct sunxi_priv *priv, struct snd_pcm_substream *sub
 			reg_val = 0x00000010;
 		}
 	}
-	regmap_write(priv->regmap, SUNXI_TXCHMAP, reg_val);
+	regmap_write(priv->regmap, SUNXI_I2S_TXCHMAP, reg_val);
 
-	regmap_read(priv->regmap, SUNXI_IISCTL, &reg_val);
+	regmap_read(priv->regmap, SUNXI_I2S_CTL, &reg_val);
 	if (priv->revision == SUN4I) {
-		reg_val &= ~SUNXI_IISCTL_SDO3EN;
-		reg_val &= ~SUNXI_IISCTL_SDO2EN;
-		reg_val &= ~SUNXI_IISCTL_SDO1EN;
-		reg_val &= ~SUNXI_IISCTL_SDO0EN;
+		reg_val &= ~SUNXI_I2SCTL_SDOEN_ALL;
 		switch(substream->runtime->channels) {
 			case 1:
 			case 2:
-				reg_val |= SUNXI_IISCTL_SDO0EN;
+				reg_val |= SUNXI_I2SCTL_SDO0EN;
 				break;
 			case 3:
 			case 4:
-				reg_val |= SUNXI_IISCTL_SDO0EN;
-				reg_val |= SUNXI_IISCTL_SDO1EN;
+				reg_val |= SUNXI_I2SCTL_SDO0EN;
+				reg_val |= SUNXI_I2SCTL_SDO1EN;
 				break;
 			case 5:
 			case 6:
-				reg_val |= SUNXI_IISCTL_SDO0EN;
-				reg_val |= SUNXI_IISCTL_SDO1EN;
-				reg_val |= SUNXI_IISCTL_SDO2EN;
+				reg_val |= SUNXI_I2SCTL_SDO0EN;
+				reg_val |= SUNXI_I2SCTL_SDO1EN;
+				reg_val |= SUNXI_I2SCTL_SDO2EN;
 				break;
 			case 7:
 			case 8:
-				reg_val |= SUNXI_IISCTL_SDO0EN;
-				reg_val |= SUNXI_IISCTL_SDO1EN;
-				reg_val |= SUNXI_IISCTL_SDO2EN;
-				reg_val |= SUNXI_IISCTL_SDO3EN;
+				reg_val |= SUNXI_I2SCTL_SDO0EN;
+				reg_val |= SUNXI_I2SCTL_SDO1EN;
+				reg_val |= SUNXI_I2SCTL_SDO2EN;
+				reg_val |= SUNXI_I2SCTL_SDO3EN;
 				break;
 			default:
-				reg_val |= SUNXI_IISCTL_SDO0EN;
+				reg_val |= SUNXI_I2SCTL_SDO0EN;
 		}
 	} else {
-		reg_val |= SUNXI_IISCTL_SDO0EN;
+		reg_val |= SUNXI_I2SCTL_SDO0EN;
 	}
-	regmap_write(priv->regmap, SUNXI_IISCTL, reg_val);
+	regmap_write(priv->regmap, SUNXI_I2S_CTL, reg_val);
 
 	//flush TX FIFO
-	regmap_update_bits(priv->regmap, SUNXI_IISFCTL, 1 << SUNXI_IISFCTL_FTX, 1 << SUNXI_IISFCTL_FTX);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_FCTL, SUNXI_I2SFCTL_FTX_MASK, SUNXI_I2SFCTL_FTX);
 
 	//clear TX counter
-	regmap_write(priv->regmap, SUNXI_IISTXCNT, 0);
+	regmap_write(priv->regmap, SUNXI_I2S_TXCNT, 0);
 
 	if (on) {
 		/* IIS TX ENABLE */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_TXEN, 1 << SUNXI_IISCTL_TXEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, SUNXI_I2SCTL_TXEN);
 
 		/* enable DMA DRQ mode for play */
-		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_TXDRQEN, 1 << SUNXI_IISINT_TXDRQEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, SUNXI_I2SINT_TXDRQEN);
 
 		//Global Enable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 1 << SUNXI_IISCTL_GEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
 
 	} else {
 		/* IIS TX DISABLE */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_TXEN, 0 << SUNXI_IISCTL_TXEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, 0);
 
 		/* DISBALE dma DRQ mode */
-		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_TXDRQEN, 0 << SUNXI_IISINT_TXDRQEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, 0);
 
 		//Global disable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 0 << SUNXI_IISCTL_GEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 	}
 }
 
 void sunxi_snd_rxctrl_i2s(struct sunxi_priv *priv, int on)
 {
 	//flush RX FIFO
-	regmap_update_bits(priv->regmap, SUNXI_IISFCTL, 1 << SUNXI_IISFCTL_FRX, 1 << SUNXI_IISFCTL_FRX);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_FCTL, SUNXI_I2SFCTL_FRX_MASK, SUNXI_I2SFCTL_FRX);
 
 	//clear RX counter
-	regmap_write(priv->regmap, SUNXI_IISRXCNT, 0);
+	regmap_write(priv->regmap, SUNXI_I2S_RXCNT, 0);
 
 	if (on) {
 		/* IIS RX ENABLE */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_RXEN, 1 << SUNXI_IISCTL_RXEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, SUNXI_I2SCTL_RXEN);
 
 		/* enable DMA DRQ mode for record */
-		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_RXDRQEN, 1 << SUNXI_IISINT_RXDRQEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_RXDRQEN_MASK, SUNXI_I2SINT_RXDRQEN);
 
 		//Global Enable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 1 << SUNXI_IISCTL_GEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
 
 	} else {
 		/* IIS RX DISABLE */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_RXEN, 0 << SUNXI_IISCTL_RXEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, 0);
 
 		/* DISBALE dma DRQ mode */
-		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_RXDRQEN, 0 << SUNXI_IISINT_RXDRQEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_RXDRQEN_MASK, 0);
 
 		//Global disable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 0 << SUNXI_IISCTL_GEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 	}
 }
 
@@ -159,8 +156,8 @@ static inline int sunxi_snd_is_clkmaster(struct sunxi_priv *priv)
 {
 	u32 reg_val;
 
-	regmap_read(priv->regmap, SUNXI_IISCTL, &reg_val);
-	return ((reg_val & SUNXI_IISCTL_MS) ? 0 : 1);
+	regmap_read(priv->regmap, SUNXI_I2S_CTL, &reg_val);
+	return ((reg_val & SUNXI_I2SCTL_MS_MASK) ? 0 : 1);
 }
 
 static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
@@ -170,21 +167,19 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 
 	//SDO ON
 	if (priv->revision == SUN4I) {
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 
-			SUNXI_IISCTL_SDO0EN | SUNXI_IISCTL_SDO1EN | SUNXI_IISCTL_SDO2EN | SUNXI_IISCTL_SDO3EN,
-			SUNXI_IISCTL_SDO0EN | SUNXI_IISCTL_SDO1EN | SUNXI_IISCTL_SDO2EN | SUNXI_IISCTL_SDO3EN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_SDOEN_ALL, SUNXI_I2SCTL_SDOEN_ALL);
 	} else {
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, SUNXI_IISCTL_SDO0EN, SUNXI_IISCTL_SDO0EN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_SDO0EN_MASK, SUNXI_I2SCTL_SDO0EN);
 	}
 
 
 	/* master or slave selection */
 	switch(fmt & SND_SOC_DAIFMT_MASTER_MASK){
 	case SND_SOC_DAIFMT_CBM_CFM:   /* codec clk & frm master */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_MS, 1 << SUNXI_IISCTL_MS);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_MS);
 		break;
 	case SND_SOC_DAIFMT_CBS_CFS:   /* codec clk & frm slave */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_MS, 0 << SUNXI_IISCTL_MS);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, 0);
 		break;
 	default:
 		return -EINVAL;
@@ -193,24 +188,24 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	/* pcm or i2s mode selection */
 	switch(fmt & SND_SOC_DAIFMT_FORMAT_MASK){
 	case SND_SOC_DAIFMT_I2S:        /* I2S mode */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 0 << SUNXI_IISCTL_PCM);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_FMT_RVD, SUNXI_IISFAT0_FMT_I2S);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, SUNXI_I2SCTL_PCM);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_FMT_MASK, SUNXI_I2SFAT0_FMT_I2S);
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:    /* Right Justified mode */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 0 << SUNXI_IISCTL_PCM);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_FMT_RVD, SUNXI_IISFAT0_FMT_RGT);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, 0);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_FMT_MASK, SUNXI_I2SFAT0_FMT_RGT);
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:     /* Left Justified mode */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 0 << SUNXI_IISCTL_PCM);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_FMT_RVD, SUNXI_IISFAT0_FMT_LFT);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, 0);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_FMT_MASK, SUNXI_I2SFAT0_FMT_LFT);
 		break;
 	case SND_SOC_DAIFMT_DSP_A:      /* L data msb after FRM LRC */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 1 << SUNXI_IISCTL_PCM);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, SUNXI_I2SCTL_PCM);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, 0);
 		break;
 	case SND_SOC_DAIFMT_DSP_B:      /* L data msb during FRM LRC */
-		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 1 << SUNXI_IISCTL_PCM);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, SUNXI_I2SCTL_PCM);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, SUNXI_I2SFAT0_LRCP);
 		break;
 	default:
 		return -EINVAL;
@@ -219,62 +214,62 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	/* DAI signal inversions */
 	switch(fmt & SND_SOC_DAIFMT_INV_MASK){
 	case SND_SOC_DAIFMT_NB_NF:     /* normal bit clock + frame */
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 0 << SUNXI_IISFAT0_LRCP);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 0 << SUNXI_IISFAT0_BCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, 0);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, 0);
 		break;
 	case SND_SOC_DAIFMT_NB_IF:     /* normal bclk + inv frm */
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 0 << SUNXI_IISFAT0_BCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, SUNXI_I2SFAT0_LRCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, 0);
 		break;
 	case SND_SOC_DAIFMT_IB_NF:     /* invert bclk + nor frm */
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 0 << SUNXI_IISFAT0_LRCP);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 1 << SUNXI_IISFAT0_BCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, 0);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, SUNXI_I2SFAT0_BCP);
 		break;
 	case SND_SOC_DAIFMT_IB_IF:     /* invert bclk + frm */
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 1 << SUNXI_IISFAT0_BCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, SUNXI_I2SFAT0_LRCP);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, SUNXI_I2SFAT0_BCP);
 		break;
 	}
 
 	/* word select size */
 	if(priv->ws_size == 16)
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_16BCLK);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_16BCLK);
 	else if(priv->ws_size == 20)
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_20BCLK);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_20BCLK);
 	else if(priv->ws_size == 24)
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_24BCLK);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_24BCLK);
 	else
-		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_32BCLK);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_32BCLK);
 
 	/* PCM REGISTER setup */
 	reg_val = priv->pcm_txtype & 0x3;
 	reg_val |= priv->pcm_rxtype << 2;
 
 	if(!priv->pcm_sync_type)
-		reg_val |= SUNXI_IISFAT1_SSYNC;							//short sync
+		reg_val |= SUNXI_I2SFAT1_SSYNC;				// short sync
 	if(priv->pcm_sw == 16)
-		reg_val |= SUNXI_IISFAT1_SW;
+		reg_val |= SUNXI_I2SFAT1_SW;
 
-	reg_val |=((priv->pcm_start_slot - 1)&0x3)<<6;		//start slot index
+	reg_val |= ((priv->pcm_start_slot - 1) << SUNXI_I2SFAT1_SI_SHIFT) & SUNXI_I2SFAT1_SI_MASK; // start slot index
 
-	reg_val |= priv->pcm_lsb_first<<9;			//MSB or LSB first
+	reg_val |= priv->pcm_lsb_first << SUNXI_I2SFAT1_MLS_SHIFT;	// MSB or LSB first
 
 	if(priv->pcm_sync_period == 256)
-		reg_val |= 0x4 << 12;
+		reg_val |= SUNXI_I2SFAT1_SYNCLEN_256BCLK;
 	else if (priv->pcm_sync_period == 128)
-		reg_val |= 0x3 << 12;
+		reg_val |= SUNXI_I2SFAT1_SYNCLEN_128BCLK;
 	else if (priv->pcm_sync_period == 64)
-		reg_val |= 0x2 << 12;
+		reg_val |= SUNXI_I2SFAT1_SYNCLEN_64BCLK;
 	else if (priv->pcm_sync_period == 32)
-		reg_val |= 0x1 << 12;
-	regmap_write(priv->regmap, SUNXI_IISFAT1, reg_val);
+		reg_val |= SUNXI_I2SFAT1_SYNCLEN_32BCLK;
+	regmap_write(priv->regmap, SUNXI_I2S_FAT1, reg_val);
 
 	/* set FIFO control register */
-	reg_val = 0 & 0x3;
-	reg_val |= (1 & 0x1) << 2;
-	reg_val |= SUNXI_IISFCTL_RXTL(0xf);				//RX FIFO trigger level
-	reg_val |= SUNXI_IISFCTL_TXTL(0x40);				//TX FIFO empty trigger level
-	regmap_write(priv->regmap, SUNXI_IISFCTL, reg_val);
+	reg_val = SUNXI_I2SFCTL_RXOM_MOD0;
+	reg_val |= SUNXI_I2SFCTL_TXIM_MOD1;
+	reg_val |= SUNXI_I2SFCTL_RXTL(0xf);				//RX FIFO trigger level
+	reg_val |= SUNXI_I2SFCTL_TXTL(0x40);				//TX FIFO empty trigger level
+	regmap_write(priv->regmap, SUNXI_I2S_FCTL, reg_val);
 	return 0;
 }
 
@@ -338,45 +333,55 @@ static int sunxi_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai, int div_id, int div
 
 	switch (div_id) {
 	case SUNXI_DIV_MCLK:
-		if(div <= 8)
-			div  = (div >>1);
-		else if(div  == 12)
-			div  = 0x5;
-		else if(div  == 16)
-			div  = 0x6;
-		else if(div == 24)
-			div = 0x7;
-		else if(div == 32)
-			div = 0x8;
-		else if(div == 48)
-			div = 0x9;
-		else if(div == 64)
-			div = 0xa;
-		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_MCLK_MASK, div << SUNXI_IISCLKD_MCLK_OFFS);
+		if (div >= 64)
+			div = SUNXI_I2SCLKD_MCLKDIV_64;
+		else if (div >= 48)
+			div = SUNXI_I2SCLKD_MCLKDIV_48;
+		else if (div >= 32)
+			div = SUNXI_I2SCLKD_MCLKDIV_32;
+		else if (div >= 24)
+			div = SUNXI_I2SCLKD_MCLKDIV_24;
+		else if (div >= 16)
+			div  = SUNXI_I2SCLKD_MCLKDIV_16;
+		else if (div >= 12)
+			div  = SUNXI_I2SCLKD_MCLKDIV_12;
+		else if (div >= 8)
+			div  = SUNXI_I2SCLKD_MCLKDIV_8;
+		else if (div >= 6)
+			div  = SUNXI_I2SCLKD_MCLKDIV_6;
+		else if (div >= 4)
+			div  = SUNXI_I2SCLKD_MCLKDIV_4;
+		else 
+			div  = SUNXI_I2SCLKD_MCLKDIV_2;
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, div);
 		break;
 	case SUNXI_DIV_BCLK:
-		if(div <= 8)
-			div = (div>>1) - 1;
-		else if(div == 12)
-			div = 0x4;
-		else if(div == 16)
-			div = 0x5;
-		else if(div == 32)
-			div = 0x6;
-		else if(div == 64)
-			div = 0x7;
-		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_BCLK_MASK, div << SUNXI_IISCLKD_BCLK_OFFS);
+		if (div >= 64)
+			div = SUNXI_I2SCLKD_BCLKDIV_64;
+		else if (div >= 32)
+			div = SUNXI_I2SCLKD_BCLKDIV_32;
+		else if (div >= 16)
+			div  = SUNXI_I2SCLKD_BCLKDIV_16;
+		else if (div >= 8)
+			div  = SUNXI_I2SCLKD_BCLKDIV_8;
+		else if (div >= 6)
+			div  = SUNXI_I2SCLKD_BCLKDIV_6;
+		else if (div >= 4)
+			div  = SUNXI_I2SCLKD_BCLKDIV_4;
+		else 
+			div  = SUNXI_I2SCLKD_BCLKDIV_2;
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
 		break;
 	default:
 		return -EINVAL;
 	}
 
 	//diable MCLK output when high samplerate
-	regmap_read(priv->regmap, SUNXI_IISCLKD, &reg);
-	if (!(reg & 0xF)) {
-		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_MCLKOEN, 0);
+	regmap_read(priv->regmap, SUNXI_I2S_CLKD, &reg);
+	if (!(reg & SUNXI_I2SCLKD_MCLKDIV_MASK)) {
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, 0);
 	} else {
-		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_MCLKOEN, SUNXI_IISCLKD_MCLKOEN);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
 	}
 	return 0;
 }
@@ -397,24 +402,24 @@ static int sunxi_i2s_dai_remove(struct snd_soc_dai *cpu_dai)
 
 static void iisregsave(void)
 {
-	/*regsave[0] = readl(priv->regs + SUNXI_IISCTL);
-	regsave[1] = readl(priv->regs + SUNXI_IISFAT0);
-	regsave[2] = readl(priv->regs + SUNXI_IISFAT1);
-	regsave[3] = readl(priv->regs + SUNXI_IISFCTL) | (0x3<<24);
-	regsave[4] = readl(priv->regs + SUNXI_IISINT);
-	regsave[5] = readl(priv->regs + SUNXI_IISCLKD);
+	/*regsave[0] = readl(priv->regs + SUNXI_I2S_CTL);
+	regsave[1] = readl(priv->regs + SUNXI_I2S_FAT0);
+	regsave[2] = readl(priv->regs + SUNXI_I2S_FAT1);
+	regsave[3] = readl(priv->regs + SUNXI_I2S_FCTL) | (0x3<<24);
+	regsave[4] = readl(priv->regs + SUNXI_I2S_INT);
+	regsave[5] = readl(priv->regs + SUNXI_I2S_CLKD);
 	regsave[6] = readl(priv->regs + SUNXI_TXCHSEL);
 	regsave[7] = readl(priv->regs + SUNXI_TXCHMAP);*/
 }
 
 static void iisregrestore(void)
 {
-	/*writel(regsave[0], priv->regs + SUNXI_IISCTL);
-	writel(regsave[1], priv->regs + SUNXI_IISFAT0);
-	writel(regsave[2], priv->regs + SUNXI_IISFAT1);
-	writel(regsave[3], priv->regs + SUNXI_IISFCTL);
-	writel(regsave[4], priv->regs + SUNXI_IISINT);
-	writel(regsave[5], priv->regs + SUNXI_IISCLKD);
+	/*writel(regsave[0], priv->regs + SUNXI_I2S_CTL);
+	writel(regsave[1], priv->regs + SUNXI_I2S_FAT0);
+	writel(regsave[2], priv->regs + SUNXI_I2S_FAT1);
+	writel(regsave[3], priv->regs + SUNXI_I2S_FCTL);
+	writel(regsave[4], priv->regs + SUNXI_I2S_INT);
+	writel(regsave[5], priv->regs + SUNXI_I2S_CLKD);
 	writel(regsave[6], priv->regs + SUNXI_TXCHSEL);
 	writel(regsave[7], priv->regs + SUNXI_TXCHMAP);*/
 }
@@ -426,7 +431,7 @@ static int sunxi_i2s_suspend(struct snd_soc_dai *cpu_dai)
 	printk("[IIS]Entered %s\n", __func__);
 
 	//Global Enable Digital Audio Interface
-	regmap_update_bits(priv->regmap, SUNXI_IISCTL, SUNXI_IISCTL_GEN, 0);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 
 	iisregsave();
 
@@ -456,7 +461,7 @@ static int sunxi_i2s_resume(struct snd_soc_dai *cpu_dai)
 	iisregrestore();
 
 	//Global Enable Digital Audio Interface
-	regmap_update_bits(priv->regmap, SUNXI_IISCTL, SUNXI_IISCTL_GEN, SUNXI_IISCTL_GEN);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
 
 	//printk("[IIS]PLL2 0x01c20008 = %#x\n", *(volatile int*)0xF1C20008);
 	printk("[IIS]SPECIAL CLK 0x01c20068 = %#x, line= %d\n", *(volatile int*)0xF1C20068, __LINE__);
@@ -503,7 +508,7 @@ static const struct regmap_config sunxi_i2s_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
 	.val_bits = 32,
-	.max_register = SUNXI_RXCHMAP,
+	.max_register = SUNXI_I2S_RXCHMAP,
 };
 
 static const struct of_device_id sunxi_i2s_of_match[] = {
@@ -583,12 +588,12 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	}
 
 	/* DMA configuration for TX FIFO */
-	priv->playback_dma_data.addr = res->start + SUNXI_IISTXFIFO;
+	priv->playback_dma_data.addr = res->start + SUNXI_I2S_TXFIFO;
 	priv->playback_dma_data.maxburst = 4;
 	priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
 	/* DMA configuration for RX FIFO */
-	priv->capture_dma_data.addr = res->start + SUNXI_IISRXFIFO;
+	priv->capture_dma_data.addr = res->start + SUNXI_I2S_RXFIFO;
 	priv->capture_dma_data.maxburst = 4;
 	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
