@@ -1,5 +1,5 @@
 Bottom: 4e66e9c5a88e22a68319fdf2517ebee1954ad140
-Top:    b442c726fe7a41a399d7fbd75d4a44a38e6ea332
+Top:    f4b0d0d0e46935b8c70254c5761a3099887ecf53
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-18 14:38:45 -0400
 
@@ -238,12 +238,12 @@ index 1bd6e1c..dc18e5d 100644
  obj-$(CONFIG_SND_SOC_TLV320AIC23_SPI)	+= snd-soc-tlv320aic23-spi.o
 diff --git a/sound/soc/codecs/tas5716.c b/sound/soc/codecs/tas5716.c
 new file mode 100644
-index 0000000..37947cd
+index 0000000..2e3316d
 --- /dev/null
 +++ b/sound/soc/codecs/tas5716.c
-@@ -0,0 +1,1317 @@
+@@ -0,0 +1,1315 @@
 +/*
-+ * Codec driver for ST TAS5716 2.1-channel high-efficiency digital audio system
++ * Codec driver for TI TAS5716 2.1-channel high-efficiency digital audio system
 + *
 + * Copyright: 2014 Raumfeld GmbH
 + * Author: Sven Brandau <info@brandau.biz>
@@ -1468,13 +1468,11 @@ index 0000000..37947cd
 +	mutex_init(&tas5716->coeff_lock);
 +	tas5716->pdata = dev_get_platdata(dev);
 +
-+#ifdef CONFIG_OF
 +	if (dev->of_node) {
 +		ret = tas5716_probe_dt(dev, tas5716);
 +		if (ret < 0)
 +			return ret;
 +	}
-+#endif
 +
 +	printk("JDS - tas5716_i2c_probe a\n");
 +	/* GPIOs */
@@ -1835,10 +1833,10 @@ index b8950d3..b40e4cb 100644
 +obj-$(CONFIG_SND_SUNXI_SOC_I2S_INTERFACE) += i2s/
 diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
 new file mode 100644
-index 0000000..9788f4a
+index 0000000..12d3515
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.c
-@@ -0,0 +1,636 @@
+@@ -0,0 +1,641 @@
 +/*
 + * Copyright 2014 Emilio López <emilio@elopez.com.ar>
 + * Copyright 2014 Jon Smirl <jonsmirl@gmail.com>
@@ -1881,10 +1879,10 @@ index 0000000..9788f4a
 +{
 +	u32 reg_val;
 +
-+	regmap_update_bits(priv->regmap, SUNXI_TXCHSEL, 0x7 << SUNXI_TXCHSEL_CHNUM, 
-+				(substream->runtime->channels - 1) << SUNXI_TXCHSEL_CHNUM);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_TXCHSEL, SUNXI_I2STXCHSEL_CHNUM_MASK, 
++				(substream->runtime->channels - 1) << SUNXI_I2STXCHSEL_CHNUM_SHIFT);
 +
-+	regmap_raw_read(priv->regmap, SUNXI_TXCHMAP, &reg_val, sizeof(reg_val));
++	regmap_raw_read(priv->regmap, SUNXI_I2S_TXCHMAP, &reg_val, sizeof(reg_val));
 +	reg_val = 0;
 +	if (priv->revision == SUN4I) {
 +		if(substream->runtime->channels == 1) {
@@ -1899,100 +1897,97 @@ index 0000000..9788f4a
 +			reg_val = 0x00000010;
 +		}
 +	}
-+	regmap_write(priv->regmap, SUNXI_TXCHMAP, reg_val);
++	regmap_write(priv->regmap, SUNXI_I2S_TXCHMAP, reg_val);
 +
-+	regmap_read(priv->regmap, SUNXI_IISCTL, &reg_val);
++	regmap_read(priv->regmap, SUNXI_I2S_CTL, &reg_val);
 +	if (priv->revision == SUN4I) {
-+		reg_val &= ~SUNXI_IISCTL_SDO3EN;
-+		reg_val &= ~SUNXI_IISCTL_SDO2EN;
-+		reg_val &= ~SUNXI_IISCTL_SDO1EN;
-+		reg_val &= ~SUNXI_IISCTL_SDO0EN;
++		reg_val &= ~SUNXI_I2SCTL_SDOEN_ALL;
 +		switch(substream->runtime->channels) {
 +			case 1:
 +			case 2:
-+				reg_val |= SUNXI_IISCTL_SDO0EN;
++				reg_val |= SUNXI_I2SCTL_SDO0EN;
 +				break;
 +			case 3:
 +			case 4:
-+				reg_val |= SUNXI_IISCTL_SDO0EN;
-+				reg_val |= SUNXI_IISCTL_SDO1EN;
++				reg_val |= SUNXI_I2SCTL_SDO0EN;
++				reg_val |= SUNXI_I2SCTL_SDO1EN;
 +				break;
 +			case 5:
 +			case 6:
-+				reg_val |= SUNXI_IISCTL_SDO0EN;
-+				reg_val |= SUNXI_IISCTL_SDO1EN;
-+				reg_val |= SUNXI_IISCTL_SDO2EN;
++				reg_val |= SUNXI_I2SCTL_SDO0EN;
++				reg_val |= SUNXI_I2SCTL_SDO1EN;
++				reg_val |= SUNXI_I2SCTL_SDO2EN;
 +				break;
 +			case 7:
 +			case 8:
-+				reg_val |= SUNXI_IISCTL_SDO0EN;
-+				reg_val |= SUNXI_IISCTL_SDO1EN;
-+				reg_val |= SUNXI_IISCTL_SDO2EN;
-+				reg_val |= SUNXI_IISCTL_SDO3EN;
++				reg_val |= SUNXI_I2SCTL_SDO0EN;
++				reg_val |= SUNXI_I2SCTL_SDO1EN;
++				reg_val |= SUNXI_I2SCTL_SDO2EN;
++				reg_val |= SUNXI_I2SCTL_SDO3EN;
 +				break;
 +			default:
-+				reg_val |= SUNXI_IISCTL_SDO0EN;
++				reg_val |= SUNXI_I2SCTL_SDO0EN;
 +		}
 +	} else {
-+		reg_val |= SUNXI_IISCTL_SDO0EN;
++		reg_val |= SUNXI_I2SCTL_SDO0EN;
 +	}
-+	regmap_write(priv->regmap, SUNXI_IISCTL, reg_val);
++	regmap_write(priv->regmap, SUNXI_I2S_CTL, reg_val);
 +
 +	//flush TX FIFO
-+	regmap_update_bits(priv->regmap, SUNXI_IISFCTL, 1 << SUNXI_IISFCTL_FTX, 1 << SUNXI_IISFCTL_FTX);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_FCTL, SUNXI_I2SFCTL_FTX_MASK, SUNXI_I2SFCTL_FTX);
 +
 +	//clear TX counter
-+	regmap_write(priv->regmap, SUNXI_IISTXCNT, 0);
++	regmap_write(priv->regmap, SUNXI_I2S_TXCNT, 0);
 +
 +	if (on) {
 +		/* IIS TX ENABLE */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_TXEN, 1 << SUNXI_IISCTL_TXEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, SUNXI_I2SCTL_TXEN);
 +
 +		/* enable DMA DRQ mode for play */
-+		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_TXDRQEN, 1 << SUNXI_IISINT_TXDRQEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, SUNXI_I2SINT_TXDRQEN);
 +
 +		//Global Enable Digital Audio Interface
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 1 << SUNXI_IISCTL_GEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
 +
 +	} else {
 +		/* IIS TX DISABLE */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_TXEN, 0 << SUNXI_IISCTL_TXEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, 0);
 +
 +		/* DISBALE dma DRQ mode */
-+		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_TXDRQEN, 0 << SUNXI_IISINT_TXDRQEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, 0);
 +
 +		//Global disable Digital Audio Interface
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 0 << SUNXI_IISCTL_GEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 +	}
 +}
 +
 +void sunxi_snd_rxctrl_i2s(struct sunxi_priv *priv, int on)
 +{
 +	//flush RX FIFO
-+	regmap_update_bits(priv->regmap, SUNXI_IISFCTL, 1 << SUNXI_IISFCTL_FRX, 1 << SUNXI_IISFCTL_FRX);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_FCTL, SUNXI_I2SFCTL_FRX_MASK, SUNXI_I2SFCTL_FRX);
 +
 +	//clear RX counter
-+	regmap_write(priv->regmap, SUNXI_IISRXCNT, 0);
++	regmap_write(priv->regmap, SUNXI_I2S_RXCNT, 0);
 +
 +	if (on) {
 +		/* IIS RX ENABLE */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_RXEN, 1 << SUNXI_IISCTL_RXEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, SUNXI_I2SCTL_RXEN);
 +
 +		/* enable DMA DRQ mode for record */
-+		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_RXDRQEN, 1 << SUNXI_IISINT_RXDRQEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_RXDRQEN_MASK, SUNXI_I2SINT_RXDRQEN);
 +
 +		//Global Enable Digital Audio Interface
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 1 << SUNXI_IISCTL_GEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
 +
 +	} else {
 +		/* IIS RX DISABLE */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_RXEN, 0 << SUNXI_IISCTL_RXEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, 0);
 +
 +		/* DISBALE dma DRQ mode */
-+		regmap_update_bits(priv->regmap, SUNXI_IISINT, 1 << SUNXI_IISINT_RXDRQEN, 0 << SUNXI_IISINT_RXDRQEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_RXDRQEN_MASK, 0);
 +
 +		//Global disable Digital Audio Interface
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_GEN, 0 << SUNXI_IISCTL_GEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 +	}
 +}
 +
@@ -2000,8 +1995,8 @@ index 0000000..9788f4a
 +{
 +	u32 reg_val;
 +
-+	regmap_read(priv->regmap, SUNXI_IISCTL, &reg_val);
-+	return ((reg_val & SUNXI_IISCTL_MS) ? 0 : 1);
++	regmap_read(priv->regmap, SUNXI_I2S_CTL, &reg_val);
++	return ((reg_val & SUNXI_I2SCTL_MS_MASK) ? 0 : 1);
 +}
 +
 +static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
@@ -2011,21 +2006,19 @@ index 0000000..9788f4a
 +
 +	//SDO ON
 +	if (priv->revision == SUN4I) {
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 
-+			SUNXI_IISCTL_SDO0EN | SUNXI_IISCTL_SDO1EN | SUNXI_IISCTL_SDO2EN | SUNXI_IISCTL_SDO3EN,
-+			SUNXI_IISCTL_SDO0EN | SUNXI_IISCTL_SDO1EN | SUNXI_IISCTL_SDO2EN | SUNXI_IISCTL_SDO3EN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_SDOEN_ALL, SUNXI_I2SCTL_SDOEN_ALL);
 +	} else {
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, SUNXI_IISCTL_SDO0EN, SUNXI_IISCTL_SDO0EN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_SDO0EN_MASK, SUNXI_I2SCTL_SDO0EN);
 +	}
 +
 +
 +	/* master or slave selection */
 +	switch(fmt & SND_SOC_DAIFMT_MASTER_MASK){
 +	case SND_SOC_DAIFMT_CBM_CFM:   /* codec clk & frm master */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_MS, 1 << SUNXI_IISCTL_MS);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_MS);
 +		break;
 +	case SND_SOC_DAIFMT_CBS_CFS:   /* codec clk & frm slave */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_MS, 0 << SUNXI_IISCTL_MS);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, 0);
 +		break;
 +	default:
 +		return -EINVAL;
@@ -2034,24 +2027,24 @@ index 0000000..9788f4a
 +	/* pcm or i2s mode selection */
 +	switch(fmt & SND_SOC_DAIFMT_FORMAT_MASK){
 +	case SND_SOC_DAIFMT_I2S:        /* I2S mode */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 0 << SUNXI_IISCTL_PCM);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_FMT_RVD, SUNXI_IISFAT0_FMT_I2S);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, SUNXI_I2SCTL_PCM);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_FMT_MASK, SUNXI_I2SFAT0_FMT_I2S);
 +		break;
 +	case SND_SOC_DAIFMT_RIGHT_J:    /* Right Justified mode */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 0 << SUNXI_IISCTL_PCM);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_FMT_RVD, SUNXI_IISFAT0_FMT_RGT);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, 0);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_FMT_MASK, SUNXI_I2SFAT0_FMT_RGT);
 +		break;
 +	case SND_SOC_DAIFMT_LEFT_J:     /* Left Justified mode */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 0 << SUNXI_IISCTL_PCM);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_FMT_RVD, SUNXI_IISFAT0_FMT_LFT);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, 0);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_FMT_MASK, SUNXI_I2SFAT0_FMT_LFT);
 +		break;
 +	case SND_SOC_DAIFMT_DSP_A:      /* L data msb after FRM LRC */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 1 << SUNXI_IISCTL_PCM);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, SUNXI_I2SCTL_PCM);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, 0);
 +		break;
 +	case SND_SOC_DAIFMT_DSP_B:      /* L data msb during FRM LRC */
-+		regmap_update_bits(priv->regmap, SUNXI_IISCTL, 1 << SUNXI_IISCTL_PCM, 1 << SUNXI_IISCTL_PCM);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, SUNXI_I2SCTL_PCM);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, SUNXI_I2SFAT0_LRCP);
 +		break;
 +	default:
 +		return -EINVAL;
@@ -2060,62 +2053,62 @@ index 0000000..9788f4a
 +	/* DAI signal inversions */
 +	switch(fmt & SND_SOC_DAIFMT_INV_MASK){
 +	case SND_SOC_DAIFMT_NB_NF:     /* normal bit clock + frame */
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 0 << SUNXI_IISFAT0_LRCP);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 0 << SUNXI_IISFAT0_BCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, 0);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, 0);
 +		break;
 +	case SND_SOC_DAIFMT_NB_IF:     /* normal bclk + inv frm */
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 0 << SUNXI_IISFAT0_BCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, SUNXI_I2SFAT0_LRCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, 0);
 +		break;
 +	case SND_SOC_DAIFMT_IB_NF:     /* invert bclk + nor frm */
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 0 << SUNXI_IISFAT0_LRCP);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 1 << SUNXI_IISFAT0_BCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, 0);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, SUNXI_I2SFAT0_BCP);
 +		break;
 +	case SND_SOC_DAIFMT_IB_IF:     /* invert bclk + frm */
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_LRCP, 1 << SUNXI_IISFAT0_LRCP);
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, 1 << SUNXI_IISFAT0_BCP, 1 << SUNXI_IISFAT0_BCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_LRCP_MASK, SUNXI_I2SFAT0_LRCP);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_BCP_MASK, SUNXI_I2SFAT0_BCP);
 +		break;
 +	}
 +
 +	/* word select size */
 +	if(priv->ws_size == 16)
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_16BCLK);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_16BCLK);
 +	else if(priv->ws_size == 20)
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_20BCLK);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_20BCLK);
 +	else if(priv->ws_size == 24)
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_24BCLK);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_24BCLK);
 +	else
-+		regmap_update_bits(priv->regmap, SUNXI_IISFAT0, SUNXI_IISFAT0_WSS_32BCLK, SUNXI_IISFAT0_WSS_32BCLK);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_32BCLK);
 +
 +	/* PCM REGISTER setup */
 +	reg_val = priv->pcm_txtype & 0x3;
 +	reg_val |= priv->pcm_rxtype << 2;
 +
 +	if(!priv->pcm_sync_type)
-+		reg_val |= SUNXI_IISFAT1_SSYNC;							//short sync
++		reg_val |= SUNXI_I2SFAT1_SSYNC;				// short sync
 +	if(priv->pcm_sw == 16)
-+		reg_val |= SUNXI_IISFAT1_SW;
++		reg_val |= SUNXI_I2SFAT1_SW;
 +
-+	reg_val |=((priv->pcm_start_slot - 1)&0x3)<<6;		//start slot index
++	reg_val |= ((priv->pcm_start_slot - 1) << SUNXI_I2SFAT1_SI_SHIFT) & SUNXI_I2SFAT1_SI_MASK; // start slot index
 +
-+	reg_val |= priv->pcm_lsb_first<<9;			//MSB or LSB first
++	reg_val |= priv->pcm_lsb_first << SUNXI_I2SFAT1_MLS_SHIFT;	// MSB or LSB first
 +
 +	if(priv->pcm_sync_period == 256)
-+		reg_val |= 0x4 << 12;
++		reg_val |= SUNXI_I2SFAT1_SYNCLEN_256BCLK;
 +	else if (priv->pcm_sync_period == 128)
-+		reg_val |= 0x3 << 12;
++		reg_val |= SUNXI_I2SFAT1_SYNCLEN_128BCLK;
 +	else if (priv->pcm_sync_period == 64)
-+		reg_val |= 0x2 << 12;
++		reg_val |= SUNXI_I2SFAT1_SYNCLEN_64BCLK;
 +	else if (priv->pcm_sync_period == 32)
-+		reg_val |= 0x1 << 12;
-+	regmap_write(priv->regmap, SUNXI_IISFAT1, reg_val);
++		reg_val |= SUNXI_I2SFAT1_SYNCLEN_32BCLK;
++	regmap_write(priv->regmap, SUNXI_I2S_FAT1, reg_val);
 +
 +	/* set FIFO control register */
-+	reg_val = 0 & 0x3;
-+	reg_val |= (1 & 0x1) << 2;
-+	reg_val |= SUNXI_IISFCTL_RXTL(0xf);				//RX FIFO trigger level
-+	reg_val |= SUNXI_IISFCTL_TXTL(0x40);				//TX FIFO empty trigger level
-+	regmap_write(priv->regmap, SUNXI_IISFCTL, reg_val);
++	reg_val = SUNXI_I2SFCTL_RXOM_MOD0;
++	reg_val |= SUNXI_I2SFCTL_TXIM_MOD1;
++	reg_val |= SUNXI_I2SFCTL_RXTL(0xf);				//RX FIFO trigger level
++	reg_val |= SUNXI_I2SFCTL_TXTL(0x40);				//TX FIFO empty trigger level
++	regmap_write(priv->regmap, SUNXI_I2S_FCTL, reg_val);
 +	return 0;
 +}
 +
@@ -2179,45 +2172,55 @@ index 0000000..9788f4a
 +
 +	switch (div_id) {
 +	case SUNXI_DIV_MCLK:
-+		if(div <= 8)
-+			div  = (div >>1);
-+		else if(div  == 12)
-+			div  = 0x5;
-+		else if(div  == 16)
-+			div  = 0x6;
-+		else if(div == 24)
-+			div = 0x7;
-+		else if(div == 32)
-+			div = 0x8;
-+		else if(div == 48)
-+			div = 0x9;
-+		else if(div == 64)
-+			div = 0xa;
-+		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_MCLK_MASK, div << SUNXI_IISCLKD_MCLK_OFFS);
++		if (div >= 64)
++			div = SUNXI_I2SCLKD_MCLKDIV_64;
++		else if (div >= 48)
++			div = SUNXI_I2SCLKD_MCLKDIV_48;
++		else if (div >= 32)
++			div = SUNXI_I2SCLKD_MCLKDIV_32;
++		else if (div >= 24)
++			div = SUNXI_I2SCLKD_MCLKDIV_24;
++		else if (div >= 16)
++			div  = SUNXI_I2SCLKD_MCLKDIV_16;
++		else if (div >= 12)
++			div  = SUNXI_I2SCLKD_MCLKDIV_12;
++		else if (div >= 8)
++			div  = SUNXI_I2SCLKD_MCLKDIV_8;
++		else if (div >= 6)
++			div  = SUNXI_I2SCLKD_MCLKDIV_6;
++		else if (div >= 4)
++			div  = SUNXI_I2SCLKD_MCLKDIV_4;
++		else 
++			div  = SUNXI_I2SCLKD_MCLKDIV_2;
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, div);
 +		break;
 +	case SUNXI_DIV_BCLK:
-+		if(div <= 8)
-+			div = (div>>1) - 1;
-+		else if(div == 12)
-+			div = 0x4;
-+		else if(div == 16)
-+			div = 0x5;
-+		else if(div == 32)
-+			div = 0x6;
-+		else if(div == 64)
-+			div = 0x7;
-+		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_BCLK_MASK, div << SUNXI_IISCLKD_BCLK_OFFS);
++		if (div >= 64)
++			div = SUNXI_I2SCLKD_BCLKDIV_64;
++		else if (div >= 32)
++			div = SUNXI_I2SCLKD_BCLKDIV_32;
++		else if (div >= 16)
++			div  = SUNXI_I2SCLKD_BCLKDIV_16;
++		else if (div >= 8)
++			div  = SUNXI_I2SCLKD_BCLKDIV_8;
++		else if (div >= 6)
++			div  = SUNXI_I2SCLKD_BCLKDIV_6;
++		else if (div >= 4)
++			div  = SUNXI_I2SCLKD_BCLKDIV_4;
++		else 
++			div  = SUNXI_I2SCLKD_BCLKDIV_2;
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
 +		break;
 +	default:
 +		return -EINVAL;
 +	}
 +
 +	//diable MCLK output when high samplerate
-+	regmap_read(priv->regmap, SUNXI_IISCLKD, &reg);
-+	if (!(reg & 0xF)) {
-+		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_MCLKOEN, 0);
++	regmap_read(priv->regmap, SUNXI_I2S_CLKD, &reg);
++	if (!(reg & SUNXI_I2SCLKD_MCLKDIV_MASK)) {
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, 0);
 +	} else {
-+		regmap_update_bits(priv->regmap, SUNXI_IISCLKD, SUNXI_IISCLKD_MCLKOEN, SUNXI_IISCLKD_MCLKOEN);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
 +	}
 +	return 0;
 +}
@@ -2238,24 +2241,24 @@ index 0000000..9788f4a
 +
 +static void iisregsave(void)
 +{
-+	/*regsave[0] = readl(priv->regs + SUNXI_IISCTL);
-+	regsave[1] = readl(priv->regs + SUNXI_IISFAT0);
-+	regsave[2] = readl(priv->regs + SUNXI_IISFAT1);
-+	regsave[3] = readl(priv->regs + SUNXI_IISFCTL) | (0x3<<24);
-+	regsave[4] = readl(priv->regs + SUNXI_IISINT);
-+	regsave[5] = readl(priv->regs + SUNXI_IISCLKD);
++	/*regsave[0] = readl(priv->regs + SUNXI_I2S_CTL);
++	regsave[1] = readl(priv->regs + SUNXI_I2S_FAT0);
++	regsave[2] = readl(priv->regs + SUNXI_I2S_FAT1);
++	regsave[3] = readl(priv->regs + SUNXI_I2S_FCTL) | (0x3<<24);
++	regsave[4] = readl(priv->regs + SUNXI_I2S_INT);
++	regsave[5] = readl(priv->regs + SUNXI_I2S_CLKD);
 +	regsave[6] = readl(priv->regs + SUNXI_TXCHSEL);
 +	regsave[7] = readl(priv->regs + SUNXI_TXCHMAP);*/
 +}
 +
 +static void iisregrestore(void)
 +{
-+	/*writel(regsave[0], priv->regs + SUNXI_IISCTL);
-+	writel(regsave[1], priv->regs + SUNXI_IISFAT0);
-+	writel(regsave[2], priv->regs + SUNXI_IISFAT1);
-+	writel(regsave[3], priv->regs + SUNXI_IISFCTL);
-+	writel(regsave[4], priv->regs + SUNXI_IISINT);
-+	writel(regsave[5], priv->regs + SUNXI_IISCLKD);
++	/*writel(regsave[0], priv->regs + SUNXI_I2S_CTL);
++	writel(regsave[1], priv->regs + SUNXI_I2S_FAT0);
++	writel(regsave[2], priv->regs + SUNXI_I2S_FAT1);
++	writel(regsave[3], priv->regs + SUNXI_I2S_FCTL);
++	writel(regsave[4], priv->regs + SUNXI_I2S_INT);
++	writel(regsave[5], priv->regs + SUNXI_I2S_CLKD);
 +	writel(regsave[6], priv->regs + SUNXI_TXCHSEL);
 +	writel(regsave[7], priv->regs + SUNXI_TXCHMAP);*/
 +}
@@ -2267,7 +2270,7 @@ index 0000000..9788f4a
 +	printk("[IIS]Entered %s\n", __func__);
 +
 +	//Global Enable Digital Audio Interface
-+	regmap_update_bits(priv->regmap, SUNXI_IISCTL, SUNXI_IISCTL_GEN, 0);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 +
 +	iisregsave();
 +
@@ -2297,7 +2300,7 @@ index 0000000..9788f4a
 +	iisregrestore();
 +
 +	//Global Enable Digital Audio Interface
-+	regmap_update_bits(priv->regmap, SUNXI_IISCTL, SUNXI_IISCTL_GEN, SUNXI_IISCTL_GEN);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
 +
 +	//printk("[IIS]PLL2 0x01c20008 = %#x\n", *(volatile int*)0xF1C20008);
 +	printk("[IIS]SPECIAL CLK 0x01c20068 = %#x, line= %d\n", *(volatile int*)0xF1C20068, __LINE__);
@@ -2344,7 +2347,7 @@ index 0000000..9788f4a
 +	.reg_bits = 32,
 +	.reg_stride = 4,
 +	.val_bits = 32,
-+	.max_register = SUNXI_RXCHMAP,
++	.max_register = SUNXI_I2S_RXCHMAP,
 +};
 +
 +static const struct of_device_id sunxi_i2s_of_match[] = {
@@ -2424,12 +2427,12 @@ index 0000000..9788f4a
 +	}
 +
 +	/* DMA configuration for TX FIFO */
-+	priv->playback_dma_data.addr = res->start + SUNXI_IISTXFIFO;
++	priv->playback_dma_data.addr = res->start + SUNXI_I2S_TXFIFO;
 +	priv->playback_dma_data.maxburst = 4;
 +	priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 +
 +	/* DMA configuration for RX FIFO */
-+	priv->capture_dma_data.addr = res->start + SUNXI_IISRXFIFO;
++	priv->capture_dma_data.addr = res->start + SUNXI_I2S_RXFIFO;
 +	priv->capture_dma_data.maxburst = 4;
 +	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 +
@@ -2477,10 +2480,10 @@ index 0000000..9788f4a
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.h b/sound/soc/sunxi/sunxi-i2s.h
 new file mode 100644
-index 0000000..3a3c271
+index 0000000..9f04dd6
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.h
-@@ -0,0 +1,212 @@
+@@ -0,0 +1,431 @@
 +/*
 + * sound\soc\sunxi\i2s\sunxi-i2s.h
 + * (C) Copyright 2007-2011
@@ -2500,161 +2503,380 @@ index 0000000..3a3c271
 +#define SUNXI_I2S_H_
 +
 +/*------------------------------------------------------------*/
-+/* REGISTER definition */
++/* REGISTER definitions */
 +
-+/* IIS REGISTER */
++#define SUNXI_I2S_CTL		0x00 /* Digital Audio Control Register */
++#define SUNXI_I2S_FAT0		0x04 /* Digital Audio Format Register 0 */
++#define SUNXI_I2S_FAT1		0x08 /* Digital Audio Format Register 1 */
++#define SUNXI_I2S_TXFIFO	0x0C /* Digital Audio TX FIFO Register */
++#define SUNXI_I2S_RXFIFO	0x10 /* Digital Audio RX FIFO Register */
++#define SUNXI_I2S_FCTL		0x14 /* Digital Audio FIFO Control Register */
++#define SUNXI_I2S_FSTA		0x18 /* Digital Audio FIFO Status Register */
++#define SUNXI_I2S_INT		0x1C /* Digital Audio Interrupt Control Register */
++#define SUNXI_I2S_ISTA		0x20 /* Digital Audio Interrupt Status Register */
++#define SUNXI_I2S_CLKD		0x24 /* Digital Audio Clock Divide Register */
++#define SUNXI_I2S_RXCNT		0x28 /* Digital Audio RX Sample Counter Register */
++#define SUNXI_I2S_TXCNT		0x2C /* Digital Audio TX Sample Counter Register */
++#define SUNXI_I2S_TXCHSEL	0x30 /* Digital Audio TX Channel Select register */
++#define SUNXI_I2S_TXCHMAP	0x34 /* Digital Audio TX Channel Mapping Register */
++#define SUNXI_I2S_RXCHSEL	0x38 /* Digital Audio RX Channel Select register */
++#define SUNXI_I2S_RXCHMAP	0x3C /* Digital Audio RX Channel Mapping Register */
 +
-+#define SUNXI_IISCTL 	  	(0x00)
-+	#define SUNXI_IISCTL_SDO3EN			(11)
-+	#define SUNXI_IISCTL_SDO2EN			(10)
-+	#define SUNXI_IISCTL_SDO1EN			(9)
-+	#define SUNXI_IISCTL_SDO0EN			(8)
-+	#define SUNXI_IISCTL_ASS			(6)
-+	#define SUNXI_IISCTL_MS				(5)
-+	#define SUNXI_IISCTL_PCM			(4)
-+	#define SUNXI_IISCTL_LOOP			(3)
-+	#define SUNXI_IISCTL_TXEN			(2)
-+	#define SUNXI_IISCTL_RXEN			(1)
-+	#define SUNXI_IISCTL_GEN			(0)
 +
-+#define SUNXI_IISFAT0 		(0x04)
-+	#define SUNXI_IISFAT0_LRCP			(7)
-+	#define SUNXI_IISFAT0_BCP			(6)
-+	#define SUNXI_IISFAT0_SR_RVD			(3<<4)
-+	#define SUNXI_IISFAT0_SR_16BIT			(0<<4)
-+	#define	SUNXI_IISFAT0_SR_20BIT			(1<<4)
-+	#define SUNXI_IISFAT0_SR_24BIT			(2<<4)
-+	#define SUNXI_IISFAT0_WSS_16BCLK		(0<<2)
-+	#define SUNXI_IISFAT0_WSS_20BCLK		(1<<2)
-+	#define SUNXI_IISFAT0_WSS_24BCLK		(2<<2)
-+	#define SUNXI_IISFAT0_WSS_32BCLK		(3<<2)
-+	#define SUNXI_IISFAT0_FMT_I2S			(0<<0)
-+	#define SUNXI_IISFAT0_FMT_LFT			(1<<0)
-+	#define SUNXI_IISFAT0_FMT_RGT			(2<<0)
-+	#define SUNXI_IISFAT0_FMT_RVD			(3<<0)
++/* SUNXI_I2S_CTL	0x00 	 Digital Audio Control Register */
++#define SUNXI_I2SCTL_SDO3EN		(1<<11)
++#define SUNXI_I2SCTL_SDO3EN_MASK	(1<<11)
++#define SUNXI_I2SCTL_SDO3EN_SHIFT	11
++#define SUNXI_I2SCTL_SDO3EN_WIDTH	1
++#define SUNXI_I2SCTL_SDO2EN		(1<<10)
++#define SUNXI_I2SCTL_SDO2EN_MASK	(1<<10)
++#define SUNXI_I2SCTL_SDO2EN_SHIFT	10
++#define SUNXI_I2SCTL_SDO2EN_WIDTH	1
++#define SUNXI_I2SCTL_SDO1EN		(1<<9)
++#define SUNXI_I2SCTL_SDO1EN_MASK	(1<<9)
++#define SUNXI_I2SCTL_SDO1EN_SHIFT	9
++#define SUNXI_I2SCTL_SDO1EN_WIDTH	1
++#define SUNXI_I2SCTL_SDO0EN		(1<<8)
++#define SUNXI_I2SCTL_SDO0EN_MASK	(1<<8)
++#define SUNXI_I2SCTL_SDO0EN_SHIFT	8
++#define SUNXI_I2SCTL_SDO0EN_WIDTH	1
++#define SUNXI_I2SCTL_SDOEN_ALL (SUNXI_I2SCTL_SDO3EN | SUNXI_I2SCTL_SDO2EN | SUNXI_I2SCTL_SDO1EN| SUNXI_I2SCTL_SDO0EN)
 +
-+#define SUNXI_IISFAT1		(0x08)
-+	#define SUNXI_IISFAT1_SYNCLEN_16BCLK		(0<<12)
-+	#define SUNXI_IISFAT1_SYNCLEN_32BCLK		(1<<12)
-+	#define SUNXI_IISFAT1_SYNCLEN_64BCLK		(2<<12)
-+	#define SUNXI_IISFAT1_SYNCLEN_128BCLK		(3<<12)
-+	#define SUNXI_IISFAT1_SYNCLEN_256BCLK		(4<<12)
-+	#define SUNXI_IISFAT1_SYNCOUTEN			(11)
-+	#define SUNXI_IISFAT1_OUTMUTE 			(10)
-+	#define SUNXI_IISFAT1_MLS		 	(9)
-+	#define SUNXI_IISFAT1_SEXT		 	(8)
-+	#define SUNXI_IISFAT1_SI_1ST			(0<<6)
-+	#define SUNXI_IISFAT1_SI_2ND			(1<<6)
-+	#define SUNXI_IISFAT1_SI_3RD			(2<<6)
-+	#define SUNXI_IISFAT1_SI_4TH			(3<<6)
-+	#define SUNXI_IISFAT1_SW			(5)
-+	#define SUNXI_IISFAT1_SSYNC	 		(4)
-+	#define SUNXI_IISFAT1_RXPDM_16PCM		(0<<2)
-+	#define SUNXI_IISFAT1_RXPDM_8PCM		(1<<2)
-+	#define SUNXI_IISFAT1_RXPDM_8ULAW		(2<<2)
-+	#define SUNXI_IISFAT1_RXPDM_8ALAW  		(3<<2)
-+	#define SUNXI_IISFAT1_TXPDM_16PCM		(0<<0)
-+	#define SUNXI_IISFAT1_TXPDM_8PCM		(1<<0)
-+	#define SUNXI_IISFAT1_TXPDM_8ULAW		(2<<0)
-+	#define SUNXI_IISFAT1_TXPDM_8ALAW  		(3<<0)
++#define SUNXI_I2SCTL_ASS		(1<<6)
++#define SUNXI_I2SCTL_ASS_MASK		(1<<6)
++#define SUNXI_I2SCTL_ASS_SHIFT		6
++#define SUNXI_I2SCTL_ASS_WIDTH		1
++#define SUNXI_I2SCTL_MS			(1<<5)
++#define SUNXI_I2SCTL_MS_MASK		(1<<5)
++#define SUNXI_I2SCTL_MS_SHIFT		5
++#define SUNXI_I2SCTL_MS_WIDTH		1
++#define SUNXI_I2SCTL_PCM		(1<<4)
++#define SUNXI_I2SCTL_PCM_MASK		(1<<4)
++#define SUNXI_I2SCTL_PCM_SHIFT		4
++#define SUNXI_I2SCTL_PCM_WIDTH		1
++#define SUNXI_I2SCTL_LOOP		(1<<3)
++#define SUNXI_I2SCTL_LOOP_MASK		(1<<3)
++#define SUNXI_I2SCTL_LOOP_SHIFT		3
++#define SUNXI_I2SCTL_LOOP_WIDTH		1
++#define SUNXI_I2SCTL_TXEN		(1<<2)
++#define SUNXI_I2SCTL_TXEN_MASK		(1<<2)
++#define SUNXI_I2SCTL_TXEN_SHIFT		2
++#define SUNXI_I2SCTL_TXEN_WIDTH		1
++#define SUNXI_I2SCTL_RXEN		(1<<1)
++#define SUNXI_I2SCTL_RXEN_MASK		(1<<1)
++#define SUNXI_I2SCTL_RXEN_SHIFT		1
++#define SUNXI_I2SCTL_RXEN_WIDTH		1
++#define SUNXI_I2SCTL_GEN		(1<<0)
++#define SUNXI_I2SCTL_GEN_MASK		(1<<0)
++#define SUNXI_I2SCTL_GEN_SHIFT		0
++#define SUNXI_I2SCTL_GEN_WIDTH		1
 +
-+#define SUNXI_IISTXFIFO 	(0x0C)
++/* SUNXI_I2S_FAT0	0x04 	 Digital Audio Format Register 0 */
 +
-+#define SUNXI_IISRXFIFO 	(0x10)
++#define SUNXI_I2SFAT0_LRCP		(1<<7)
++#define SUNXI_I2SFAT0_LRCP_MASK		(1<<7)
++#define SUNXI_I2SFAT0_LRCP_SHIFT	7
++#define SUNXI_I2SFAT0_LRCP_WIDTH	1
++#define SUNXI_I2SFAT0_BCP		(1<<6)
++#define SUNXI_I2SFAT0_BCP_MASK		(1<<6)
++#define SUNXI_I2SFAT0_BCP_SHIFT		6
++#define SUNXI_I2SFAT0_BCP_WIDTH		1
++#define SUNXI_I2SFAT0_SR_MASK		(3<<4)
++#define SUNXI_I2SFAT0_SR_16BIT		(0<<4)
++#define	SUNXI_I2SFAT0_SR_20BIT		(1<<4)
++#define SUNXI_I2SFAT0_SR_24BIT		(2<<4)
++#define SUNXI_I2SFAT0_SR_SHIFT		4
++#define SUNXI_I2SFAT0_SR_WIDTH		2
++#define SUNXI_I2SFAT0_WSS_MASK		(3<<2)
++#define SUNXI_I2SFAT0_WSS_16BCLK	(0<<2)
++#define SUNXI_I2SFAT0_WSS_20BCLK	(1<<2)
++#define SUNXI_I2SFAT0_WSS_24BCLK	(2<<2)
++#define SUNXI_I2SFAT0_WSS_32BCLK	(3<<2)
++#define SUNXI_I2SFAT0_WSS_SHIFT		2
++#define SUNXI_I2SFAT0_WSS_WIDTH		2
++#define SUNXI_I2SFAT0_FMT_MASK		(3<<0)
++#define SUNXI_I2SFAT0_FMT_I2S		(0<<0)
++#define SUNXI_I2SFAT0_FMT_LFT		(1<<0)
++#define SUNXI_I2SFAT0_FMT_RGT		(2<<0)
++#define SUNXI_I2SFAT0_FMT_RVD		(3<<0)
++#define SUNXI_I2SFAT0_FMT_SHIFT		0
++#define SUNXI_I2SFAT0_FMT_WIDTH		2
 +
-+#define SUNXI_IISFCTL		(0x14)
-+	#define SUNXI_IISFCTL_FIFOSRC			(31)
-+	#define SUNXI_IISFCTL_FTX			(25)
-+	#define SUNXI_IISFCTL_FRX			(24)
-+	#define SUNXI_IISFCTL_TXTL(v)			((v)<<12)
-+	#define SUNXI_IISFCTL_RXTL(v)  			((v)<<4)
-+	#define SUNXI_IISFCTL_TXIM_MOD0			(0<<2)
-+	#define SUNXI_IISFCTL_TXIM_MOD1			(1<<2)
-+	#define SUNXI_IISFCTL_RXOM_MOD0			(0<<0)
-+	#define SUNXI_IISFCTL_RXOM_MOD1			(1<<0)
-+	#define SUNXI_IISFCTL_RXOM_MOD2			(2<<0)
-+	#define SUNXI_IISFCTL_RXOM_MOD3			(3<<0)
++/* SUNXI_I2S_FAT1	0x08 	 Digital Audio Format Register 1 */
 +
-+#define SUNXI_IISFSTA   	(0x18)
-+	#define SUNXI_IISFSTA_TXE			(28)
-+	#define SUNXI_IISFSTA_TXECNT(v)			((v)<<16)
-+	#define SUNXI_IISFSTA_RXA			(8)
-+	#define SUNXI_IISFSTA_RXACNT(v)			((v)<<0)
++#define SUNXI_I2SFAT1_SYNCLEN_MASK	(7<<12)
++#define SUNXI_I2SFAT1_SYNCLEN_16BCLK	(0<<12)
++#define SUNXI_I2SFAT1_SYNCLEN_32BCLK	(1<<12)
++#define SUNXI_I2SFAT1_SYNCLEN_64BCLK	(2<<12)
++#define SUNXI_I2SFAT1_SYNCLEN_128BCLK	(3<<12)
++#define SUNXI_I2SFAT1_SYNCLEN_256BCLK	(4<<12)
++#define SUNXI_I2SFAT1_SYNCLEN_SHIFT	12
++#define SUNXI_I2SFAT1_SYNCLEN_WIDTH	3
++#define SUNXI_I2SFAT1_SYNCOUTEN		(1<<11)
++#define SUNXI_I2SFAT1_SYNCOUTEN_MASK	(1<<11)
++#define SUNXI_I2SFAT1_SYNCOUTEN_SHIFT	11
++#define SUNXI_I2SFAT1_SYNCOUTEN_WIDTH	1
++#define SUNXI_I2SFAT1_OUTMUTE		(1<<10)
++#define SUNXI_I2SFAT1_OUTMUTE_MASK	(1<<10)
++#define SUNXI_I2SFAT1_OUTMUTE_SHIFT	10
++#define SUNXI_I2SFAT1_OUTMUTE_WIDTH	1
++#define SUNXI_I2SFAT1_MLS		(1<<9)
++#define SUNXI_I2SFAT1_MLS_MASK		(1<<9)
++#define SUNXI_I2SFAT1_MLS_SHIFT		9
++#define SUNXI_I2SFAT1_MLS_WIDTH		1
++#define SUNXI_I2SFAT1_SEXT		(1<<8)
++#define SUNXI_I2SFAT1_SEXT_MASK		(1<<8)
++#define SUNXI_I2SFAT1_SEXT_SHIFT	8
++#define SUNXI_I2SFAT1_SEXT_WIDTH	1
++#define SUNXI_I2SFAT1_SI_MASK		(3<<6)
++#define SUNXI_I2SFAT1_SI_1ST		(0<<6)
++#define SUNXI_I2SFAT1_SI_2ND		(1<<6)
++#define SUNXI_I2SFAT1_SI_3RD		(2<<6)
++#define SUNXI_I2SFAT1_SI_4TH		(3<<6)
++#define SUNXI_I2SFAT1_SI_SHIFT		6
++#define SUNXI_I2SFAT1_SI_WIDTH		2
++#define SUNXI_I2SFAT1_SW		(1<<5)
++#define SUNXI_I2SFAT1_SW_MASK		(1<<5)
++#define SUNXI_I2SFAT1_SW_SHIFT		5
++#define SUNXI_I2SFAT1_SW_WIDTH		1
++#define SUNXI_I2SFAT1_SSYNC		(1<<4)
++#define SUNXI_I2SFAT1_SSYNC_MASK	(1<<4)
++#define SUNXI_I2SFAT1_SSYNC_SHIFT	4
++#define SUNXI_I2SFAT1_SSYNC_WIDTH	1
++#define SUNXI_I2SFAT1_RXPDM_MASK	(3<<2)
++#define SUNXI_I2SFAT1_RXPDM_16PCM	(0<<2)
++#define SUNXI_I2SFAT1_RXPDM_8PCM	(1<<2)
++#define SUNXI_I2SFAT1_RXPDM_8ULAW	(2<<2)
++#define SUNXI_I2SFAT1_RXPDM_8ALAW  	(3<<2)
++#define SUNXI_I2SFAT1_RXPDM_SHIFT	2
++#define SUNXI_I2SFAT1_RXPDM_WIDTH	2
++#define SUNXI_I2SFAT1_TXPDM_MASK	(3<<0)
++#define SUNXI_I2SFAT1_TXPDM_16PCM	(0<<0)
++#define SUNXI_I2SFAT1_TXPDM_8PCM	(1<<0)
++#define SUNXI_I2SFAT1_TXPDM_8ULAW	(2<<0)
++#define SUNXI_I2SFAT1_TXPDM_8ALAW  	(3<<0)
++#define SUNXI_I2SFAT1_TXPDM_SHIFT	0
++#define SUNXI_I2SFAT1_TXPDM_WIDTH	2
 +
-+#define SUNXI_IISINT    	(0x1C)
-+	#define SUNXI_IISINT_TXDRQEN			(7)
-+	#define SUNXI_IISINT_TXUIEN			(6)
-+	#define SUNXI_IISINT_TXOIEN			(5)
-+	#define SUNXI_IISINT_TXEIEN			(4)
-+	#define SUNXI_IISINT_RXDRQEN			(2)
-+	#define SUNXI_IISINT_RXOIEN			(1)
-+	#define SUNXI_IISINT_RXAIEN			(0)
++/* SUNXI_I2S_TXFIFO	0x0C 	 Digital Audio TX FIFO Register */
 +
-+#define SUNXI_IISISTA   	(0x20)
-+	#define SUNXI_IISISTA_TXUISTA			(6)
-+	#define SUNXI_IISISTA_TXOISTA			(5)
-+	#define SUNXI_IISISTA_TXEISTA			(4)
-+	#define SUNXI_IISISTA_RXOISTA			(1)
-+	#define SUNXI_IISISTA_RXAISTA			(0)
++/* SUNXI_I2S_RXFIFO	0x10 	 Digital Audio RX FIFO Register */
 +
-+#define SUNXI_IISCLKD   	(0x24)
-+	#define SUNXI_IISCLKD_MCLKOEN			(7)
-+	#define SUNXI_IISCLKD_BCLKDIV_2			(0<<4)
-+	#define SUNXI_IISCLKD_BCLKDIV_4			(1<<4)
-+	#define SUNXI_IISCLKD_BCLKDIV_6			(2<<4)
-+	#define SUNXI_IISCLKD_BCLKDIV_8			(3<<4)
-+	#define SUNXI_IISCLKD_BCLKDIV_12		(4<<4)
-+	#define SUNXI_IISCLKD_BCLKDIV_16		(5<<4)
-+	#define SUNXI_IISCLKD_BCLKDIV_32		(6<<4)
-+	#define SUNXI_IISCLKD_BCLKDIV_64		(7<<4)
-+	#define SUNXI_IISCLKD_MCLKDIV_1			(0<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_2			(1<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_4			(2<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_6			(3<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_8			(4<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_12		(5<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_16		(6<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_24		(7<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_32		(8<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_48		(9<<0)
-+	#define SUNXI_IISCLKD_MCLKDIV_64		(10<<0)
++/* SUNXI_I2S_FCTL	0x14 	 Digital Audio FIFO Control Register */
 +
-+#define SUNXI_IISTXCNT  	(0x28)
++#define SUNXI_I2SFCTL_FIFOSRC		(1<<31)
++#define SUNXI_I2SFCTL_FIFOSRC_MASK	(1<<31)
++#define SUNXI_I2SFCTL_FIFOSRC_SHIFT	31
++#define SUNXI_I2SFCTL_FIFOSRC_WIDTH	1
++#define SUNXI_I2SFCTL_FTX		(1<<25)
++#define SUNXI_I2SFCTL_FTX_MASK		(1<<25)
++#define SUNXI_I2SFCTL_FTX_SHIFT		25
++#define SUNXI_I2SFCTL_FTX_WIDTH		1
++#define SUNXI_I2SFCTL_FRX		(1<<24)
++#define SUNXI_I2SFCTL_FRX_MASK		(1<<24)
++#define SUNXI_I2SFCTL_FRX_SHIFT		24
++#define SUNXI_I2SFCTL_FRX_WIDTH		1
++#define SUNXI_I2SFCTL_TXTL(x) ((x << SUNXI_I2SFCTL_TXTL_SHIFT) & SUNXI_I2SFCTL_TXTL_MASK)
++#define SUNXI_I2SFCTL_TXTL_MASK		(0x3F<<12)
++#define SUNXI_I2SFCTL_TXTL_SHIFT	12
++#define SUNXI_I2SFCTL_TXTL_WIDTH	7
++#define SUNXI_I2SFCTL_RXTL(x) ((x << SUNXI_I2SFCTL_RXTL_SHIFT) & SUNXI_I2SFCTL_RXTL_MASK)
++#define SUNXI_I2SFCTL_RXTL_MASK		(0x3F<<4)
++#define SUNXI_I2SFCTL_RXTL_SHIFT	4
++#define SUNXI_I2SFCTL_RXTL_WIDTH	7
++#define SUNXI_I2SFCTL_TXIM_MASK		(1<<2)
++#define SUNXI_I2SFCTL_TXIM_MOD0		(0<<2)
++#define SUNXI_I2SFCTL_TXIM_MOD1		(1<<2)
++#define SUNXI_I2SFCTL_TXIM_SHIFT	2
++#define SUNXI_I2SFCTL_TXIM_WIDTH	1
++#define SUNXI_I2SFCTL_RXOM_MASK		(3<<0)
++#define SUNXI_I2SFCTL_RXOM_MOD0		(0<<0)
++#define SUNXI_I2SFCTL_RXOM_MOD1		(1<<0)
++#define SUNXI_I2SFCTL_RXOM_MOD2		(2<<0)
++#define SUNXI_I2SFCTL_RXOM_MOD3		(3<<0)
++#define SUNXI_I2SFCTL_RXOM_SHIFT	0
++#define SUNXI_I2SFCTL_RXOM_WIDTH	2
 +
-+#define SUNXI_IISRXCNT  	(0x2C)
++/* SUNXI_I2S_FSTA	0x18 	 Digital Audio FIFO Status Register */
 +
-+#define SUNXI_TXCHSEL		(0x30)
-+	#define SUNXI_TXCHSEL_CHNUM			(0)
++#define SUNXI_I2SFSTA_TXE		(1<<28)
++#define SUNXI_I2SFSTA_TXE_MASK		(1<<28)
++#define SUNXI_I2SFSTA_TXE_SHIFT		28
++#define SUNXI_I2SFSTA_TXE_WIDTH		1
++#define SUNXI_I2SFSTA_TXECNT_MASK	(0xFF<<16)
++#define SUNXI_I2SFSTA_TXECNT_SHIFT	16
++#define SUNXI_I2SFSTA_TXECNT_WIDTH	8
++#define SUNXI_I2SFSTA_RXA		(1<<8)
++#define SUNXI_I2SFSTA_RXA_MASK		(1<<8)
++#define SUNXI_I2SFSTA_RXA_SHIFT		8
++#define SUNXI_I2SFSTA_RXA_WIDTH		1
++#define SUNXI_I2SFSTA_RXACNT_MASK	(0x3F<<0)
++#define SUNXI_I2SFSTA_RXACNT_SHIFT	0
++#define SUNXI_I2SFSTA_RXACNT_WIDTH	7
 +
-+#define SUNXI_TXCHMAP		(0x34)
-+	#define SUNXI_TXCHMAP_CH7(v)			(((v)-1)<<28)
-+	#define SUNXI_TXCHMAP_CH6(v)			(((v)-1)<<24)
-+	#define SUNXI_TXCHMAP_CH5(v)			(((v)-1)<<20)
-+	#define SUNXI_TXCHMAP_CH4(v)			(((v)-1)<<16)
-+	#define SUNXI_TXCHMAP_CH3(v)			(((v)-1)<<12)
-+	#define SUNXI_TXCHMAP_CH2(v)			(((v)-1)<<8)
-+	#define SUNXI_TXCHMAP_CH1(v)			(((v)-1)<<4)
-+	#define SUNXI_TXCHMAP_CH0(v)			(((v)-1)<<0)
++/* SUNXI_I2S_INT	0x1C 	 Digital Audio Interrupt Control Register */
 +
-+#define SUNXI_RXCHSEL		(0x38)
-+	#define SUNXI_RXCHSEL_CHNUM(v)			(((v)-1)<<0)
++#define SUNXI_I2SINT_TXDRQEN		(1<<7)
++#define SUNXI_I2SINT_TXDRQEN_MASK	(1<<7)
++#define SUNXI_I2SINT_TXDRQEN_SHIFT	7
++#define SUNXI_I2SINT_TXDRQEN_WIDTH	1
++#define SUNXI_I2SINT_TXUIEN		(1<<6)
++#define SUNXI_I2SINT_TXUIEN_MASK	(1<<6)
++#define SUNXI_I2SINT_TXUIEN_SHIFT	6
++#define SUNXI_I2SINT_TXUIEN_WIDTH	1
++#define SUNXI_I2SINT_TXOIEN		(1<<5)
++#define SUNXI_I2SINT_TXOIEN_MASK	(1<<5)
++#define SUNXI_I2SINT_TXOIEN_SHIFT	5
++#define SUNXI_I2SINT_TXOIEN_WIDTH	1
++#define SUNXI_I2SINT_TXEIEN		(1<<4)
++#define SUNXI_I2SINT_TXEIEN_MASK	(1<<4)
++#define SUNXI_I2SINT_TXEIEN_SHIFT	4
++#define SUNXI_I2SINT_TXEIEN_WIDTH	1
++#define SUNXI_I2SINT_RXDRQEN		(1<<3)
++#define SUNXI_I2SINT_RXDRQEN_MASK	(1<<3)
++#define SUNXI_I2SINT_RXDRQEN_SHIFT	3
++#define SUNXI_I2SINT_RXDRQEN_WIDTH	1
++#define SUNXI_I2SINT_RXUIEN		(1<<2)
++#define SUNXI_I2SINT_RXUIEN_MASK	(1<<2)
++#define SUNXI_I2SINT_RXUIEN_SHIFT	2
++#define SUNXI_I2SINT_RXUIEN_WIDTH	1
++#define SUNXI_I2SINT_RXOIEN		(1<<1)
++#define SUNXI_I2SINT_RXOIEN_MASK	(1<<1)
++#define SUNXI_I2SINT_RXOIEN_SHIFT	1
++#define SUNXI_I2SINT_RXOIEN_WIDTH	1
++#define SUNXI_I2SINT_RXAIEN		(1<<0)
++#define SUNXI_I2SINT_RXAIEN_MASK	(1<<0)
++#define SUNXI_I2SINT_RXAIEN_SHIFT	0
++#define SUNXI_I2SINT_RXAIEN_WIDTH	1
 +
-+#define SUNXI_RXCHMAP		(0x3C)
-+	#define SUNXI_RXCHMAP_CH3(v)			(((v)-1)<<12)
-+	#define SUNXI_RXCHMAP_CH2(v)			(((v)-1)<<8)
-+	#define SUNXI_RXCHMAP_CH1(v)			(((v)-1)<<4)
-+	#define SUNXI_RXCHMAP_CH0(v)			(((v)-1)<<0)
++/* SUNXI_I2S_ISTA	0x20 	 Digital Audio Interrupt Status Register */
++
++#define SUNXI_I2SSTA_TXUIEN		(1<<6)
++#define SUNXI_I2SSTA_TXUIEN_MASK	(1<<6)
++#define SUNXI_I2SSTA_TXUIEN_SHIFT	6
++#define SUNXI_I2SSTA_TXUIEN_WIDTH	1
++#define SUNXI_I2SSTA_TXOIEN		(1<<5)
++#define SUNXI_I2SSTA_TXOIEN_MASK	(1<<5)
++#define SUNXI_I2SSTA_TXOIEN_SHIFT	5
++#define SUNXI_I2SSTA_TXOIEN_WIDTH	1
++#define SUNXI_I2SSTA_TXEIEN		(1<<4)
++#define SUNXI_I2SSTA_TXEIEN_MASK	(1<<4)
++#define SUNXI_I2SSTA_TXEIEN_SHIFT	4
++#define SUNXI_I2SSTA_TXEIEN_WIDTH	1
++#define SUNXI_I2SSTA_RXUIEN		(1<<2)
++#define SUNXI_I2SSTA_RXUIEN_MASK	(1<<2)
++#define SUNXI_I2SSTA_RXUIEN_SHIFT	2
++#define SUNXI_I2SSTA_RXUIEN_WIDTH	1
++#define SUNXI_I2SSTA_RXOIEN		(1<<1)
++#define SUNXI_I2SSTA_RXOIEN_MASK	(1<<1)
++#define SUNXI_I2SSTA_RXOIEN_SHIFT	1
++#define SUNXI_I2SSTA_RXOIEN_WIDTH	1
++#define SUNXI_I2SSTA_RXAIEN		(1<<0)
++#define SUNXI_I2SSTA_RXAIEN_MASK	(1<<0)
++#define SUNXI_I2SSTA_RXAIEN_SHIFT	0
++#define SUNXI_I2SSTA_RXAIEN_WIDTH	1
++
++/* SUNXI_I2S_CLKD	0x24 	 Digital Audio Clock Divide Register */
++
++#define SUNXI_I2SCLKD_MCLKOEN		(1<<7)
++#define SUNXI_I2SCLKD_MCLKOEN_MASK	(1<<7)
++#define SUNXI_I2SCLKD_MCLKOEN_SHIFT	7
++#define SUNXI_I2SCLKD_MCLKOEN_WIDTH	1
++#define SUNXI_I2SCLKD_BCLKDIV_MASK	(7<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_2		(0<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_4		(1<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_6		(2<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_8		(3<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_12	(4<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_16	(5<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_32	(6<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_64	(7<<4)
++#define SUNXI_I2SCLKD_BCLKDIV_SHIFT	4
++#define SUNXI_I2SCLKD_BCLKDIV_WIDTH	3
++#define SUNXI_I2SCLKD_MCLKDIV_MASK	(0xF<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_1		(0<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_2		(1<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_4		(2<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_6		(3<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_8		(4<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_12	(5<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_16	(6<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_24	(7<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_32	(8<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_48	(9<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_64	(10<<0)
++#define SUNXI_I2SCLKD_MCLKDIV_SHIFT	0
++#define SUNXI_I2SCLKD_MCLKDIV_WIDTH	4
++
++/* SUNXI_I2S_RXCNT	0x28 	 Digital Audio RX Sample Counter Register */
++
++/* SUNXI_I2S_TXCNT	0x2C 	 Digital Audio TX Sample Counter Register */
++
++/* SUNXI_I2S_TXCHSEL	0x30 	 Digital Audio TX Channel Select register */
++
++#define SUNXI_I2STXCHSEL_CHNUM_MASK	(7<<0)
++#define SUNXI_I2STXCHSEL_CHNUM_SHIFT	0
++#define SUNXI_I2STXCHSEL_CHNUM_WIDTH	3
++
++/* SUNXI_I2S_TXCHMAP	0x34 	 Digital Audio TX Channel Mapping Register */
++
++#define SUNXI_I2STXCHMAP_CH7_MASK	(7<<28)
++#define SUNXI_I2STXCHMAP_CH7_SHIFT	28
++#define SUNXI_I2STXCHMAP_CH7_WIDTH	3
++#define SUNXI_I2STXCHMAP_CH6_MASK	(7<<24)
++#define SUNXI_I2STXCHMAP_CH6_SHIFT	24
++#define SUNXI_I2STXCHMAP_CH6_WIDTH	3
++#define SUNXI_I2STXCHMAP_CH5_MASK	(7<<20)
++#define SUNXI_I2STXCHMAP_CH5_SHIFT	20
++#define SUNXI_I2STXCHMAP_CH5_WIDTH	3
++#define SUNXI_I2STXCHMAP_CH4_MASK	(7<<16)
++#define SUNXI_I2STXCHMAP_CH4_SHIFT	16
++#define SUNXI_I2STXCHMAP_CH4_WIDTH	3
++#define SUNXI_I2STXCHMAP_CH3_MASK	(7<<12)
++#define SUNXI_I2STXCHMAP_CH3_SHIFT	12
++#define SUNXI_I2STXCHMAP_CH3_WIDTH	3
++#define SUNXI_I2STXCHMAP_CH2_MASK	(7<<8)
++#define SUNXI_I2STXCHMAP_CH2_SHIFT	8
++#define SUNXI_I2STXCHMAP_CH2_WIDTH	3
++#define SUNXI_I2STXCHMAP_CH1_MASK	(7<<4)
++#define SUNXI_I2STXCHMAP_CH1_SHIFT	4
++#define SUNXI_I2STXCHMAP_CH1_WIDTH	3
++#define SUNXI_I2STXCHMAP_CH0_MASK	(7<<0)
++#define SUNXI_I2STXCHMAP_CH0_SHIFT	0
++#define SUNXI_I2STXCHMAP_CH0_WIDTH	3
++
++/* SUNXI_I2S_RXCHSEL	0x38 	 Digital Audio RX Channel Select register */
++
++#define SUNXI_I2SRXCHSEL_CHNUM_MASK	(7<<0)
++#define SUNXI_I2SRXCHSEL_CHNUM_SHIFT	0
++#define SUNXI_I2SRXCHSEL_CHNUM_WIDTH	3
++
++/* SUNXI_I2S_RXCHMAP	0x3C 	 Digital Audio RX Channel Mapping Register */
++
++#define SUNXI_I2SRXCHMAP_CH3_MASK	(7<<12)
++#define SUNXI_I2SRXCHMAP_CH3_SHIFT	12
++#define SUNXI_I2SRXCHMAP_CH3_WIDTH	3
++#define SUNXI_I2SRXCHMAP_CH2_MASK	(7<<8)
++#define SUNXI_I2SRXCHMAP_CH2_SHIFT	8
++#define SUNXI_I2SRXCHMAP_CH2_WIDTH	3
++#define SUNXI_I2SRXCHMAP_CH1_MASK	(7<<4)
++#define SUNXI_I2SRXCHMAP_CH1_SHIFT	4
++#define SUNXI_I2SRXCHMAP_CH1_WIDTH	3
++#define SUNXI_I2SRXCHMAP_CH0_MASK	(7<<0)
++#define SUNXI_I2SRXCHMAP_CH0_SHIFT	0
++#define SUNXI_I2SRXCHMAP_CH0_WIDTH	3
++
 +
 +/*------------------------------------------------------------*/
 +/* Clock dividers */
 +#define SUNXI_DIV_MCLK	0
 +#define SUNXI_DIV_BCLK	1
 +
-+#define SUNXI_IISCLKD_MCLK_MASK   0x0f
-+#define SUNXI_IISCLKD_MCLK_OFFS   0
-+#define SUNXI_IISCLKD_BCLK_MASK   0x070
-+#define SUNXI_IISCLKD_BCLK_OFFS   4
-+#define SUNXI_IISCLKD_MCLKEN_OFFS 7
++#define SUNXI_I2SCLKD_MCLK_MASK   0x0f
++#define SUNXI_I2SCLKD_MCLK_OFFS   0
++#define SUNXI_I2SCLKD_BCLK_MASK   0x070
++#define SUNXI_I2SCLKD_BCLK_OFFS   4
++#define SUNXI_I2SCLKD_MCLKEN_OFFS 7
 +
 +/* Supported SoC families - used for quirks */
 +enum sunxi_soc_family {
