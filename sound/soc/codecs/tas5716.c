@@ -40,8 +40,50 @@
 #include <sound/initval.h>
 #include <sound/tlv.h>
 
-#include <sound/tas5716.h>
 #include "tas5716.h"
+
+#define TAS5716_OCFG_2CH		0
+#define TAS5716_OCFG_2_1CH	1
+#define TAS5716_OCFG_1CH		3
+
+#define TAS5716_OM_CH1		0
+#define TAS5716_OM_CH2		1
+#define TAS5716_OM_CH3		2
+
+#define TAS5716_THERMAL_ADJUSTMENT_ENABLE	1
+#define TAS5716_THERMAL_RECOVERY_ENABLE		2
+#define TAS5716_FAULT_DETECT_RECOVERY_BYPASS	1
+
+#define TAS5716_FFX_PM_DROP_COMP			0
+#define TAS5716_FFX_PM_TAPERED_COMP		1
+#define TAS5716_FFX_PM_FULL_POWER		2
+#define TAS5716_FFX_PM_VARIABLE_DROP_COMP	3
+
+
+struct tas5716_platform_data {
+	u8 output_conf;
+	u8 ch1_output_mapping;
+	u8 ch2_output_mapping;
+	u8 ch3_output_mapping;
+	u8 ffx_power_output_mode;
+	u8 drop_compensation_ns;
+	u8 powerdown_delay_divider;
+	unsigned int thermal_warning_recovery:1;
+	unsigned int thermal_warning_adjustment:1;
+	unsigned int fault_detect_recovery:1;
+	unsigned int oc_warning_adjustment:1;
+	unsigned int max_power_use_mpcc:1;
+	unsigned int max_power_correction:1;
+	unsigned int am_reduction_mode:1;
+	unsigned int odd_pwm_speed_mode:1;
+	unsigned int distortion_compensation:1;
+	unsigned int invalid_input_detect_mute:1;
+	unsigned int activate_mute_output:1;
+	unsigned int bridge_immediate_off:1;
+	unsigned int noise_shape_dc_cut:1;
+	unsigned int powerdown_master_vol:1;
+};
+
 
 #define TAS5716_RATES (SNDRV_PCM_RATE_32000 | \
 		      SNDRV_PCM_RATE_44100 | \
@@ -1097,7 +1139,6 @@ static const struct regmap_config tas5716_regmap = {
 	.volatile_table =	&tas5716_volatile_regs,
 };
 
-#ifdef CONFIG_OF
 static const struct of_device_id tas5716_dt_ids[] = {
 	{ .compatible = "ti,tas5716", },
 	{ }
@@ -1207,7 +1248,7 @@ static int tas5716_probe_dt(struct device *dev, struct tas5716_priv *tas5716)
 
 	return 0;
 }
-#endif
+
 
 static int tas5716_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
@@ -1224,11 +1265,9 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 	mutex_init(&tas5716->coeff_lock);
 	tas5716->pdata = dev_get_platdata(dev);
 
-	if (dev->of_node) {
-		ret = tas5716_probe_dt(dev, tas5716);
-		if (ret < 0)
-			return ret;
-	}
+	ret = tas5716_probe_dt(dev, tas5716);
+	if (ret < 0)
+		return ret;
 
 	printk("JDS - tas5716_i2c_probe a\n");
 	/* GPIOs */
@@ -1311,5 +1350,5 @@ static struct i2c_driver tas5716_i2c_driver = {
 module_i2c_driver(tas5716_i2c_driver);
 
 MODULE_DESCRIPTION("ASoC TAS5716 driver");
-MODULE_AUTHOR("Sven Brandau <info@brandau.biz>");
+MODULE_AUTHOR("Jon Smirl <jonsmirl@gmail.com>");
 MODULE_LICENSE("GPL");
