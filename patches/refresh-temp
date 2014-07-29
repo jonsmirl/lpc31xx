@@ -1,0 +1,732 @@
+Bottom: f4b0d0d0e46935b8c70254c5761a3099887ecf53
+Top:    3ffc19b5ed3d0af53c8221d239a223142ea96f8e
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-07-29 17:02:26 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/sound/soc/codecs/tas5716.c b/sound/soc/codecs/tas5716.c
+index 2e3316d..1e2364e 100644
+--- a/sound/soc/codecs/tas5716.c
++++ b/sound/soc/codecs/tas5716.c
+@@ -40,9 +40,51 @@
+ #include <sound/initval.h>
+ #include <sound/tlv.h>
+ 
+-#include <sound/tas5716.h>
+ #include "tas5716.h"
+ 
++#define TAS5716_OCFG_2CH		0
++#define TAS5716_OCFG_2_1CH	1
++#define TAS5716_OCFG_1CH		3
++
++#define TAS5716_OM_CH1		0
++#define TAS5716_OM_CH2		1
++#define TAS5716_OM_CH3		2
++
++#define TAS5716_THERMAL_ADJUSTMENT_ENABLE	1
++#define TAS5716_THERMAL_RECOVERY_ENABLE		2
++#define TAS5716_FAULT_DETECT_RECOVERY_BYPASS	1
++
++#define TAS5716_FFX_PM_DROP_COMP			0
++#define TAS5716_FFX_PM_TAPERED_COMP		1
++#define TAS5716_FFX_PM_FULL_POWER		2
++#define TAS5716_FFX_PM_VARIABLE_DROP_COMP	3
++
++
++struct tas5716_platform_data {
++	u8 output_conf;
++	u8 ch1_output_mapping;
++	u8 ch2_output_mapping;
++	u8 ch3_output_mapping;
++	u8 ffx_power_output_mode;
++	u8 drop_compensation_ns;
++	u8 powerdown_delay_divider;
++	unsigned int thermal_warning_recovery:1;
++	unsigned int thermal_warning_adjustment:1;
++	unsigned int fault_detect_recovery:1;
++	unsigned int oc_warning_adjustment:1;
++	unsigned int max_power_use_mpcc:1;
++	unsigned int max_power_correction:1;
++	unsigned int am_reduction_mode:1;
++	unsigned int odd_pwm_speed_mode:1;
++	unsigned int distortion_compensation:1;
++	unsigned int invalid_input_detect_mute:1;
++	unsigned int activate_mute_output:1;
++	unsigned int bridge_immediate_off:1;
++	unsigned int noise_shape_dc_cut:1;
++	unsigned int powerdown_master_vol:1;
++};
++
++
+ #define TAS5716_RATES (SNDRV_PCM_RATE_32000 | \
+ 		      SNDRV_PCM_RATE_44100 | \
+ 		      SNDRV_PCM_RATE_48000 | \
+@@ -1097,7 +1139,6 @@ static const struct regmap_config tas5716_regmap = {
+ 	.volatile_table =	&tas5716_volatile_regs,
+ };
+ 
+-#ifdef CONFIG_OF
+ static const struct of_device_id tas5716_dt_ids[] = {
+ 	{ .compatible = "ti,tas5716", },
+ 	{ }
+@@ -1207,7 +1248,7 @@ static int tas5716_probe_dt(struct device *dev, struct tas5716_priv *tas5716)
+ 
+ 	return 0;
+ }
+-#endif
++
+ 
+ static int tas5716_i2c_probe(struct i2c_client *i2c,
+ 			    const struct i2c_device_id *id)
+@@ -1224,11 +1265,9 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
+ 	mutex_init(&tas5716->coeff_lock);
+ 	tas5716->pdata = dev_get_platdata(dev);
+ 
+-	if (dev->of_node) {
+-		ret = tas5716_probe_dt(dev, tas5716);
+-		if (ret < 0)
+-			return ret;
+-	}
++	ret = tas5716_probe_dt(dev, tas5716);
++	if (ret < 0)
++		return ret;
+ 
+ 	printk("JDS - tas5716_i2c_probe a\n");
+ 	/* GPIOs */
+@@ -1311,5 +1350,5 @@ static struct i2c_driver tas5716_i2c_driver = {
+ module_i2c_driver(tas5716_i2c_driver);
+ 
+ MODULE_DESCRIPTION("ASoC TAS5716 driver");
+-MODULE_AUTHOR("Sven Brandau <info@brandau.biz>");
++MODULE_AUTHOR("Jon Smirl <jonsmirl@gmail.com>");
+ MODULE_LICENSE("GPL");
+diff --git a/sound/soc/codecs/tas5716.h b/sound/soc/codecs/tas5716.h
+index c90dd50..7588860 100644
+--- a/sound/soc/codecs/tas5716.h
++++ b/sound/soc/codecs/tas5716.h
+@@ -1,14 +1,5 @@
+ /*
+- * Codec driver for ST TAS5716 2.1-channel high-efficiency digital audio system
+- *
+- * Copyright: 2011 Raumfeld GmbH
+- * Author: Sven Brandau <info@brandau.biz>
+- *
+- * based on code from:
+- *      Raumfeld GmbH
+- *        Johannes Stezenbach <js@sig21.net>
+- *	Wolfson Microelectronics PLC.
+- *	  Mark Brown <broonie@opensource.wolfsonmicro.com>
++ * Codec driver for TI TAS5716 2.1-channel high-efficiency digital audio system
+  *
+  * This program is free software; you can redistribute  it and/or modify it
+  * under  the terms of  the GNU General  Public License as published by the
+@@ -18,221 +9,390 @@
+ #ifndef _ASOC_TAS_5716_H
+ #define _ASOC_TAS_5716_H
+ 
+-/* STA50 register addresses */
+-
+-#define TAS5716_REGISTER_COUNT	0x4D
+-#define TAS5716_COEF_COUNT 62
+-
+-#define TAS5716_CONFA	0x00
+-#define TAS5716_CONFB    0x01
+-#define TAS5716_CONFC    0x02
+-#define TAS5716_CONFD    0x03
+-#define TAS5716_CONFE    0x04
+-#define TAS5716_CONFF    0x05
+-#define TAS5716_MMUTE    0x06
+-#define TAS5716_MVOL     0x07
+-#define TAS5716_C1VOL    0x08
+-#define TAS5716_C2VOL    0x09
+-#define TAS5716_C3VOL    0x0a
+-#define TAS5716_AUTO1    0x0b
+-#define TAS5716_AUTO2    0x0c
+-#define TAS5716_AUTO3    0x0d
+-#define TAS5716_C1CFG    0x0e
+-#define TAS5716_C2CFG    0x0f
+-#define TAS5716_C3CFG    0x10
+-#define TAS5716_TONE     0x11
+-#define TAS5716_L1AR     0x12
+-#define TAS5716_L1ATRT   0x13
+-#define TAS5716_L2AR     0x14
+-#define TAS5716_L2ATRT   0x15
+-#define TAS5716_CFADDR2  0x16
+-#define TAS5716_B1CF1    0x17
+-#define TAS5716_B1CF2    0x18
+-#define TAS5716_B1CF3    0x19
+-#define TAS5716_B2CF1    0x1a
+-#define TAS5716_B2CF2    0x1b
+-#define TAS5716_B2CF3    0x1c
+-#define TAS5716_A1CF1    0x1d
+-#define TAS5716_A1CF2    0x1e
+-#define TAS5716_A1CF3    0x1f
+-#define TAS5716_A2CF1    0x20
+-#define TAS5716_A2CF2    0x21
+-#define TAS5716_A2CF3    0x22
+-#define TAS5716_B0CF1    0x23
+-#define TAS5716_B0CF2    0x24
+-#define TAS5716_B0CF3    0x25
+-#define TAS5716_CFUD     0x26
+-#define TAS5716_MPCC1    0x27
+-#define TAS5716_MPCC2    0x28
+-#define TAS5716_DCC1     0x29
+-#define TAS5716_DCC2     0x2a
+-#define TAS5716_FDRC1    0x2b
+-#define TAS5716_FDRC2    0x2c
+-#define TAS5716_STATUS   0x2d
+-/* reserved: 0x2d - 0x30 */
+-#define TAS5716_EQCFG    0x31
+-#define TAS5716_EATH1    0x32
+-#define TAS5716_ERTH1    0x33
+-#define TAS5716_EATH2    0x34
+-#define TAS5716_ERTH2    0x35
+-#define TAS5716_CONFX    0x36
+-#define TAS5716_SVCA     0x37
+-#define TAS5716_SVCB     0x38
+-#define TAS5716_RMS0A    0x39
+-#define TAS5716_RMS0B    0x3a
+-#define TAS5716_RMS0C    0x3b
+-#define TAS5716_RMS1A    0x3c
+-#define TAS5716_RMS1B    0x3d
+-#define TAS5716_RMS1C    0x3e
+-#define TAS5716_EVOLRES  0x3f
+-/* reserved: 0x40 - 0x47 */
+-#define TAS5716_NSHAPE   0x48
+-#define TAS5716_CTXB4B1  0x49
+-#define TAS5716_CTXB7B5  0x4a
+-#define TAS5716_MISC1    0x4b
+-#define TAS5716_MISC2    0x4c
+-
+-/* 0x00 CONFA */
+-#define TAS5716_CONFA_MCS_MASK	0x03
+-#define TAS5716_CONFA_MCS_SHIFT	0
+-#define TAS5716_CONFA_IR_MASK	0x18
+-#define TAS5716_CONFA_IR_SHIFT	3
+-#define TAS5716_CONFA_TWRB	BIT(5)
+-#define TAS5716_CONFA_TWAB	BIT(6)
+-#define TAS5716_CONFA_FDRB	BIT(7)
+-
+-/* 0x01 CONFB */
+-#define TAS5716_CONFB_SAI_MASK	0x0f
+-#define TAS5716_CONFB_SAI_SHIFT	0
+-#define TAS5716_CONFB_SAIFB	BIT(4)
+-#define TAS5716_CONFB_DSCKE	BIT(5)
+-#define TAS5716_CONFB_C1IM	BIT(6)
+-#define TAS5716_CONFB_C2IM	BIT(7)
+-
+-/* 0x02 CONFC */
+-#define TAS5716_CONFC_OM_MASK	0x03
+-#define TAS5716_CONFC_OM_SHIFT	0
+-#define TAS5716_CONFC_CSZ_MASK	0x3c
+-#define TAS5716_CONFC_CSZ_SHIFT	2
+-#define TAS5716_CONFC_OCRB	BIT(7)
+-
+-/* 0x03 CONFD */
+-#define TAS5716_CONFD_HPB_SHIFT	0
+-#define TAS5716_CONFD_DEMP_SHIFT	1
+-#define TAS5716_CONFD_DSPB_SHIFT	2
+-#define TAS5716_CONFD_PSL_SHIFT	3
+-#define TAS5716_CONFD_BQL_SHIFT	4
+-#define TAS5716_CONFD_DRC_SHIFT	5
+-#define TAS5716_CONFD_ZDE_SHIFT	6
+-#define TAS5716_CONFD_SME_SHIFT	7
+-
+-/* 0x04 CONFE */
+-#define TAS5716_CONFE_MPCV	BIT(0)
+-#define TAS5716_CONFE_MPCV_SHIFT	0
+-#define TAS5716_CONFE_MPC	BIT(1)
+-#define TAS5716_CONFE_MPC_SHIFT	1
+-#define TAS5716_CONFE_NSBW	BIT(2)
+-#define TAS5716_CONFE_NSBW_SHIFT	2
+-#define TAS5716_CONFE_AME	BIT(3)
+-#define TAS5716_CONFE_AME_SHIFT	3
+-#define TAS5716_CONFE_PWMS	BIT(4)
+-#define TAS5716_CONFE_PWMS_SHIFT	4
+-#define TAS5716_CONFE_DCCV	BIT(5)
+-#define TAS5716_CONFE_DCCV_SHIFT	5
+-#define TAS5716_CONFE_ZCE	BIT(6)
+-#define TAS5716_CONFE_ZCE_SHIFT	6
+-#define TAS5716_CONFE_SVE	BIT(7)
+-#define TAS5716_CONFE_SVE_SHIFT	7
+-
+-/* 0x05 CONFF */
+-#define TAS5716_CONFF_OCFG_MASK	0x03
+-#define TAS5716_CONFF_OCFG_SHIFT	0
+-#define TAS5716_CONFF_IDE	BIT(2)
+-#define TAS5716_CONFF_BCLE	BIT(3)
+-#define TAS5716_CONFF_LDTE	BIT(4)
+-#define TAS5716_CONFF_ECLE	BIT(5)
+-#define TAS5716_CONFF_PWDN	BIT(6)
+-#define TAS5716_CONFF_EAPD	BIT(7)
+-
+-/* 0x06 MMUTE */
+-#define TAS5716_MMUTE_MMUTE		0x01
+-#define TAS5716_MMUTE_MMUTE_SHIFT	0
+-#define TAS5716_MMUTE_C1M		0x02
+-#define TAS5716_MMUTE_C1M_SHIFT		1
+-#define TAS5716_MMUTE_C2M		0x04
+-#define TAS5716_MMUTE_C2M_SHIFT		2
+-#define TAS5716_MMUTE_C3M		0x08
+-#define TAS5716_MMUTE_C3M_SHIFT		3
+-#define TAS5716_MMUTE_LOC_MASK		0xC0
+-#define TAS5716_MMUTE_LOC_SHIFT		6
+-
+-/* 0x0b AUTO1 */
+-#define TAS5716_AUTO1_AMGC_MASK	0x30
+-#define TAS5716_AUTO1_AMGC_SHIFT	4
+-
+-/* 0x0c AUTO2 */
+-#define TAS5716_AUTO2_AMAME	0x01
+-#define TAS5716_AUTO2_AMAM_MASK	0x0e
+-#define TAS5716_AUTO2_AMAM_SHIFT	1
+-#define TAS5716_AUTO2_XO_MASK	0xf0
+-#define TAS5716_AUTO2_XO_SHIFT	4
+-
+-/* 0x0d AUTO3 */
+-#define TAS5716_AUTO3_PEQ_MASK	0x1f
+-#define TAS5716_AUTO3_PEQ_SHIFT	0
+-
+-/* 0x0e 0x0f 0x10 CxCFG */
+-#define TAS5716_CxCFG_TCB_SHIFT	0
+-#define TAS5716_CxCFG_EQBP_SHIFT	1
+-#define TAS5716_CxCFG_VBP_SHIFT	2
+-#define TAS5716_CxCFG_BO_SHIFT	3
+-#define TAS5716_CxCFG_LS_SHIFT	4
+-#define TAS5716_CxCFG_OM_MASK	0xc0
+-#define TAS5716_CxCFG_OM_SHIFT	6
+-
+-/* 0x11 TONE */
+-#define TAS5716_TONE_BTC_SHIFT	0
+-#define TAS5716_TONE_TTC_SHIFT	4
+-
+-/* 0x12 0x13 0x14 0x15 limiter attack/release */
+-#define TAS5716_LxA_SHIFT	0
+-#define TAS5716_LxR_SHIFT	4
+-
+-/* 0x26 CFUD */
+-#define TAS5716_CFUD_W1		0x01
+-#define TAS5716_CFUD_WA		0x02
+-#define TAS5716_CFUD_R1		0x04
+-#define TAS5716_CFUD_RA		0x08
+-
+-
+-/* biquad filter coefficient table offsets */
+-#define TAS5716_C1_BQ_BASE	0
+-#define TAS5716_C2_BQ_BASE	20
+-#define TAS5716_CH_BQ_NUM	4
+-#define TAS5716_BQ_NUM_COEF	5
+-#define TAS5716_XO_HP_BQ_BASE	40
+-#define TAS5716_XO_LP_BQ_BASE	45
+-#define TAS5716_C1_PRESCALE	50
+-#define TAS5716_C2_PRESCALE	51
+-#define TAS5716_C1_POSTSCALE	52
+-#define TAS5716_C2_POSTSCALE	53
+-#define TAS5716_C3_POSTSCALE	54
+-#define TAS5716_TW_POSTSCALE	55
+-#define TAS5716_C1_MIX1		56
+-#define TAS5716_C1_MIX2		57
+-#define TAS5716_C2_MIX1		58
+-#define TAS5716_C2_MIX2		59
+-#define TAS5716_C3_MIX1		60
+-#define TAS5716_C3_MIX2		61
+-
+-/* miscellaneous register 1 */
+-#define TAS5716_MISC1_CPWMEN	BIT(2)
+-#define TAS5716_MISC1_BRIDGOFF	BIT(5)
+-#define TAS5716_MISC1_NSHHPEN	BIT(6)
+-#define TAS5716_MISC1_RPDNEN	BIT(7)
+-
+-/* miscellaneous register 2 */
+-#define TAS5716_MISC2_PNDLSL_MASK	0x1c
+-#define TAS5716_MISC2_PNDLSL_SHIFT	2
++/* TAS5716 register addresses */
++
++#define TAS5716_CLOCK_CTRL	0x00 	// Clock control register
++#define TAS5716_DEVICE_ID	0x01 	// Device ID register
++#define TAS5716_ERROR		0x02	// Error status register
++#define TAS5716_SYS_CTRL1	0x03	// System control 1 register
++#define TAS5716_FORMAT		0x04 	// Serial-data interface register
++#define TAS5716_SYS_CTRL2	0x05	// System-control 2 register
++#define TAS5716_SOFT_MUTE	0x06	// Soft-mute register
++#define TAS5716_MASTER_VOLUME	0x07	// Master volume
++#define TAS5716_CH1_VOLUME	0x08	// Channel 1 volume
++#define TAS5716_CH2_VOLUME	0x08	// Channel 2 volume
++#define TAS5716_CH3_VOLUME	0x08	// Channel 3 volume
++#define TAS5716_CH4_VOLUME	0x08	// Channel 4 volume
++#define TAS5716_HP_VOLUME	0x0C	// HP volume
++#define TAS5716_CH6_VOLUME	0x0D	// Channel-6 volume
++#define TAS5716_VOLUME_CONFIG	0x0E 	// Volume configuration
++
++#define TAS5716_MOD_LIMIT0	0x10	// Modulation-limit register
++#define TAS5716_IC_DELAY_CH1	0x11 	// IC delay channel 1
++#define TAS5716_IC_DELAY_CH2	0x12 	// IC delay channel 2
++#define TAS5716_IC_DELAY_CH3	0x13 	// IC delay channel 3
++#define TAS5716_IC_DELAY_CH4	0x14 	// IC delay channel 4
++#define TAS5716_IC_DELAY_CH5	0x15 	// IC delay channel 5
++#define TAS5716_IC_DELAY_CH6	0x16 	// IC delay channel 6
++#define TAS5716_OFFSET		0x17	// Offset register
++
++#define TAS5716_PWM_SHUTDOWN	0x19	// PWM shutdown group
++#define TAS5716_START_STOP	0x1A	// Start/stop period
++#define TAS5716_OSC_TRIM	0x1B	// Oscillator trim
++#define TAS5716_BKND_ERR	0x1C	// BKND_ERR
++
++#define TAS5716_INPUT_MUX	0x20	// Input MUX register
++#define TAS5716_CH6_INPUT_MUX2	0x21	// Ch-6 input mux-2 register
++#define TAS5716_AM_TUNED_FREQ	0x22	// AM tuned frequency
++
++#define TAS5716_CH6_BQ_2	0x23	// ch6_bq[2] (loudness BQ)
++#define TAS5716_CH6_BQ_3	0x24	// ch6_bq[3] (post volume)
++#define TAS5716_PWM_MUX		0x25	// PWM MUX register
++#define TAS5716_1_G		0x26	// 1/G register
++#define TAS5716_SCALE		0x28	// Scale register
++#define TAS5716_CH1_BQ_0	0x29	// ch1_bq[0]
++#define TAS5716_CH1_BQ_1	0x2A	// ch1_bq[1]
++#define TAS5716_CH1_BQ_2	0x2B	// ch1_bq[2]
++#define TAS5716_CH1_BQ_3	0x2C	// ch1_bq[3]
++#define TAS5716_CH1_BQ_4	0x2D	// ch1_bq[4]
++#define TAS5716_CH1_BQ_5	0x2E	// ch1_bq[5]
++#define TAS5716_CH1_BQ_6	0x2F	// ch1_bq[6]
++#define TAS5716_CH2_BQ_0	0x30	// ch2_bq[0]
++#define TAS5716_CH2_BQ_1	0x31	// ch2_bq[1]
++#define TAS5716_CH2_BQ_2	0x32	// ch2_bq[2]
++#define TAS5716_CH2_BQ_3	0x33	// ch2_bq[3]
++#define TAS5716_CH2_BQ_4	0x34	// ch2_bq[4]
++#define TAS5716_CH2_BQ_5	0x35	// ch2_bq[5]
++#define TAS5716_CH2_BQ_6	0x36	// ch2_bq[6]
++#define TAS5716_CH6_BQ_0	0x37	// ch6_bq[0]
++#define TAS5716_CH6_BQ_1	0x38	// ch6_bq[1]
++
++#define TAS5716_DRC1_AE		0x3A	// DRC1 ae
++#define TAS5716_DRC1_AA		0x3B	// DRC1 aa
++#define TAS5716_DRC1_AD		0x3C	// DRC1 ad
++#define TAS5716_DRC2_AE		0x3F	// DRC2 ae
++#define TAS5716_DRC2_AA		0x3E	// DRC2 aa
++#define TAS5716_DRC2_AD		0x3F	// DRC2 ad
++#define TAS5716_DRC1_T		0x40	// DRC1-T
++#define TAS5716_DRC1_K		0x41	// DRC1-K
++#define TAS5716_DRC1_O		0x42	// DRC1-O
++#define TAS5716_DRC2_T		0x43	// DRC2-T
++#define TAS5716_DRC2_K		0x44	// DRC2-K
++#define TAS5716_DRC2_O		0x45	// DRC2-O
++#define TAS5716_DRC_CONTROL	0x46	// DRC control
++
++#define TAS5716_BANK_UPDATE	0x50	// Bank update command
++#define TAS5716_V1OM		0x51	// V1OM3[31:0] V1OM1[31:0]
++#define TAS5716_V2OM		0x52	// V2OM6[31:0] V2OM4[31:0] V2OM2[31:0]
++
++/* TAS5716_CLOCK_CONTROL	0x00 	Clock control register */
++
++#define TAS5716_CLOCK_CTRL_FS_MASK	(7<<5)
++#define TAS5716_CLOCK_CTRL_32K		(0<<5)
++#define TAS5716_CLOCK_CTRL_38K		(1<<5)
++#define TAS5716_CLOCK_CTRL_441K		(2<<5)
++#define TAS5716_CLOCK_CTRL_48K		(3<<5)
++#define TAS5716_CLOCK_CTRL_882K		(4<<5)
++#define TAS5716_CLOCK_CTRL_96K		(5<<5)
++#define TAS5716_CLOCK_CTRL_176K		(6<<5)
++#define TAS5716_CLOCK_CTRL_192K		(7<<5)
++#define TAS5716_CLOCK_CTRL_FS_SHIFT	5
++#define TAS5716_CLOCK_CTRL_FS_WIDTH	3
++#define TAS5716_CLOCK_CTRL_MCLK_MASK	(7<<2)
++#define TAS5716_CLOCK_CTRL_64FS		(0<<2)
++#define TAS5716_CLOCK_CTRL_128FS	(1<<2)
++#define TAS5716_CLOCK_CTRL_192FS	(2<<2)
++#define TAS5716_CLOCK_CTRL_256FS	(3<<2)
++#define TAS5716_CLOCK_CTRL_384FS	(4<<2)
++#define TAS5716_CLOCK_CTRL_512FS	(5<<2)
++#define TAS5716_CLOCK_CTRL_MCLK_SHIFT	2
++#define TAS5716_CLOCK_CTRL_MCLK_WIDTH	3
++#define TAS5716_CLOCK_CTRL_SCLK64	(0<<1)
++#define TAS5716_CLOCK_CTRL_SCLK48	(1<<1)
++#define TAS5716_CLOCK_CTRL_SCLK_MASK	(1<<1)
++#define TAS5716_CLOCK_CTRL_SCLK_SHIFT	1
++#define TAS5716_CLOCK_CTRL_SCLK_WIDTH	1
++#define TAS5716_CLOCK_CTRL_VALID	(1<<0)
++#define TAS5716_CLOCK_CTRL_VALID_MASK	(1<<0)
++#define TAS5716_CLOCK_CTRL_VALID_SHIFT	0
++#define TAS5716_CLOCK_CTRL_VALID_WIDTH	1
++
++/* TAS5716_DEVICE_ID		0x01 	Device ID register */
++
++/* TAS5716_ERROR_STATUS		0x02	Error status register */
++
++#define TAS5716_ERROR_MCLK		(1<<7)
++#define TAS5716_ERROR_MCLK_MASK		(1<<7)
++#define TAS5716_ERROR_MCLK_SHIFT	7
++#define TAS5716_ERROR_MCLK_WIDTH	1
++#define TAS5716_ERROR_PLL		(1<<6)
++#define TAS5716_ERROR_PLL_MASK		(1<<6)
++#define TAS5716_ERROR_PLL_SHIFT		6
++#define TAS5716_ERROR_PLL_WIDTH		1
++#define TAS5716_ERROR_SCLK		(1<<5)
++#define TAS5716_ERROR_SCLK_MASK		(1<<5)
++#define TAS5716_ERROR_SCLK_SHIFT	5
++#define TAS5716_ERROR_SCLK_WIDTH	1
++#define TAS5716_ERROR_LRCLK		(1<<4)
++#define TAS5716_ERROR_LRCLK_MASK	(1<<4)
++#define TAS5716_ERROR_LRCLK_SHIFT	4
++#define TAS5716_ERROR_LRCLK_WIDTH	1
++#define TAS5716_ERROR_SLIP		(1<<3)
++#define TAS5716_ERROR_SLIP_MASK		(1<<3)
++#define TAS5716_ERROR_SLIP_SHIFT	3
++#define TAS5716_ERROR_SLIP_WIDTH	1
++#define TAS5716_ERROR_NONE		0
++
++/* TAS5716_SYS_CTRL1		0x03	System control 1 register */
++
++#define TAS5716_SYS_CTRL1_PWM_PASS	(1<<7)
++#define TAS5716_SYS_CTRL1_PWM_MASK	(1<<7)
++#define TAS5716_SYS_CTRL1_PWM_SHIFT	7
++#define TAS5716_SYS_CTRL1_PWM_WIDTH	1
++#define TAS5716_SYS_CTRL1_HARD_UNMUTE	(1<<5)
++#define TAS5716_SYS_CTRL1_SOFT_UNMUTE	(0<<5)
++#define TAS5716_SYS_CTRL1_UNMUTE_MASK	(1<<5)
++#define TAS5716_SYS_CTRL1_UNMUTE_SHIFT	5
++#define TAS5716_SYS_CTRL1_UNMUTE_WIDTH	1
++#define TAS5716_SYS_CTRL1_AUTOCLK_OFF	(1<<3)
++#define TAS5716_SYS_CTRL1_AUTOCLK_ON	(0<<3)
++#define TAS5716_SYS_CTRL1_AUTOCLK_MASK	(1<<3)
++#define TAS5716_SYS_CTRL1_AUTOCLK_SHIFT	3
++#define TAS5716_SYS_CTRL1_AUTOCLK_WIDTH	1
++#define TAS5716_SYS_CTRL1_SOFTSTART	(1<<2)
++#define TAS5716_SYS_CTRL1_SOFT_MASK	(1<<2)
++#define TAS5716_SYS_CTRL1_SOFT_SHIFT	2
++#define TAS5716_SYS_CTRL1_SOFT_WIDTH	1
++#define TAS5716_SYS_CTRL1_DEEMP_MASK	(3<<0)
++#define TAS5716_SYS_CTRL1_DEEMP_NONE	(0<<0)
++#define TAS5716_SYS_CTRL1_DEEMP_441	(2<<0)
++#define TAS5716_SYS_CTRL1_DEEMP_48	(3<<0)
++#define TAS5716_SYS_CTRL1_DEEMP_SHIFT	0
++#define TAS5716_SYS_CTRL1_DEEMP_WIDTH	2
++
++/* TAS5716_FORMAT		0x04 	Serial-data interface register */
++
++#define TAS5716_FORMAT_RJ_16		0
++#define TAS5716_FORMAT_RJ_20		1
++#define TAS5716_FORMAT_RJ_24		2
++#define TAS5716_FORMAT_I2S_16		3
++#define TAS5716_FORMAT_I2S_20		4
++#define TAS5716_FORMAT_I2S_24		5
++#define TAS5716_FORMAT_LJ_16		6
++#define TAS5716_FORMAT_LJ_20		7
++#define TAS5716_FORMAT_LJ_24		8
++#define TAS5716_FORMAT_RJ_18		0xA
++#define TAS5716_FORMAT_I2S_16_32FS	0x13
++#define TAS5716_FORMAT_LJ_16_32FS	0x16
++
++/* TAS5716_SYS_CTRL2		0x05	System-control 2 register */
++
++#define TAS5716_SYS_CTRL2_SHUT_MASK	(3<<5)
++#define TAS5716_SYS_CTRL2_SHUTDOWN	(3<<5)
++#define TAS5716_SYS_CTRL2_START_SDG	(0<<5)
++#define TAS5716_SYS_CTRL2_START_ALL	(1<<5)
++#define TAS5716_SYS_CTRL2_SHUT_SHIFT	5
++#define TAS5716_SYS_CTRL2_SHUT_WIDTH	2
++#define TAS5716_SYS_CTRL2_HPVOL		(1<<3)
++#define TAS5716_SYS_CTRL2_CHVOL		(0<<3)
++#define TAS5716_SYS_CTRL2_HPVOL_MASK	(1<<3)
++#define TAS5716_SYS_CTRL2_HPVOL_SHIFT	3
++#define TAS5716_SYS_CTRL2_HPVOL_WIDTH	1
++#define TAS5716_SYS_CTRL2_SPK_MASK	(3<<1)
++#define TAS5716_SYS_CTRL2_HPSEL		(0<<1)
++#define TAS5716_SYS_CTRL2_HPMODE	(1<<1)
++#define TAS5716_SYS_CTRL2_LINEOUT	(2<<1)
++#define TAS5716_SYS_CTRL2_SPK_SHIFT	1
++#define TAS5716_SYS_CTRL2_SPK_WIDTH	2
++
++/* TAS5716_SOFT_MUTE		0x06	Soft-mute register */
++
++#define TAS5716_SM_CH1			(1<<0)
++#define TAS5716_SM_CH1_MASK		(1<<0)
++#define TAS5716_SM_CH1_SHIFT		0
++#define TAS5716_SM_CH1_WIDTH		1
++#define TAS5716_SM_CH2			(1<<1)
++#define TAS5716_SM_CH2_MASK		(1<<1)
++#define TAS5716_SM_CH2_SHIFT		1
++#define TAS5716_SM_CH2_WIDTH		1
++#define TAS5716_SM_CH3			(1<<2)
++#define TAS5716_SM_CH3_MASK		(1<<2)
++#define TAS5716_SM_CH3_SHIFT		2
++#define TAS5716_SM_CH3_WIDTH		1
++#define TAS5716_SM_CH4			(1<<3)
++#define TAS5716_SM_CH4_MASK		(1<<3)
++#define TAS5716_SM_CH4_SHIFT		3
++#define TAS5716_SM_CH4_WIDTH		1
++#define TAS5716_SM_CH6			(1<<5)
++#define TAS5716_SM_CH6_MASK		(1<<5)
++#define TAS5716_SM_CH6_SHIFT		5
++#define TAS5716_SM_CH6_WIDTH		1
++#define TAS5716_SM_UNMUTE_ALL		0
++
++/* TAS5716_MASTER_VOLUME	0x07	Master volume */
++/* TAS5716_CH1_VOLUME		0x08	Channel 1 volume */
++/* TAS5716_CH2_VOLUME		0x08	Channel 2 volume */
++/* TAS5716_CH3_VOLUME		0x08	Channel 3 volume */
++/* TAS5716_CH4_VOLUME		0x08	Channel 4 volume */
++/* TAS5716_HP_VOLUME		0x0C	HP volume */
++/* TAS5716_CH6_VOLUME		0x0D	Channel-6 volume */
++
++/* TAS5716_VOLUME_CONFIG	0x0E 	Volume configuration */
++
++#define TAS5716_VOLCONF_BIQUAD		(1<<6)
++#define TAS5716_VOLCONF_BIQUAD_MASK	(1<<6)
++#define TAS5716_VOLCONF_BIQUAD_SHIFT	6
++#define TAS5716_VOLCONF_BIQUAD_WIDTH	1
++#define TAS5716_VOLCONF_SLEW_MASK	(3<<0)
++#define TAS5716_VOLCONF_SLEW512		(0<<0)
++#define TAS5716_VOLCONF_SLEW1024	(1<<0)
++#define TAS5716_VOLCONF_SLEW2048	(2<<0)
++#define TAS5716_VOLCONF_SLEW256		(3<<0)
++#define TAS5716_VOLCONF_SLEW_SHIFT	0
++#define TAS5716_VOLCONF_SLEW_WIDTH	2
++
++/* TAS5716_MOD_LIMIT0		0x10	Modulation-limit register */
++/* TAS5716_IC_DELAY_CH1		0x11 	IC delay channel 1 */
++/* TAS5716_IC_DELAY_CH2		0x12 	IC delay channel 2 */
++/* TAS5716_IC_DELAY_CH3		0x13 	IC delay channel 3 */
++/* TAS5716_IC_DELAY_CH4		0x14 	IC delay channel 4 */
++/* TAS5716_IC_DELAY_CH5		0x15 	IC delay channel 5 */
++/* TAS5716_IC_DELAY_CH6		0x16 	IC delay channel 6 */
++/* TAS5716_OFFSET		0x17	Offset register */
++
++/* TAS5716_PWM_SHUTDOWN		0x19	PWM shutdown group */
++
++#define TAS5716_SDG_CH6			(1 << 5)
++#define TAS5716_SDG_CH5			(1 << 4)
++#define TAS5716_SDG_CH4			(1 << 3)
++#define TAS5716_SDG_CH3			(1 << 2)
++#define TAS5716_SDG_CH2			(1 << 1)
++#define TAS5716_SDG_CH1			(1 << 0)
++
++/* TAS5716_START_STOP		0x1A	Start/stop period */
++
++#define TAS5716_SS_BTL			(1<<7)
++#define TAS5716_SS_SE			(0<<7)
++#define TAS5716_SS_LOAD_MASK		(1<<7)
++#define TAS5716_SS_LOAD_SHIFT		6
++#define TAS5716_SS_LOAD_WIDTH		1
++#define TAS5716_SS_DUTY_MASK		(0x1F<<0)
++#define TAS5716_SS_DUTY_SHIFT		0
++#define TAS5716_SS_DUTY_WIDTH		5
++
++/* TAS5716_OSC_TRIM		0x1B	Oscillator trim */
++/* Write data 0x00 to register 0x1B (enable factory trim). */
++
++#define TAS5716_OSC_DONE		(1<<7)
++#define TAS5716_OSC_DONE_MASK		(1<<7)
++#define TAS5716_OSC_DONE_SHIFT		7
++#define TAS5716_OSC_DONE_WIDTH		1
++#define TAS5716_OSC_NOTRIM		(1<<1)
++#define TAS5716_OSC_NOTRIM_MASK		(1<<1)
++#define TAS5716_OSC_NOTRIM_SHIFT	1
++#define TAS5716_OSC_NOTRIM_WIDTH	1
++
++/* TAS5716_BKND_ERR		0x1C	BKND_ERR */
++
++/* TAS5716_INPUT_MUX		0x20	Input MUX register */
++#define TAS5716_MUX_AD(ch)		0
++#define TAS5716_MUX_BD(ch)		(8<<((6-ch)*4)))
++#define TAS5716_MUX_IN1L(ch)		(0<<((6-ch)*4)))
++#define TAS5716_MUX_IN1R(ch)		(1<<((6-ch)*4)))
++#define TAS5716_MUX_IN2L(ch)		(2<<((6-ch)*4)))
++#define TAS5716_MUX_IN2R(ch)		(3<<((6-ch)*4)))
++#define TAS5716_MUX_BTL(ch)		(7<<((6-ch)*4)))
++
++/* TAS5716_CH6_INPUT_MUX2	0x21	Ch-6 input mux-2 register */
++
++#define TAS5716_MUX2_6_TO_6		(0<<8)
++#define TAS5716_MUX2_6_BASS		(1<<8)
++#define TAS5716_MUX2_LR_DIV_2		(2<<8)
++#define TAS5716_MUX2_MASK		(3<<8)
++#define TAS5716_MUX2_SHIFT		8
++#define TAS5716_MUX2_WIDTH		2
++
++/* TAS5716_AM_TUNED_FREQ	0x22	AM tuned frequency */
++
++#define TAS5716_AM_MODE			(1<<20)
++#define TAS5716_AM_MODE_MASK		(1<<20)
++#define TAS5716_AM_MODE_SHIFT		20
++#define TAS5716_AM_MODE_WIDTH		1
++#define TAS5716_AM_SEQ_MASK		(3<<18)
++#define TAS5716_AM_SEQ_SHIFT		18
++#define TAS5716_AM_SEQ_WIDTH		1
++#define TAS5716_AM_IF			(1<<17)
++#define TAS5716_AM_IF_MASK		(1<<17)
++#define TAS5716_AM_IF_SHIFT		17
++#define TAS5716_AM_IF_WIDTH		1
++#define TAS5716_AM_BCD			(1<<16)
++#define TAS5716_AM_BCD_MASK		(1<<16)
++#define TAS5716_AM_BCD_SHIFT		16
++#define TAS5716_AM_BCD_WIDTH		1
++#define TAS5716_AM_FREQ_MASK		(0xFFFF<<0)
++#define TAS5716_AM_FREQ_SHIFT		0
++#define TAS5716_AM_FREQ_WIDTH		16
++
++/* TAS5716_PWM_MUX		0x25	PWM MUX register */
++#define TAS5716_PWM_MUX_HPL(ch)		((ch-1)<<28)
++#define TAS5716_PWM_MUX_HPR(ch)		((ch-1)<<24)
++#define TAS5716_PWM_MUX_OUTA(ch)	((ch-1)<<20)
++#define TAS5716_PWM_MUX_OUTB(ch)	((ch-1)<<16)
++#define TAS5716_PWM_MUX_OUTC(ch)	((ch-1)<<12)
++#define TAS5716_PWM_MUX_OUTD(ch)	((ch-1)<<8)
++#define TAS5716_PWM_MUX_SUBM(ch)	((ch-1)<<4)
++#define TAS5716_PWM_MUX_SUBP(ch)	((ch-1)<<0)
++
++/* TAS5716_1_G			0x26	1/G register */
++/* TAS5716_SCALE		0x28	Scale register */
++/* TAS5716_CH1_BQ_0		0x29	ch1_bq[0] */
++/* TAS5716_CH1_BQ_1		0x2A	ch1_bq[1] */
++/* TAS5716_CH1_BQ_2		0x2B	ch1_bq[2] */
++/* TAS5716_CH1_BQ_3		0x2C	ch1_bq[3] */
++/* TAS5716_CH1_BQ_4		0x2D	ch1_bq[4] */
++/* TAS5716_CH1_BQ_5		0x2E	ch1_bq[5] */
++/* TAS5716_CH1_BQ_6		0x2F	ch1_bq[6] */
++/* TAS5716_CH2_BQ_0		0x30	ch2_bq[0] */
++/* TAS5716_CH2_BQ_1		0x31	ch2_bq[1] */
++/* TAS5716_CH2_BQ_2		0x32	ch2_bq[2] */
++/* TAS5716_CH2_BQ_3		0x33	ch2_bq[3] */
++/* TAS5716_CH2_BQ_4		0x34	ch2_bq[4] */
++/* TAS5716_CH2_BQ_5		0x35	ch2_bq[5] */
++/* TAS5716_CH2_BQ_6		0x36	ch2_bq[6] */
++/* TAS5716_CH6_BQ_0		0x37	ch6_bq[0] */
++/* TAS5716_CH6_BQ_1		0x38	ch6_bq[1] */
++
++/* TAS5716_DRC1_AE		0x3A	DRC1 ae */
++/* TAS5716_DRC1_AA		0x3B	DRC1 aa */
++/* TAS5716_DRC1_AD		0x3C	DRC1 ad */
++/* TAS5716_DRC2_AE		0x3F	DRC2 ae */
++/* TAS5716_DRC2_AA		0x3E	DRC2 aa */
++/* TAS5716_DRC2_AD		0x3F	DRC2 ad */
++/* TAS5716_DRC1_T		0x40	DRC1-T */
++/* TAS5716_DRC1_K		0x41	DRC1-K */
++/* TAS5716_DRC1_O		0x42	DRC1-O */
++/* TAS5716_DRC2_T		0x43	DRC2-T */
++/* TAS5716_DRC2_K		0x44	DRC2-K */
++/* TAS5716_DRC2_O		0x45	DRC2-O */
++/* TAS5716_DRC_CONTROL		0x46	DRC control */
++
++#define TAS5716_DRC_CTRL_DRC1_CH4	(1 << 3)
++#define TAS5716_DRC_CTRL_DRC1_CH3	(1 << 2)
++#define TAS5716_DRC_CTRL_DRC2_SUB	(1 << 1)
++#define TAS5716_DRC_CTRL_DRC2_SAT	(1 << 0)
++
++/* TAS5716_BANK_UPDATE		0x50	Bank update command */
++
++#define TAS5716_BANK_EQ_HEAD		(1 << 7)
++#define TAS5716_BANK_DRC_HEAD		(1 << 6)
++#define TAS5716_BANK_SW_MASK		(3 << 0)
++#define TAS5716_BANK_SW_NONE		(0 << 0)
++#define TAS5716_BANK_SW_BANK1		(1 << 0)
++#define TAS5716_BANK_SW_BANK2		(2 << 0)
++#define TAS5716_BANK_SW_BANK3		(3 << 0)
++#define TAS5716_BANK_SW_AUTO		(4 << 0)
++
++/* TAS5716_V1OM			0x51	V1OM3[31:0] V1OM1[31:0] */
++/* TAS5716_V2OM			0x52	V2OM6[31:0] V2OM4[31:0] V2OM2[31:0] */
+ 
+ #endif /* _ASOC_TAS_5716_H */
