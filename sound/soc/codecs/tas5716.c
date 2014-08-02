@@ -42,49 +42,6 @@
 
 #include "tas5716.h"
 
-#define TAS5716_OCFG_2CH		0
-#define TAS5716_OCFG_2_1CH	1
-#define TAS5716_OCFG_1CH		3
-
-#define TAS5716_OM_CH1		0
-#define TAS5716_OM_CH2		1
-#define TAS5716_OM_CH3		2
-
-#define TAS5716_THERMAL_ADJUSTMENT_ENABLE	1
-#define TAS5716_THERMAL_RECOVERY_ENABLE		2
-#define TAS5716_FAULT_DETECT_RECOVERY_BYPASS	1
-
-#define TAS5716_FFX_PM_DROP_COMP			0
-#define TAS5716_FFX_PM_TAPERED_COMP		1
-#define TAS5716_FFX_PM_FULL_POWER		2
-#define TAS5716_FFX_PM_VARIABLE_DROP_COMP	3
-
-
-struct tas5716_platform_data {
-	u8 output_conf;
-	u8 ch1_output_mapping;
-	u8 ch2_output_mapping;
-	u8 ch3_output_mapping;
-	u8 ffx_power_output_mode;
-	u8 drop_compensation_ns;
-	u8 powerdown_delay_divider;
-	unsigned int thermal_warning_recovery:1;
-	unsigned int thermal_warning_adjustment:1;
-	unsigned int fault_detect_recovery:1;
-	unsigned int oc_warning_adjustment:1;
-	unsigned int max_power_use_mpcc:1;
-	unsigned int max_power_correction:1;
-	unsigned int am_reduction_mode:1;
-	unsigned int odd_pwm_speed_mode:1;
-	unsigned int distortion_compensation:1;
-	unsigned int invalid_input_detect_mute:1;
-	unsigned int activate_mute_output:1;
-	unsigned int bridge_immediate_off:1;
-	unsigned int noise_shape_dc_cut:1;
-	unsigned int powerdown_master_vol:1;
-};
-
-
 #define TAS5716_RATES (SNDRV_PCM_RATE_32000 | \
 		      SNDRV_PCM_RATE_44100 | \
 		      SNDRV_PCM_RATE_48000 | \
@@ -103,86 +60,65 @@ struct tas5716_platform_data {
 
 /* Power-up register defaults */
 static const struct reg_default tas5716_regs[] = {
-	{  0x0, 0x63 },
-	{  0x1, 0x80 },
-	{  0x2, 0xdf },
-	{  0x3, 0x40 },
-	{  0x4, 0xc2 },
-	{  0x5, 0x5c },
+	{  0x0, 0x6c },
+	{  0x1, 0x28 },
+	{  0x2, 0x00 },
+	{  0x3, 0xA0 },
+	{  0x4, 0x05 },
+	{  0x5, 0x40 },
 	{  0x6, 0x00 },
 	{  0x7, 0xff },
-	{  0x8, 0x60 },
-	{  0x9, 0x60 },
-	{  0xa, 0x60 },
-	{  0xb, 0x00 },
-	{  0xc, 0x00 },
-	{  0xd, 0x00 },
-	{  0xe, 0x00 },
-	{  0xf, 0x40 },
-	{ 0x10, 0x80 },
-	{ 0x11, 0x77 },
-	{ 0x12, 0x6a },
-	{ 0x13, 0x69 },
-	{ 0x14, 0x6a },
-	{ 0x15, 0x69 },
-	{ 0x16, 0x00 },
-	{ 0x17, 0x00 },
-	{ 0x18, 0x00 },
-	{ 0x19, 0x00 },
-	{ 0x1a, 0x00 },
-	{ 0x1b, 0x00 },
-	{ 0x1c, 0x00 },
-	{ 0x1d, 0x00 },
-	{ 0x1e, 0x00 },
-	{ 0x1f, 0x00 },
-	{ 0x20, 0x00 },
-	{ 0x21, 0x00 },
+	{  0x8, 0x30 },
+	{  0x9, 0x30 },
+	{  0xa, 0x30 },
+	{  0xb, 0x30 },
+	{  0xc, 0x30 },
+	{  0xd, 0x30 },
+	{  0xe, 0x91 },
+	{ 0x10, 0x02 },
+	{ 0x11, 0x4c },
+	{ 0x12, 0x34 },
+	{ 0x13, 0x1c },
+	{ 0x14, 0x64 },
+	{ 0x15, 0xb0 },
+	{ 0x16, 0x90 },
+	{ 0x19, 0x30 },
+	{ 0x1a, 0x0a },
+	{ 0x1b, 0x82 },
+	{ 0x1c, 0x02 },
+	{ 0x20, 0x008977A },
+	{ 0x21, 0x0004203 },
 	{ 0x22, 0x00 },
-	{ 0x23, 0x00 },
-	{ 0x24, 0x00 },
-	{ 0x25, 0x00 },
-	{ 0x26, 0x00 },
-	{ 0x27, 0x2a },
-	{ 0x28, 0xc0 },
-	{ 0x29, 0xf3 },
-	{ 0x2a, 0x33 },
-	{ 0x2b, 0x00 },
-	{ 0x2c, 0x0c },
-	{ 0x31, 0x00 },
-	{ 0x36, 0x00 },
-	{ 0x37, 0x00 },
-	{ 0x38, 0x00 },
-	{ 0x39, 0x01 },
-	{ 0x3a, 0xee },
-	{ 0x3b, 0xff },
-	{ 0x3c, 0x7e },
-	{ 0x3d, 0xc0 },
-	{ 0x3e, 0x26 },
-	{ 0x3f, 0x00 },
-	{ 0x48, 0x00 },
-	{ 0x49, 0x00 },
-	{ 0x4a, 0x00 },
-	{ 0x4b, 0x04 },
-	{ 0x4c, 0x00 },
+	{ 0x25, 0x01021345 },
+	{ 0x26, 0x00800000 },
+	{ 0x28, 0x00800000 },
+	{ 0x40, 0xFDA21490 },
+	{ 0x41, 0x03842109 },
+	{ 0x42, 0x00084210 },
+	{ 0x43, 0xFDA21490 },
+	{ 0x44, 0x03842109 },
+	{ 0x45, 0x00084210 },
+	{ 0x46, 0x00 },
+	{ 0x50, 0x00 },
 };
 
 static const struct regmap_range tas5716_write_regs_range[] = {
-	regmap_reg_range(TAS5716_CONFA,  TAS5716_AUTO2),
-	regmap_reg_range(TAS5716_C1CFG,  TAS5716_FDRC2),
-	regmap_reg_range(TAS5716_EQCFG,  TAS5716_EVOLRES),
-	regmap_reg_range(TAS5716_NSHAPE, TAS5716_MISC2),
+	regmap_reg_range(TAS5716_SYS_CTRL1,  TAS5716_BKND_ERR),
+	regmap_reg_range(TAS5716_INPUT_MUX,  TAS5716_AM_TUNED_FREQ),
+	regmap_reg_range(TAS5716_PWM_MUX,  TAS5716_SCALE),
+	regmap_reg_range(TAS5716_DRC1_T, TAS5716_BANK_UPDATE),
 };
 
 static const struct regmap_range tas5716_read_regs_range[] = {
-	regmap_reg_range(TAS5716_CONFA,  TAS5716_AUTO2),
-	regmap_reg_range(TAS5716_C1CFG,  TAS5716_STATUS),
-	regmap_reg_range(TAS5716_EQCFG,  TAS5716_EVOLRES),
-	regmap_reg_range(TAS5716_NSHAPE, TAS5716_MISC2),
+	regmap_reg_range(TAS5716_SYS_CTRL1,  TAS5716_BKND_ERR),
+	regmap_reg_range(TAS5716_INPUT_MUX,  TAS5716_AM_TUNED_FREQ),
+	regmap_reg_range(TAS5716_PWM_MUX,  TAS5716_SCALE),
+	regmap_reg_range(TAS5716_DRC1_T, TAS5716_BANK_UPDATE),
 };
 
 static const struct regmap_range tas5716_volatile_regs_range[] = {
-	regmap_reg_range(TAS5716_CFADDR2, TAS5716_CFUD),
-	regmap_reg_range(TAS5716_STATUS,  TAS5716_STATUS),
+	regmap_reg_range(TAS5716_CLOCK_CTRL, TAS5716_ERROR),
+	regmap_reg_range(TAS5716_OSC_TRIM,  TAS5716_OSC_TRIM),
 };
 
 static const struct regmap_access_table tas5716_write_regs = {
@@ -202,8 +138,7 @@ static const struct regmap_access_table tas5716_volatile_regs = {
 
 /* regulator power supply names */
 static const char * const tas5716_supply_names[] = {
-	"vdd-dig",	/* digital supply, 3.3V */
-	"vdd-pll",	/* pll supply, 3.3V */
+	"vdd",		/* digital supply, 3.3V */
 	"vcc"		/* power amp supply, 5V - 26V */
 };
 
@@ -211,21 +146,45 @@ static const char * const tas5716_supply_names[] = {
 struct tas5716_priv {
 	struct regmap *regmap;
 	struct regulator_bulk_data supplies[ARRAY_SIZE(tas5716_supply_names)];
-	struct tas5716_platform_data *pdata;
 
 	unsigned int mclk;
 	unsigned int format;
 
-	u32 coef_shadow[TAS5716_COEF_COUNT];
 	int shutdown;
 
-	struct gpio_desc *gpiod_nreset;
-	struct gpio_desc *gpiod_power_down;
+	int gpio_nreset;
+	int gpio_power_down;
+	int gpio_mute;
+	int gpio_hpsel;
 
 	struct mutex coeff_lock;
+
+	u8 system_control_1;
+	u8 system_control_2;
+	u8 soft_mute;
+	u8 volume_configuration;
+	u8 modulation_limit;
+	u8 ic_delay_ch1;
+	u8 ic_delay_ch2;
+	u8 ic_delay_ch3;
+	u8 ic_delay_ch4;
+	u8 ic_delay_ch5;
+	u8 ic_delay_ch6;
+	u8 offset;
+	u8 pwm_shutdown_group;
+	u8 start_stop_period;
+	u8 backend_error;
+	u32 input_mux;
+	u32 ch6_input_mux;
+	u32 am_tuned_frequency;
+	u32 pwm_mux;
+	u32 drc_control;
+	u32 bank_update;
 };
 
-static const DECLARE_TLV_DB_SCALE(mvol_tlv, -12750, 50, 1);
+static const DECLARE_TLV_DB_SCALE(vol_tlv, -10000, 48, 1);
+
+
 static const DECLARE_TLV_DB_SCALE(chvol_tlv, -7950, 50, 1);
 static const DECLARE_TLV_DB_SCALE(tone_tlv, -1200, 200, 0);
 
@@ -260,7 +219,7 @@ static const char * const tas5716_limiter_release_rate[] = {
 static const char * const tas5716_noise_shaper_type[] = {
 	"Third order", "Fourth order"
 };
-
+#ifdef jds
 static DECLARE_TLV_DB_RANGE(tas5716_limiter_ac_attack_tlv,
 	0, 7, TLV_DB_SCALE_ITEM(-1200, 200, 0),
 	8, 16, TLV_DB_SCALE_ITEM(300, 100, 0),
@@ -330,6 +289,111 @@ static SOC_ENUM_SINGLE_DECL(tas5716_limiter1_release_rate_enum,
 static SOC_ENUM_SINGLE_DECL(tas5716_limiter2_release_rate_enum,
 			    TAS5716_L2AR, TAS5716_LxR_SHIFT,
 			    tas5716_limiter_release_rate);
+#endif
+
+/* Byte lengths of the variable length registers in the TAS5716 */
+static int tas5716_register_size(int reg) {
+	switch (reg) {
+	case 0 ... 0x1f:
+		return 1;
+	case 0x20 ... 0x22:
+		return 2;
+	case 0x23 ... 0x24:
+		return 20;
+	case 0x25 ... 0x26:
+		return 4;
+	case 0x27:
+		return 1;
+	case 0x28:
+		return 4;
+	case 0x29 ... 0x38:
+		return 20;
+	case 0x39:
+		return 4;
+	case 0x3a ... 0x3f:
+		return 8;
+	case 0x40 ... 0x50:
+		return 4;
+	case 0x51:
+		return 8;
+	case 0x52:
+		return 12;
+	case 0x53 ... 0xFF:
+		return 4;
+	default:
+		return -EINVAL;
+	}
+}
+
+static int tas5716_reg_write(void *context, unsigned int reg, unsigned int value)
+{
+	struct i2c_client *client = context;
+	unsigned int i;
+	int size;
+	uint8_t buf[5];
+	int ret;
+
+	size = tas5716_register_size(reg);
+	if (size < 0)
+		return size;
+
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+
+	for (i = size + 1; i >= 2; --i) {
+		buf[i] = value;
+		value >>= 8;
+	}
+
+	ret = i2c_master_send(client, buf, size + 2);
+	if (ret == size + 2)
+		return 0;
+	else if (ret < 0)
+		return ret;
+	else
+		return -EIO;
+}
+
+static int tas5716_reg_read(void *context, unsigned int reg, unsigned int *value)
+{
+	int ret;
+	unsigned int i;
+	int size;
+	uint8_t send_buf[2], recv_buf[3];
+	struct i2c_client *client = context;
+	struct i2c_msg msgs[2];
+
+	size = tas5716_register_size(reg);
+	if (size < 0)
+		return size;
+
+	send_buf[0] = reg >> 8;
+	send_buf[1] = reg & 0xff;
+
+	msgs[0].addr = client->addr;
+	msgs[0].len = sizeof(send_buf);
+	msgs[0].buf = send_buf;
+	msgs[0].flags = 0;
+
+	msgs[1].addr = client->addr;
+	msgs[1].len = size;
+	msgs[1].buf = recv_buf;
+	msgs[1].flags = I2C_M_RD;
+
+	ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
+	if (ret < 0)
+		return ret;
+	else if (ret != ARRAY_SIZE(msgs))
+		return -EIO;
+
+	*value = 0;
+
+	for (i = 0; i < size; i++)
+		*value |= recv_buf[i] << (i * 8);
+
+	return 0;
+}
+
 
 /*
  * byte array controls for setting biquad, mixer, scaling coefficients;
@@ -344,13 +408,14 @@ static int tas5716_coefficient_info(struct snd_kcontrol *kcontrol,
 {
 	int numcoef = kcontrol->private_value >> 16;
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
-	uinfo->count = 3 * numcoef;
+	uinfo->count = numcoef;
 	return 0;
 }
 
 static int tas5716_coefficient_get(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
+#ifdef jds
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tas5716_priv *tas5716 = snd_soc_codec_get_drvdata(codec);
 	int numcoef = kcontrol->private_value >> 16;
@@ -359,7 +424,6 @@ static int tas5716_coefficient_get(struct snd_kcontrol *kcontrol,
 	int i, ret = 0;
 
 	mutex_lock(&tas5716->coeff_lock);
-
 	/* preserve reserved bits in TAS5716_CFUD */
 	regmap_read(tas5716->regmap, TAS5716_CFUD, &cfud);
 	cfud &= 0xf0;
@@ -383,16 +447,18 @@ static int tas5716_coefficient_get(struct snd_kcontrol *kcontrol,
 		regmap_read(tas5716->regmap, TAS5716_B1CF1 + i, &val);
 		ucontrol->value.bytes.data[i] = val;
 	}
-
 exit_unlock:
 	mutex_unlock(&tas5716->coeff_lock);
 
 	return ret;
+#endif
+	return 0;
 }
 
 static int tas5716_coefficient_put(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
+#ifdef jds
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tas5716_priv *tas5716 = snd_soc_codec_get_drvdata(codec);
 	int numcoef = kcontrol->private_value >> 16;
@@ -410,11 +476,6 @@ static int tas5716_coefficient_put(struct snd_kcontrol *kcontrol,
 	regmap_write(tas5716->regmap, TAS5716_CFUD, cfud);
 
 	regmap_write(tas5716->regmap, TAS5716_CFADDR2, index);
-	for (i = 0; i < numcoef && (index + i < TAS5716_COEF_COUNT); i++)
-		tas5716->coef_shadow[index + i] =
-			  (ucontrol->value.bytes.data[3 * i] << 16)
-			| (ucontrol->value.bytes.data[3 * i + 1] << 8)
-			| (ucontrol->value.bytes.data[3 * i + 2]);
 	for (i = 0; i < 3 * numcoef; i++)
 		regmap_write(tas5716->regmap, TAS5716_B1CF1 + i,
 			     ucontrol->value.bytes.data[i]);
@@ -424,40 +485,13 @@ static int tas5716_coefficient_put(struct snd_kcontrol *kcontrol,
 		regmap_write(tas5716->regmap, TAS5716_CFUD, cfud | 0x02);
 	else
 		return -EINVAL;
-
-	return 0;
-}
-
-static int tas5716_sync_coef_shadow(struct snd_soc_codec *codec)
-{
-	struct tas5716_priv *tas5716 = snd_soc_codec_get_drvdata(codec);
-	unsigned int cfud;
-	int i;
-
-	/* preserve reserved bits in TAS5716_CFUD */
-	regmap_read(tas5716->regmap, TAS5716_CFUD, &cfud);
-	cfud &= 0xf0;
-
-	for (i = 0; i < TAS5716_COEF_COUNT; i++) {
-		regmap_write(tas5716->regmap, TAS5716_CFADDR2, i);
-		regmap_write(tas5716->regmap, TAS5716_B1CF1,
-			     (tas5716->coef_shadow[i] >> 16) & 0xff);
-		regmap_write(tas5716->regmap, TAS5716_B1CF2,
-			     (tas5716->coef_shadow[i] >> 8) & 0xff);
-		regmap_write(tas5716->regmap, TAS5716_B1CF3,
-			     (tas5716->coef_shadow[i]) & 0xff);
-		/*
-		 * chip documentation does not say if the bits are
-		 * self-clearing, so do it explicitly
-		 */
-		regmap_write(tas5716->regmap, TAS5716_CFUD, cfud);
-		regmap_write(tas5716->regmap, TAS5716_CFUD, cfud | 0x01);
-	}
+#endif
 	return 0;
 }
 
 static int tas5716_cache_sync(struct snd_soc_codec *codec)
 {
+#ifdef jds
 	struct tas5716_priv *tas5716 = snd_soc_codec_get_drvdata(codec);
 	unsigned int mute;
 	int rc;
@@ -465,27 +499,47 @@ static int tas5716_cache_sync(struct snd_soc_codec *codec)
 	/* mute during register sync */
 	regmap_read(tas5716->regmap, TAS5716_CFUD, &mute);
 	regmap_write(tas5716->regmap, TAS5716_MMUTE, mute | TAS5716_MMUTE_MMUTE);
-	tas5716_sync_coef_shadow(codec);
 	rc = regcache_sync(tas5716->regmap);
 	regmap_write(tas5716->regmap, TAS5716_MMUTE, mute);
+
 	return rc;
+#endif
+	return 0;
 }
 
-#define SINGLE_COEF(xname, index) \
+#define COEFS_8(xname, index) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
 	.info = tas5716_coefficient_info, \
 	.get = tas5716_coefficient_get,\
 	.put = tas5716_coefficient_put, \
-	.private_value = index | (1 << 16) }
+	.private_value = index | (8 << 16) }
 
-#define BIQUAD_COEFS(xname, index) \
+#define COEFS_12(xname, index) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
 	.info = tas5716_coefficient_info, \
 	.get = tas5716_coefficient_get,\
 	.put = tas5716_coefficient_put, \
-	.private_value = index | (5 << 16) }
+	.private_value = index | (12 << 16) }
+
+#define COEFS_20(xname, index) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
+	.info = tas5716_coefficient_info, \
+	.get = tas5716_coefficient_get,\
+	.put = tas5716_coefficient_put, \
+	.private_value = index | (20 << 16) }
 
 static const struct snd_kcontrol_new tas5716_snd_controls[] = {
+SOC_SINGLE_TLV("Master Volume", TAS5716_MASTER_VOLUME, 0, 0xff, 1, vol_tlv),
+SOC_SINGLE_TLV("Channel 1 Volume", TAS5716_CH1_VOLUME, 0, 0xff, 1, vol_tlv),
+SOC_SINGLE_TLV("Channel 2 Volume", TAS5716_CH2_VOLUME, 0, 0xff, 1, vol_tlv),
+SOC_SINGLE_TLV("Channel 3 Volume", TAS5716_CH3_VOLUME, 0, 0xff, 1, vol_tlv),
+SOC_SINGLE_TLV("Channel 4 Volume", TAS5716_CH4_VOLUME, 0, 0xff, 1, vol_tlv),
+SOC_SINGLE_TLV("HP Volume", TAS5716_HP_VOLUME, 0, 0xff, 1, vol_tlv),
+SOC_SINGLE_TLV("Channel 5 Volume", TAS5716_CH6_VOLUME, 0, 0xff, 1, vol_tlv),
+
+
+
+#ifdef JDS
 SOC_SINGLE_TLV("Master Volume", TAS5716_MVOL, 0, 0xff, 1, mvol_tlv),
 /* VOL */
 SOC_SINGLE_TLV("Ch1 Volume", TAS5716_C1VOL, 0, 0xff, 1, chvol_tlv),
@@ -578,29 +632,36 @@ SOC_SINGLE_TLV("Limiter1 Release Threshold (DRC Mode)",
 SOC_SINGLE_TLV("Limiter2 Release Threshold (DRC Mode)",
 	       TAS5716_L2ATRT, TAS5716_LxR_SHIFT,
 	       16, 0, tas5716_limiter_drc_release_tlv),
+#endif
 
-BIQUAD_COEFS("Ch1 - Biquad 1", 0),
-BIQUAD_COEFS("Ch1 - Biquad 2", 5),
-BIQUAD_COEFS("Ch1 - Biquad 3", 10),
-BIQUAD_COEFS("Ch1 - Biquad 4", 15),
-BIQUAD_COEFS("Ch2 - Biquad 1", 20),
-BIQUAD_COEFS("Ch2 - Biquad 2", 25),
-BIQUAD_COEFS("Ch2 - Biquad 3", 30),
-BIQUAD_COEFS("Ch2 - Biquad 4", 35),
-BIQUAD_COEFS("High-pass", 40),
-BIQUAD_COEFS("Low-pass", 45),
-SINGLE_COEF("Ch1 - Prescale", 50),
-SINGLE_COEF("Ch2 - Prescale", 51),
-SINGLE_COEF("Ch1 - Postscale", 52),
-SINGLE_COEF("Ch2 - Postscale", 53),
-SINGLE_COEF("Ch3 - Postscale", 54),
-SINGLE_COEF("Thermal warning - Postscale", 55),
-SINGLE_COEF("Ch1 - Mix 1", 56),
-SINGLE_COEF("Ch1 - Mix 2", 57),
-SINGLE_COEF("Ch2 - Mix 1", 58),
-SINGLE_COEF("Ch2 - Mix 2", 59),
-SINGLE_COEF("Ch3 - Mix 1", 60),
-SINGLE_COEF("Ch3 - Mix 2", 61),
+COEFS_20("ch6_bq[2] (loudness BQ)", 0x23),
+COEFS_20("ch6_bq[3] (post volume BQ)", 0x24),
+COEFS_20("ch1_bq[0]", 0x29),
+COEFS_20("ch1_bq[1]", 0x2a),
+COEFS_20("ch1_bq[2]", 0x2b),
+COEFS_20("ch1_bq[3]", 0x2c),
+COEFS_20("ch1_bq[4]", 0x2d),
+COEFS_20("ch1_bq[5]", 0x2e),
+COEFS_20("ch1_bq[6]", 0x2f),
+COEFS_20("ch2_bq[0]", 0x30),
+COEFS_20("ch2_bq[1]", 0x31),
+COEFS_20("ch2_bq[2]", 0x32),
+COEFS_20("ch2_bq[3]", 0x33),
+COEFS_20("ch2_bq[4]", 0x34),
+COEFS_20("ch2_bq[5]", 0x35),
+COEFS_20("ch2_bq[6]", 0x36),
+COEFS_20("ch6_bq[0]", 0x37),
+COEFS_20("ch6_bq[1]", 0x38),
+
+COEFS_8("DRC1 ae", 0x3a),
+COEFS_8("DRC1 aa", 0x3b),
+COEFS_8("DRC1 ad", 0x3c),
+COEFS_8("DRC1 ae", 0x3d),
+COEFS_8("DRC2 aa", 0x3e),
+COEFS_8("DRC2 ad", 0x3f),
+
+COEFS_8("V1OM", 0x51),
+COEFS_12("V2OM", 0x52),
 };
 
 static const struct snd_soc_dapm_widget tas5716_dapm_widgets[] = {
@@ -677,7 +738,7 @@ static int tas5716_set_dai_fmt(struct snd_soc_dai *codec_dai,
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct tas5716_priv *tas5716 = snd_soc_codec_get_drvdata(codec);
-	unsigned int confb = 0;
+//	unsigned int confb = 0;
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
@@ -698,17 +759,19 @@ static int tas5716_set_dai_fmt(struct snd_soc_dai *codec_dai,
 
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_NB_NF:
-		confb |= TAS5716_CONFB_C2IM;
+//		confb |= TAS5716_CONFB_C2IM;
 		break;
 	case SND_SOC_DAIFMT_NB_IF:
-		confb |= TAS5716_CONFB_C1IM;
+//		confb |= TAS5716_CONFB_C1IM;
 		break;
 	default:
 		return -EINVAL;
 	}
-
+#ifdef jds
 	return regmap_update_bits(tas5716->regmap, TAS5716_CONFB,
 				  TAS5716_CONFB_C1IM | TAS5716_CONFB_C2IM, confb);
+#endif
+	return 0;
 }
 
 /**
@@ -727,9 +790,10 @@ static int tas5716_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct tas5716_priv *tas5716 = snd_soc_codec_get_drvdata(codec);
 	int i, mcs = -EINVAL, ir = -EINVAL;
-	unsigned int confa, confb;
+//	unsigned int confa;
+	unsigned int confb;
 	unsigned int rate, ratio;
-	int ret;
+//	int ret;
 
 	if (!tas5716->mclk) {
 		dev_err(codec->dev,
@@ -765,8 +829,8 @@ static int tas5716_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	confa = (ir << TAS5716_CONFA_IR_SHIFT) |
-		(mcs << TAS5716_CONFA_MCS_SHIFT);
+//	confa = (ir << TAS5716_CONFA_IR_SHIFT) |
+//		(mcs << TAS5716_CONFA_MCS_SHIFT);
 	confb = 0;
 
 	switch (params_width(params)) {
@@ -836,7 +900,7 @@ static int tas5716_hw_params(struct snd_pcm_substream *substream,
 	default:
 		return -EINVAL;
 	}
-
+#ifdef jds
 	ret = regmap_update_bits(tas5716->regmap, TAS5716_CONFA,
 				 TAS5716_CONFA_MCS_MASK | TAS5716_CONFA_IR_MASK,
 				 confa);
@@ -848,19 +912,19 @@ static int tas5716_hw_params(struct snd_pcm_substream *substream,
 				 confb);
 	if (ret < 0)
 		return ret;
-
+#endif
 	return 0;
 }
 
 static int tas5716_startup_sequence(struct tas5716_priv *tas5716)
 {
-	if (tas5716->gpiod_power_down)
-		gpiod_set_value(tas5716->gpiod_power_down, 1);
+	if (tas5716->gpio_power_down)
+		gpio_set_value(tas5716->gpio_power_down, 1);
 
-	if (tas5716->gpiod_nreset) {
-		gpiod_set_value(tas5716->gpiod_nreset, 0);
+	if (tas5716->gpio_nreset) {
+		gpio_set_value(tas5716->gpio_nreset, 0);
 		mdelay(1);
-		gpiod_set_value(tas5716->gpiod_nreset, 1);
+		gpio_set_value(tas5716->gpio_nreset, 1);
 		mdelay(1);
 	}
 
@@ -889,9 +953,11 @@ static int tas5716_set_bias_level(struct snd_soc_codec *codec,
 
 	case SND_SOC_BIAS_PREPARE:
 		/* Full power on */
+#ifdef jds
 		regmap_update_bits(tas5716->regmap, TAS5716_CONFF,
 				   TAS5716_CONFF_PWDN | TAS5716_CONFF_EAPD,
 				   TAS5716_CONFF_PWDN | TAS5716_CONFF_EAPD);
+#endif
 		break;
 
 	case SND_SOC_BIAS_STANDBY:
@@ -910,23 +976,27 @@ static int tas5716_set_bias_level(struct snd_soc_codec *codec,
 		}
 
 		/* Power down */
+#ifdef JDS
 		regmap_update_bits(tas5716->regmap, TAS5716_CONFF,
 				   TAS5716_CONFF_PWDN | TAS5716_CONFF_EAPD,
 				   0);
+#endif
 
 		break;
 
 	case SND_SOC_BIAS_OFF:
 		/* The chip runs through the power down sequence for us */
+#ifdef JDS
 		regmap_update_bits(tas5716->regmap, TAS5716_CONFF,
 				   TAS5716_CONFF_PWDN | TAS5716_CONFF_EAPD, 0);
+#endif
 
 		/* power down: low */
-		if (tas5716->gpiod_power_down)
-			gpiod_set_value(tas5716->gpiod_power_down, 0);
+		if (tas5716->gpio_power_down)
+			gpio_set_value(tas5716->gpio_power_down, 0);
 
-		if (tas5716->gpiod_nreset)
-			gpiod_set_value(tas5716->gpiod_nreset, 0);
+		if (tas5716->gpio_nreset)
+			gpio_set_value(tas5716->gpio_nreset, 0);
 
 		regulator_bulk_disable(ARRAY_SIZE(tas5716->supplies),
 				       tas5716->supplies);
@@ -974,8 +1044,8 @@ static int tas5716_resume(struct snd_soc_codec *codec)
 static int tas5716_probe(struct snd_soc_codec *codec)
 {
 	struct tas5716_priv *tas5716 = snd_soc_codec_get_drvdata(codec);
-	struct tas5716_platform_data *pdata = tas5716->pdata;
-	int i, ret = 0, thermal = 0;
+	int ret = 0;
+//	int thermal = 0;
 
 	ret = regulator_bulk_enable(ARRAY_SIZE(tas5716->supplies),
 				    tas5716->supplies);
@@ -989,13 +1059,13 @@ static int tas5716_probe(struct snd_soc_codec *codec)
 		dev_err(codec->dev, "Failed to startup device\n");
 		return ret;
 	}
-
+#ifdef jds
 	/* CONFA */
-	if (!pdata->thermal_warning_recovery)
+	if (!tas5716->thermal_warning_recovery)
 		thermal |= TAS5716_CONFA_TWAB;
-	if (!pdata->thermal_warning_adjustment)
+	if (!tas5716->thermal_warning_adjustment)
 		thermal |= TAS5716_CONFA_TWRB;
-	if (!pdata->fault_detect_recovery)
+	if (!tas5716->fault_detect_recovery)
 		thermal |= TAS5716_CONFA_FDRB;
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFA,
 			   TAS5716_CONFA_TWAB | TAS5716_CONFA_TWRB |
@@ -1005,97 +1075,86 @@ static int tas5716_probe(struct snd_soc_codec *codec)
 	/* CONFC */
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFC,
 			   TAS5716_CONFC_OM_MASK,
-			   pdata->ffx_power_output_mode
+			   tas5716->ffx_power_output_mode
 				<< TAS5716_CONFC_OM_SHIFT);
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFC,
 			   TAS5716_CONFC_CSZ_MASK,
-			   pdata->drop_compensation_ns
+			   tas5716->drop_compensation_ns
 				<< TAS5716_CONFC_CSZ_SHIFT);
 	regmap_update_bits(tas5716->regmap,
 			   TAS5716_CONFC,
 			   TAS5716_CONFC_OCRB,
-			   pdata->oc_warning_adjustment ?
+			   tas5716->oc_warning_adjustment ?
 				TAS5716_CONFC_OCRB : 0);
 
 	/* CONFE */
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFE,
 			   TAS5716_CONFE_MPCV,
-			   pdata->max_power_use_mpcc ?
+			   tas5716->max_power_use_mpcc ?
 				TAS5716_CONFE_MPCV : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFE,
 			   TAS5716_CONFE_MPC,
-			   pdata->max_power_correction ?
+			   tas5716->max_power_correction ?
 				TAS5716_CONFE_MPC : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFE,
 			   TAS5716_CONFE_AME,
-			   pdata->am_reduction_mode ?
+			   tas5716->am_reduction_mode ?
 				TAS5716_CONFE_AME : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFE,
 			   TAS5716_CONFE_PWMS,
-			   pdata->odd_pwm_speed_mode ?
+			   tas5716->odd_pwm_speed_mode ?
 				TAS5716_CONFE_PWMS : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFE,
 			   TAS5716_CONFE_DCCV,
-			   pdata->distortion_compensation ?
+			   tas5716->distortion_compensation ?
 				TAS5716_CONFE_DCCV : 0);
 	/*  CONFF */
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFF,
 			   TAS5716_CONFF_IDE,
-			   pdata->invalid_input_detect_mute ?
+			   tas5716->invalid_input_detect_mute ?
 				TAS5716_CONFF_IDE : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_CONFF,
 			   TAS5716_CONFF_OCFG_MASK,
-			   pdata->output_conf
+			   tas5716->output_conf
 				<< TAS5716_CONFF_OCFG_SHIFT);
 
 	/* channel to output mapping */
 	regmap_update_bits(tas5716->regmap, TAS5716_C1CFG,
 			   TAS5716_CxCFG_OM_MASK,
-			   pdata->ch1_output_mapping
+			   tas5716->ch1_output_mapping
 				<< TAS5716_CxCFG_OM_SHIFT);
 	regmap_update_bits(tas5716->regmap, TAS5716_C2CFG,
 			   TAS5716_CxCFG_OM_MASK,
-			   pdata->ch2_output_mapping
+			   tas5716->ch2_output_mapping
 				<< TAS5716_CxCFG_OM_SHIFT);
 	regmap_update_bits(tas5716->regmap, TAS5716_C3CFG,
 			   TAS5716_CxCFG_OM_MASK,
-			   pdata->ch3_output_mapping
+			   tas5716->ch3_output_mapping
 				<< TAS5716_CxCFG_OM_SHIFT);
 
 	/* miscellaneous registers */
 	regmap_update_bits(tas5716->regmap, TAS5716_MISC1,
 			   TAS5716_MISC1_CPWMEN,
-			   pdata->activate_mute_output ?
+			   tas5716->activate_mute_output ?
 				TAS5716_MISC1_CPWMEN : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_MISC1,
 			   TAS5716_MISC1_BRIDGOFF,
-			   pdata->bridge_immediate_off ?
+			   tas5716->bridge_immediate_off ?
 				TAS5716_MISC1_BRIDGOFF : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_MISC1,
 			   TAS5716_MISC1_NSHHPEN,
-			   pdata->noise_shape_dc_cut ?
+			   tas5716->noise_shape_dc_cut ?
 				TAS5716_MISC1_NSHHPEN : 0);
 	regmap_update_bits(tas5716->regmap, TAS5716_MISC1,
 			   TAS5716_MISC1_RPDNEN,
-			   pdata->powerdown_master_vol ?
+			   tas5716->powerdown_master_vol ?
 				TAS5716_MISC1_RPDNEN: 0);
 
 	regmap_update_bits(tas5716->regmap, TAS5716_MISC2,
 			   TAS5716_MISC2_PNDLSL_MASK,
-			   pdata->powerdown_delay_divider
+			   tas5716->powerdown_delay_divider
 				<< TAS5716_MISC2_PNDLSL_SHIFT);
-
-	/* initialize coefficient shadow RAM with reset values */
-	for (i = 4; i <= 49; i += 5)
-		tas5716->coef_shadow[i] = 0x400000;
-	for (i = 50; i <= 54; i++)
-		tas5716->coef_shadow[i] = 0x7fffff;
-	tas5716->coef_shadow[55] = 0x5a9df7;
-	tas5716->coef_shadow[56] = 0x7fffff;
-	tas5716->coef_shadow[59] = 0x7fffff;
-	tas5716->coef_shadow[60] = 0x400000;
-	tas5716->coef_shadow[61] = 0x400000;
-
+#endif
 	tas5716_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	/* Bias level configuration will have done an extra enable */
 	regulator_bulk_disable(ARRAY_SIZE(tas5716->supplies), tas5716->supplies);
@@ -1129,14 +1188,16 @@ static const struct snd_soc_codec_driver tas5716_codec = {
 
 static const struct regmap_config tas5716_regmap = {
 	.reg_bits =		8,
-	.val_bits =		8,
-	.max_register =		TAS5716_MISC2,
+	.val_bits =		32,
+	.max_register =		TAS5716_V2OM,
 	.reg_defaults =		tas5716_regs,
 	.num_reg_defaults =	ARRAY_SIZE(tas5716_regs),
 	.cache_type =		REGCACHE_RBTREE,
+	.volatile_table =	&tas5716_volatile_regs,
 	.wr_table =		&tas5716_write_regs,
 	.rd_table =		&tas5716_read_regs,
-	.volatile_table =	&tas5716_volatile_regs,
+	.reg_write =		tas5716_reg_write,
+	.reg_read =		tas5716_reg_read,
 };
 
 static const struct of_device_id tas5716_dt_ids[] = {
@@ -1145,106 +1206,40 @@ static const struct of_device_id tas5716_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, tas5716_dt_ids);
 
+#ifdef jds
 static const char * const tas5716_ffx_modes[] = {
 	[TAS5716_FFX_PM_DROP_COMP]		= "drop-compensation",
 	[TAS5716_FFX_PM_TAPERED_COMP]		= "tapered-compensation",
 	[TAS5716_FFX_PM_FULL_POWER]		= "full-power-mode",
 	[TAS5716_FFX_PM_VARIABLE_DROP_COMP]	= "variable-drop-compensation",
 };
+#endif
 
 static int tas5716_probe_dt(struct device *dev, struct tas5716_priv *tas5716)
 {
 	struct device_node *np = dev->of_node;
-	struct tas5716_platform_data *pdata;
-	const char *ffx_power_mode;
-	u16 tmp;
-	u8 tmp8;
 
-	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata)
-		return -ENOMEM;
-
-	of_property_read_u8(np, "ti,output-conf",
-			    &pdata->output_conf);
-	of_property_read_u8(np, "ti,ch1-output-mapping",
-			    &pdata->ch1_output_mapping);
-	of_property_read_u8(np, "ti,ch2-output-mapping",
-			    &pdata->ch2_output_mapping);
-	of_property_read_u8(np, "ti,ch3-output-mapping",
-			    &pdata->ch3_output_mapping);
-
-	if (of_get_property(np, "ti,thermal-warning-recovery", NULL))
-		pdata->thermal_warning_recovery = 1;
-	if (of_get_property(np, "ti,thermal-warning-adjustment", NULL))
-		pdata->thermal_warning_adjustment = 1;
-	if (of_get_property(np, "ti,fault-detect-recovery", NULL))
-		pdata->fault_detect_recovery = 1;
-
-	pdata->ffx_power_output_mode = TAS5716_FFX_PM_VARIABLE_DROP_COMP;
-	if (!of_property_read_string(np, "ti,ffx-power-output-mode",
-				     &ffx_power_mode)) {
-		int i, mode = -EINVAL;
-
-		for (i = 0; i < ARRAY_SIZE(tas5716_ffx_modes); i++)
-			if (!strcasecmp(ffx_power_mode, tas5716_ffx_modes[i]))
-				mode = i;
-
-		if (mode < 0)
-			dev_warn(dev, "Unsupported ffx output mode: %s\n",
-				 ffx_power_mode);
-		else
-			pdata->ffx_power_output_mode = mode;
-	}
-
-	tmp = 140;
-	of_property_read_u16(np, "ti,drop-compensation-ns", &tmp);
-	pdata->drop_compensation_ns = clamp_t(u16, tmp, 0, 300) / 20;
-
-	if (of_get_property(np, "ti,overcurrent-warning-adjustment", NULL))
-		pdata->oc_warning_adjustment = 1;
-
-	/* CONFE */
-	if (of_get_property(np, "ti,max-power-use-mpcc", NULL))
-		pdata->max_power_use_mpcc = 1;
-
-	if (of_get_property(np, "ti,max-power-correction", NULL))
-		pdata->max_power_correction = 1;
-
-	if (of_get_property(np, "ti,am-reduction-mode", NULL))
-		pdata->am_reduction_mode = 1;
-
-	if (of_get_property(np, "ti,odd-pwm-speed-mode", NULL))
-		pdata->odd_pwm_speed_mode = 1;
-
-	if (of_get_property(np, "ti,distortion-compensation", NULL))
-		pdata->distortion_compensation = 1;
-
-	/* CONFF */
-	if (of_get_property(np, "ti,invalid-input-detect-mute", NULL))
-		pdata->invalid_input_detect_mute = 1;
-
-	/* MISC */
-	if (of_get_property(np, "ti,activate-mute-output", NULL))
-		pdata->activate_mute_output = 1;
-
-	if (of_get_property(np, "ti,bridge-immediate-off", NULL))
-		pdata->bridge_immediate_off = 1;
-
-	if (of_get_property(np, "ti,noise-shape-dc-cut", NULL))
-		pdata->noise_shape_dc_cut = 1;
-
-	if (of_get_property(np, "ti,powerdown-master-volume", NULL))
-		pdata->powerdown_master_vol = 1;
-
-	if (!of_property_read_u8(np, "ti,powerdown-delay-divider", &tmp8)) {
-		if (is_power_of_2(tmp8) && tmp8 >= 1 && tmp8 <= 128)
-			pdata->powerdown_delay_divider = ilog2(tmp8);
-		else
-			dev_warn(dev, "Unsupported powerdown delay divider %d\n",
-				 tmp8);
-	}
-
-	tas5716->pdata = pdata;
+	of_property_read_u8(np, "ti,system-control-1", &tas5716->system_control_1);
+	of_property_read_u8(np, "ti,system-control-2", &tas5716->system_control_2);
+	of_property_read_u8(np, "ti,soft-mute", &tas5716->soft_mute);
+	of_property_read_u8(np, "ti,volume-configuration", &tas5716->volume_configuration);
+	of_property_read_u8(np, "ti,modulation-limit", &tas5716->modulation_limit);
+	of_property_read_u8(np, "ti,ic-delay-ch1", &tas5716->ic_delay_ch1);
+	of_property_read_u8(np, "ti,ic-delay-ch2", &tas5716->ic_delay_ch2);
+	of_property_read_u8(np, "ti,ic-delay-ch3", &tas5716->ic_delay_ch3);
+	of_property_read_u8(np, "ti,ic-delay-ch4", &tas5716->ic_delay_ch4);
+	of_property_read_u8(np, "ti,ic-delay-ch5", &tas5716->ic_delay_ch5);
+	of_property_read_u8(np, "ti,ic-delay-ch6", &tas5716->ic_delay_ch6);
+	of_property_read_u8(np, "ti,offset", &tas5716->offset);
+	of_property_read_u8(np, "ti,pwm-shutdown-group", &tas5716->pwm_shutdown_group);
+	of_property_read_u8(np, "ti,start-stop-period", &tas5716->start_stop_period);
+	of_property_read_u8(np, "ti,backend-error", &tas5716->backend_error);
+	of_property_read_u32(np, "ti,input-mux", &tas5716->input_mux);
+	of_property_read_u32(np, "ti,ch6-input-mux", &tas5716->ch6_input_mux);
+	of_property_read_u32(np, "ti,am-tuned-frequency", &tas5716->am_tuned_frequency);
+	of_property_read_u32(np, "ti,pwm-mux", &tas5716->pwm_mux);
+	of_property_read_u32(np, "ti,drc-control", &tas5716->drc_control);
+	of_property_read_u32(np, "ti,bank-update", &tas5716->bank_update);
 
 	return 0;
 }
@@ -1253,7 +1248,9 @@ static int tas5716_probe_dt(struct device *dev, struct tas5716_priv *tas5716)
 static int tas5716_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
+	enum of_gpio_flags flags;
 	struct device *dev = &i2c->dev;
+	struct device_node *np = dev->of_node;
 	struct tas5716_priv *tas5716;
 	int ret, i;
 
@@ -1263,35 +1260,52 @@ static int tas5716_i2c_probe(struct i2c_client *i2c,
 		return -ENOMEM;
 
 	mutex_init(&tas5716->coeff_lock);
-	tas5716->pdata = dev_get_platdata(dev);
 
 	ret = tas5716_probe_dt(dev, tas5716);
 	if (ret < 0)
 		return ret;
 
 	printk("JDS - tas5716_i2c_probe a\n");
-	/* GPIOs */
-	tas5716->gpiod_nreset = devm_gpiod_get(dev, "reset");
-	if (IS_ERR(tas5716->gpiod_nreset)) {
-		ret = PTR_ERR(tas5716->gpiod_nreset);
-		if (ret != -ENOENT && ret != -ENOSYS)
-			return ret;
 
-		tas5716->gpiod_nreset = NULL;
-	} else {
-		gpiod_direction_output(tas5716->gpiod_nreset, 0);
+	/* GPIOs */
+	tas5716->gpio_nreset = of_get_named_gpio_flags(np, "reset", 0, &flags);
+	if (gpio_is_valid(tas5716->gpio_nreset)) {
+		ret = devm_gpio_request_one(dev, tas5716->gpio_nreset,
+			     flags & OF_GPIO_ACTIVE_LOW ?
+				GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
+			     "tas5716:reset");
+		if (ret < 0)
+			return ret;
 	}
 
-	printk("JDS - tas5716_i2c_probe b\n");
-	tas5716->gpiod_power_down = devm_gpiod_get(dev, "power-down");
-	if (IS_ERR(tas5716->gpiod_power_down)) {
-		ret = PTR_ERR(tas5716->gpiod_power_down);
-		if (ret != -ENOENT && ret != -ENOSYS)
+	tas5716->gpio_power_down = of_get_named_gpio_flags(np, "power-down", 0, &flags);
+	if (gpio_is_valid(tas5716->gpio_power_down)) {
+		ret = devm_gpio_request_one(dev, tas5716->gpio_power_down,
+			     flags & OF_GPIO_ACTIVE_LOW ?
+				GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
+			     "tas5716:power-down");
+		if (ret < 0)
 			return ret;
+	}
 
-		tas5716->gpiod_power_down = NULL;
-	} else {
-		gpiod_direction_output(tas5716->gpiod_power_down, 0);
+	tas5716->gpio_mute = of_get_named_gpio_flags(np, "mute", 0, &flags);
+	if (gpio_is_valid(tas5716->gpio_mute)) {
+		ret = devm_gpio_request_one(dev, tas5716->gpio_mute,
+			     flags & OF_GPIO_ACTIVE_LOW ?
+				GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
+			     "tas5716:mute");
+		if (ret < 0)
+			return ret;
+	}
+
+	tas5716->gpio_hpsel = of_get_named_gpio_flags(np, "ti,hpsel", 0, &flags);
+	if (gpio_is_valid(tas5716->gpio_hpsel)) {
+		ret = devm_gpio_request_one(dev, tas5716->gpio_hpsel,
+			     flags & OF_GPIO_ACTIVE_LOW ?
+				GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
+			     "tas5716:ti,hpsel");
+		if (ret < 0)
+			return ret;
 	}
 
 	/* regulators */

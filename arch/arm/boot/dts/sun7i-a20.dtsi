@@ -724,6 +724,13 @@
 				allwinner,pull = <0>;
 			};
 
+			i2s0_pins_a: i2s0@0 {
+				allwinner,pins = "PB5", "PB6","PB7", "PB8","PB9", "PB10","PB11", "PB12";
+				allwinner,function = "i2s0";
+				allwinner,drive = <0>;
+				allwinner,pull = <0>;
+			};
+
 			emac_pins_a: emac0@0 {
 				allwinner,pins = "PA0", "PA1", "PA2",
 						"PA3", "PA4", "PA5", "PA6",
@@ -875,6 +882,7 @@
 		};
 
 		iis0: iis@01c22000 {
+			#clock-cells = <0>;
 			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-iis";
 			reg = <0x01C22000 0x40>;
@@ -887,6 +895,7 @@
 		};
 
 		iis1: iis@01c22400 {
+			#clock-cells = <0>;
 			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-iis";
 			reg = <0x01C22400 0x40>;
@@ -899,6 +908,7 @@
 		};
 
 		iis2: iis@01c24400 {
+			#clock-cells = <0>;
 			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-iis";
 			reg = <0x01C24400 0x40>;

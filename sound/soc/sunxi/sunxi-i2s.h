@@ -426,6 +426,9 @@ struct sunxi_priv {
 	u32 pcm_start_slot;	//PCM start slot index (1--4)
 	u32 pcm_lsb_first;	//0: MSB first, 1: LSB first
 	u32 pcm_ch_num;		//PCM channel number (1: one channel, 2: two channel)
+
+	void __iomem *base;
+	struct clk *mclk;
 };
 
 #endif

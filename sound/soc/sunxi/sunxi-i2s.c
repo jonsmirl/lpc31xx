@@ -25,6 +25,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/regmap.h>
 
 #include <sound/core.h>
@@ -400,6 +401,31 @@ static int sunxi_i2s_dai_remove(struct snd_soc_dai *cpu_dai)
 	return 0;
 }
 
+static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *priv)
+{
+	struct device_node *np = pdev->dev.of_node;
+	int ret;
+
+	priv->mclk = clk_register_divider(&pdev->dev, "iisX_mclk",
+				   __clk_get_name(priv->clk_pll2), 0,
+				   priv->base + SUNXI_I2S_CLKD,
+				   SUNXI_I2SCLKD_MCLKDIV_SHIFT, SUNXI_I2SCLKD_MCLKDIV_WIDTH,
+				   0, NULL);
+	if (IS_ERR(priv->mclk)) {
+		ret = PTR_ERR(priv->mclk);
+		if (ret == -EEXIST)
+			return 0;
+		dev_err(&pdev->dev, "failed to register mclk: %d\n", ret);
+		return PTR_ERR(priv->mclk);
+	}
+
+	ret = of_clk_add_provider(np, of_clk_src_simple_get, priv->mclk);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
 static void iisregsave(void)
 {
 	/*regsave[0] = readl(priv->regs + SUNXI_I2S_CTL);
@@ -526,12 +552,12 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct sunxi_priv *priv;
 	struct resource *res;
-	void __iomem *base;
 	int ret;
 
 	if (!of_device_is_available(np))
 		return -ENODEV;
 
+	printk("JDS: sunxi_i2s_probe\n");
 	of_id = of_match_device(sunxi_i2s_of_match, dev);
 	if (!of_id)
 		return -EINVAL;
@@ -543,11 +569,11 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	priv->revision = (enum sunxi_soc_family)of_id->data;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(base))
-		return PTR_ERR(base);
+	priv->base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(priv->base))
+		return PTR_ERR(priv->base);
 
-	priv->regmap = devm_regmap_init_mmio(&pdev->dev, base,
+	priv->regmap = devm_regmap_init_mmio(&pdev->dev, priv->base,
 					     &sunxi_i2s_regmap_config);
 	if (IS_ERR(priv->regmap))
 		return PTR_ERR(priv->regmap);
@@ -597,6 +623,10 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	priv->capture_dma_data.maxburst = 4;
 	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
+	ret = sunxi_i2s_mclk_init(pdev, priv);
+	if (ret)
+		goto err_clk_disable;
+
 	dev_set_drvdata(&pdev->dev, priv);
 
 	ret = devm_snd_soc_register_component(&pdev->dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
@@ -607,6 +637,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_clk_disable;
 
+	printk("JDS: sunxi_i2s_probe finished\n");
 	return 0;
 
 err_clk_disable:
