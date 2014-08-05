@@ -155,10 +155,6 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 		of_property_read_u32(np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
-	} else {
-		clk = of_clk_get(node, 0);
-		if (!IS_ERR(clk))
-			dai->sysclk = clk_get_rate(clk);
 	}
 
 	return 0;
