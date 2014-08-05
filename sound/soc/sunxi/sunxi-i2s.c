@@ -319,9 +319,9 @@ static int sunxi_i2s_set_sysclk(struct snd_soc_dai *cpu_dai, int clk_id, unsigne
 	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 
 	if (!freq) {
-		clk_set_rate(priv->clk_pll2, 24576000);
+		clk_set_rate(priv->clk_iis, 24576000);
 	} else {
-		clk_set_rate(priv->clk_pll2, 22579200);
+		clk_set_rate(priv->clk_iis, 22579200);
 	}
 
 	return 0;
@@ -401,25 +401,64 @@ static int sunxi_i2s_dai_remove(struct snd_soc_dai *cpu_dai)
 	return 0;
 }
 
+
+static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
+{
+	struct sunxi_priv *priv =
+		container_of(hw, struct sunxi_priv, mclk_div.hw);
+
+	priv->mode = IIS_MASTER;
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, SUNXI_I2SCTL_TXEN);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, SUNXI_I2SCTL_RXEN);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_8);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
+	mdelay(10);
+	
+	return 0;
+}
+
+static struct clk_ops sunxi_i2s_clk_divider_ops = {
+};
+
 static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *priv)
 {
 	struct device_node *np = pdev->dev.of_node;
+	struct clk_init_data init;
+	const char *clk_name = NULL;
+	const char *clk_parent = __clk_get_name(priv->clk_iis);
 	int ret;
+	int flags = 0;
 
-	priv->mclk = clk_register_divider(&pdev->dev, "iisX_mclk",
-				   __clk_get_name(priv->clk_pll2), 0,
-				   priv->base + SUNXI_I2S_CLKD,
-				   SUNXI_I2SCLKD_MCLKDIV_SHIFT, SUNXI_I2SCLKD_MCLKDIV_WIDTH,
-				   0, NULL);
-	if (IS_ERR(priv->mclk)) {
-		ret = PTR_ERR(priv->mclk);
-		if (ret == -EEXIST)
-			return 0;
-		dev_err(&pdev->dev, "failed to register mclk: %d\n", ret);
-		return PTR_ERR(priv->mclk);
+	of_property_read_string(np, "clock-output-names", &clk_name);
+
+	sunxi_i2s_clk_divider_ops = clk_divider_ops;
+	sunxi_i2s_clk_divider_ops.prepare = sunxi_i2s_mclk_prepare;
+
+	init.name = clk_name;
+	init.ops = &sunxi_i2s_clk_divider_ops;
+	init.flags = flags | CLK_IS_BASIC;
+	init.parent_names = &clk_parent;
+	init.num_parents = 1;
+
+	/* struct clk_divider assignments */
+	priv->mclk_div.reg = priv->base + SUNXI_I2S_CLKD;
+	priv->mclk_div.shift = SUNXI_I2SCLKD_MCLKDIV_SHIFT;
+	priv->mclk_div.width = SUNXI_I2SCLKD_MCLKDIV_WIDTH;
+	priv->mclk_div.flags = 0;
+	priv->mclk_div.lock = NULL;
+	priv->mclk_div.hw.init = &init;
+	priv->mclk_div.table = NULL;
+
+	/* register the clock */
+	priv->clk_mclk = clk_register(&pdev->dev, &priv->mclk_div.hw);
+
+	if (IS_ERR(priv->clk_mclk)) {
+		dev_err(&pdev->dev, "failed to register mclk: %ld\n", PTR_ERR(priv->clk_mclk));
+		return PTR_ERR(priv->clk_mclk);
 	}
 
-	ret = of_clk_add_provider(np, of_clk_src_simple_get, priv->mclk);
+	ret = of_clk_add_provider(np, of_clk_src_simple_get, priv->clk_mclk);
 	if (ret)
 		return ret;
 
@@ -462,7 +501,7 @@ static int sunxi_i2s_suspend(struct snd_soc_dai *cpu_dai)
 	iisregsave();
 
 	//release the module clock
-	clk_disable(priv->clk_module);
+	clk_disable(priv->clk_iis);
 
 	clk_disable(priv->clk_apb);
 
@@ -482,7 +521,7 @@ static int sunxi_i2s_resume(struct snd_soc_dai *cpu_dai)
 	clk_enable(priv->clk_apb);
 
 	//release the module clock
-	clk_enable(priv->clk_module);
+	clk_enable(priv->clk_iis);
 
 	iisregrestore();
 
@@ -584,32 +623,27 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to get apb clock\n");
 		return PTR_ERR(priv->clk_apb);
 	}
-	priv->clk_pll2 = devm_clk_get(dev, "pll2");
-	if (IS_ERR(priv->clk_pll2)) {
-		dev_err(dev, "failed to get pll2 clock\n");
-		return PTR_ERR(priv->clk_pll2);
-	}
-	priv->clk_module = devm_clk_get(dev, "iis");
-	if (IS_ERR(priv->clk_module)) {
+	priv->clk_iis = devm_clk_get(dev, "iis");
+	if (IS_ERR(priv->clk_iis)) {
 		dev_err(dev, "failed to get iis clock\n");
-		return PTR_ERR(priv->clk_module);
+		return PTR_ERR(priv->clk_iis);
 	}
 
-	/* Enable PLL2 on a basic rate */
-	ret = clk_set_rate(priv->clk_pll2, 24576000);
+	/* Enable iis on a basic rate */
+	ret = clk_set_rate(priv->clk_iis, 24576000);
 	if (ret) {
 		dev_err(dev, "failed to set i2s base clock rate\n");
 		return ret;
 	}
-	if (clk_prepare_enable(priv->clk_pll2)) {
-		dev_err(dev, "failed to enable pll2 clock\n");
+	if (clk_prepare_enable(priv->clk_iis)) {
+		dev_err(dev, "failed to enable iis clock\n");
 		return -EINVAL;
 	}
 
 	/* Enable the bus clock */
 	if (clk_prepare_enable(priv->clk_apb)) {
 		dev_err(dev, "failed to enable apb clock\n");
-		clk_disable_unprepare(priv->clk_pll2);
+		clk_disable_unprepare(priv->clk_iis);
 		return -EINVAL;
 	}
 
@@ -642,7 +676,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 
 err_clk_disable:
 	clk_disable_unprepare(priv->clk_apb);
-	clk_disable_unprepare(priv->clk_pll2);
+	clk_disable_unprepare(priv->clk_iis);
 	return ret;
 }
 
@@ -651,7 +685,7 @@ static int sunxi_i2s_remove(struct platform_device *pdev)
 	struct sunxi_priv *priv = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(priv->clk_apb);
-	clk_disable_unprepare(priv->clk_pll2);
+	clk_disable_unprepare(priv->clk_iis);
 
 	return 0;
 }

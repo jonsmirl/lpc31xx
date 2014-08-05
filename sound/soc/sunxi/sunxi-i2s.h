@@ -400,9 +400,14 @@ enum sunxi_soc_family {
 	SUN7I,	/* A20 SoC */
 };
 
+enum sunxi_i2s_mode {
+	IIS_MASTER,
+	IIS_SLAVE,
+};	
+
 struct sunxi_priv {
 	struct regmap *regmap;
-	struct clk *clk_apb, *clk_pll2, *clk_module;
+	struct clk *clk_apb, *clk_iis, *clk_mclk;
 
 	enum sunxi_soc_family revision;
 
@@ -428,7 +433,8 @@ struct sunxi_priv {
 	u32 pcm_ch_num;		//PCM channel number (1: one channel, 2: two channel)
 
 	void __iomem *base;
-	struct clk *mclk;
+	struct clk_divider mclk_div;
+	enum sunxi_i2s_mode mode;
 };
 
 #endif
