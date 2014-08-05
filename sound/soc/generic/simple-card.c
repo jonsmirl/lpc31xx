@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/of_platform.h>
 #include <linux/string.h>
 #include <sound/simple_card.h>
 #include <sound/soc-dai.h>
@@ -109,13 +110,14 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 }
 
 static int
-asoc_simple_card_sub_parse_of(struct device_node *np,
+asoc_simple_card_sub_parse_of(struct device_node *np, 
 			      struct asoc_simple_dai *dai,
 			      const struct device_node **p_node,
 			      const char **name)
 {
 	struct device_node *node;
 	struct clk *clk;
+	struct of_phandle_args clkspec;
 	int ret;
 
 	/*
@@ -156,11 +158,14 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
 	} else {
-		clk = of_clk_get(node, 0);
-		if (!IS_ERR(clk))
-			dai->sysclk = clk_get_rate(clk);
-	}
+		clkspec.np = node;
+		clk = of_clk_get_from_provider(&clkspec);
 
+		if (!IS_ERR(clk)) {
+			dai->sysclk = clk_get_rate(clk);
+			clk_put(clk);
+		}
+	}
 	return 0;
 }
 
