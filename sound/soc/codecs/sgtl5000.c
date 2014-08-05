@@ -16,6 +16,7 @@
 #include <linux/pm.h>
 #include <linux/i2c.h>
 #include <linux/clk.h>
+#include <linux/pwm.h>
 #include <linux/regmap.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
@@ -130,6 +131,7 @@ struct sgtl5000_priv {
 	struct ldo_regulator *ldo;
 	struct regmap *regmap;
 	struct clk *mclk;
+	struct pwm_device *pwm;
 	int revision;
 };
 
@@ -450,6 +452,8 @@ static int sgtl5000_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
 	u16 i2sctl = 0;
 
+	printk("JDS - sgtl5000_set_dai_fmt %08x\n", fmt);
+
 	sgtl5000->master = 0;
 	/*
 	 * i2s clock and frame master setting.
@@ -467,6 +471,7 @@ static int sgtl5000_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	default:
 		return -EINVAL;
 	}
+	printk("JDS - sgtl5000_set_dai_fmt master %d\n", sgtl5000->master);
 
 	/* setting i2s data format */
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
@@ -517,6 +522,8 @@ static int sgtl5000_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
 
+printk("JDS - sgtl5000_set_dai_sysclk %d id %d\n", freq, clk_id);
+
 	switch (clk_id) {
 	case SGTL5000_SYSCLK:
 		sgtl5000->sysclk = freq;
@@ -552,6 +559,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 	 * if frame clock lower than 44.1khz, sample feq should set to
 	 * 32khz or 44.1khz.
 	 */
+	printk("JDS frame_rate %d\n", frame_rate);
 	switch (frame_rate) {
 	case 8000:
 	case 16000:
@@ -565,6 +573,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 		sys_fs = frame_rate;
 		break;
 	}
+	printk("JDS sys_fs %d\n", sys_fs);
 
 	/* set divided factor of frame clock */
 	switch (sys_fs / frame_rate) {
@@ -601,11 +610,13 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 		return -EINVAL;
 	}
 
+	printk("JDS sgtl5000->sysclk %d\n", sgtl5000->sysclk);
+
 	/*
 	 * calculate the divider of mclk/sample_freq,
 	 * factor of freq =96k can only be 256, since mclk in range (12m,27m)
 	 */
-	switch (sgtl5000->sysclk / sys_fs) {
+	switch (DIV_ROUND_CLOSEST(sgtl5000->sysclk, sys_fs)) {
 	case 256:
 		clk_ctl |= SGTL5000_MCLK_FREQ_256FS <<
 			SGTL5000_MCLK_FREQ_SHIFT;
@@ -653,6 +664,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 		t *= 2048;
 		do_div(t, in);
 		frac_div = t;
+		printk("JDS - SGTL5000_MCLK_FREQ_PLL int %d frac %d\n", int_div, frac_div);
 		pll_ctl = int_div << SGTL5000_PLL_INT_DIV_SHIFT |
 		    frac_div << SGTL5000_PLL_FRAC_DIV_SHIFT;
 
@@ -757,6 +769,7 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 			    SGTL5000_I2S_DLEN_MASK | SGTL5000_I2S_SCLKFREQ_MASK,
 			    i2s_ctl);
 
+	printk("JDS - sgtl5000_pcm_hw_params ok\n");
 	return 0;
 }
 
@@ -1440,8 +1453,9 @@ static int sgtl5000_fill_defaults(struct sgtl5000_priv *sgtl5000)
 static int sgtl5000_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
 {
+	struct device_node *np = client->dev.of_node;
 	struct sgtl5000_priv *sgtl5000;
-	int ret, reg, rev;
+	int ret, reg, rev, period;
 
 	sgtl5000 = devm_kzalloc(&client->dev, sizeof(struct sgtl5000_priv),
 								GFP_KERNEL);
@@ -1458,21 +1472,34 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
 	if (IS_ERR(sgtl5000->mclk)) {
 		ret = PTR_ERR(sgtl5000->mclk);
-		dev_err(&client->dev, "Failed to get mclock: %d\n", ret);
-		/* Defer the probe to see if the clk will be provided later */
-		if (ret == -ENOENT)
-			return -EPROBE_DEFER;
-		return ret;
+		sgtl5000->pwm = devm_of_pwm_get(&client->dev, np, NULL);
+		if (IS_ERR(sgtl5000->pwm)) {
+			/* Defer the probe to see if the clk will be provided later */
+			dev_err(&client->dev, "Failed to get mclock, defering: %d\n", ret);
+			if (ret == -ENOENT)
+				return -EPROBE_DEFER;
+			return ret;
+		}
+		period = pwm_get_period(sgtl5000->pwm);
+		ret = pwm_config(sgtl5000->pwm, period / 2, period); 
+		if (ret)
+			return ret;
+		ret = pwm_enable(sgtl5000->pwm);
+		if (ret)
+			return ret;
+	} else {
+		ret = clk_prepare_enable(sgtl5000->mclk);
+		if (ret)
+			return ret;
 	}
-
-	ret = clk_prepare_enable(sgtl5000->mclk);
-	if (ret)
-		return ret;
 
 	/* read chip information */
 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev,
+			"Unable to read I2C %d\n", reg);
 		goto disable_clk;
+	}
 
 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
 	    SGTL5000_PARTID_PART_ID) {
