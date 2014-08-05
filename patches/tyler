@@ -1,5 +1,5 @@
 Bottom: 4e66e9c5a88e22a68319fdf2517ebee1954ad140
-Top:    7344ff6d195cec5c12d7ad8f38532bc885772366
+Top:    c2d39edc206f74b70ac7c9866084228692dbc02b
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-07-18 14:38:45 -0400
 
@@ -83,7 +83,7 @@ index e316509..e90b856 100644
  		compatible = "gpio-leds";
  		pinctrl-names = "default";
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index b06f9b0..4583c09 100644
+index b06f9b0..7dd1f2c 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -724,6 +724,13 @@
@@ -100,7 +100,7 @@ index b06f9b0..4583c09 100644
  			emac_pins_a: emac0@0 {
  				allwinner,pins = "PA0", "PA1", "PA2",
  						"PA3", "PA4", "PA5", "PA6",
-@@ -874,6 +881,45 @@
+@@ -874,13 +881,55 @@
  			status = "disabled";
  		};
  
@@ -110,8 +110,9 @@ index b06f9b0..4583c09 100644
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C22000 0x40>;
 +			interrupts = <0 16 4>;
-+			clocks = <&pll2 0>, <&apb0_gates 3>, <&iis0_clk>;
-+			clock-names = "pll2", "apb", "iis";
++			clocks = <&apb0_gates 3>, <&iis0_clk>;
++			clock-names = "apb", "iis";
++			clock-output-names = "mclk0";
 +			dmas = <&dma 0 3>, <&dma 0 3>;
 +			dma-names = "rx", "tx";
 +			status = "disabled";
@@ -123,8 +124,9 @@ index b06f9b0..4583c09 100644
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C22400 0x40>;
 +			interrupts = <0 87 4>;
-+			clocks = <&pll2 0>, <&apb0_gates 4>, <&iis1_clk>;
-+			clock-names = "pll2", "apb", "iis";
++			clocks = <&apb0_gates 4>, <&iis1_clk>;
++			clock-names = "apb", "iis";
++			clock-output-names = "mclk1";
 +			dmas = <&dma 0 4>, <&dma 0 4>;
 +			dma-names = "rx", "tx";
 +			status = "disabled";
@@ -136,8 +138,9 @@ index b06f9b0..4583c09 100644
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C24400 0x40>;
 +			interrupts = <0 90 4>;
-+			clocks = <&pll2 0>, <&apb0_gates 8>, <&iis2_clk>;
-+			clock-names = "pll2", "apb", "iis";
++			clocks = <&apb0_gates 8>, <&iis2_clk>;
++			clock-names = "apb", "iis";
++			clock-output-names = "mclk2";
 +			dmas = <&dma 0 6>, <&dma 0 6>;
 +			dma-names = "rx", "tx";
 +			status = "disabled";
@@ -146,6 +149,14 @@ index b06f9b0..4583c09 100644
  		codec: codec@01c22c00 {
  			#sound-dai-cells = <0>;
  			compatible = "allwinner,sun7i-a20-codec";
+ 			reg = <0x01c22c00 0x40>;
+ 			interrupts = <0 30 4>;
+ 			clocks = <&pll2 0>, <&apb0_gates 0>, <&codec_clk>;
+-			clock-names = "pll", "apb", "codec";
++			clock-names = "pll2", "apb", "codec";
+ 			dmas = <&dma 0 19>, <&dma 0 19>;
+ 			dma-names = "rx", "tx";
+ 			routing =
 diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
 index 0b9571c..94a6bc8 100644
 --- a/sound/soc/codecs/Kconfig
@@ -2056,10 +2067,10 @@ index b8950d3..b40e4cb 100644
 +obj-$(CONFIG_SND_SUNXI_SOC_I2S_INTERFACE) += i2s/
 diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
 new file mode 100644
-index 0000000..05e8209
+index 0000000..7a4f657
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.c
-@@ -0,0 +1,672 @@
+@@ -0,0 +1,706 @@
 +/*
 + * Copyright 2014 Emilio López <emilio@elopez.com.ar>
 + * Copyright 2014 Jon Smirl <jonsmirl@gmail.com>
@@ -2381,9 +2392,9 @@ index 0000000..05e8209
 +	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 +
 +	if (!freq) {
-+		clk_set_rate(priv->clk_pll2, 24576000);
++		clk_set_rate(priv->clk_iis, 24576000);
 +	} else {
-+		clk_set_rate(priv->clk_pll2, 22579200);
++		clk_set_rate(priv->clk_iis, 22579200);
 +	}
 +
 +	return 0;
@@ -2463,25 +2474,64 @@ index 0000000..05e8209
 +	return 0;
 +}
 +
++
++static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
++{
++	struct sunxi_priv *priv =
++		container_of(hw, struct sunxi_priv, mclk_div.hw);
++
++	priv->mode = IIS_MASTER;
++	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, SUNXI_I2SCTL_TXEN);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, SUNXI_I2SCTL_RXEN);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_8);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
++	mdelay(10);
++	
++	return 0;
++}
++
++static struct clk_ops sunxi_i2s_clk_divider_ops = {
++};
++
 +static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *priv)
 +{
 +	struct device_node *np = pdev->dev.of_node;
++	struct clk_init_data init;
++	const char *clk_name = NULL;
++	const char *clk_parent = __clk_get_name(priv->clk_iis);
 +	int ret;
++	int flags = 0;
 +
-+	priv->mclk = clk_register_divider(&pdev->dev, "iisX_mclk",
-+				   __clk_get_name(priv->clk_pll2), 0,
-+				   priv->base + SUNXI_I2S_CLKD,
-+				   SUNXI_I2SCLKD_MCLKDIV_SHIFT, SUNXI_I2SCLKD_MCLKDIV_WIDTH,
-+				   0, NULL);
-+	if (IS_ERR(priv->mclk)) {
-+		ret = PTR_ERR(priv->mclk);
-+		if (ret == -EEXIST)
-+			return 0;
-+		dev_err(&pdev->dev, "failed to register mclk: %d\n", ret);
-+		return PTR_ERR(priv->mclk);
++	of_property_read_string(np, "clock-output-names", &clk_name);
++
++	sunxi_i2s_clk_divider_ops = clk_divider_ops;
++	sunxi_i2s_clk_divider_ops.prepare = sunxi_i2s_mclk_prepare;
++
++	init.name = clk_name;
++	init.ops = &sunxi_i2s_clk_divider_ops;
++	init.flags = flags | CLK_IS_BASIC;
++	init.parent_names = &clk_parent;
++	init.num_parents = 1;
++
++	/* struct clk_divider assignments */
++	priv->mclk_div.reg = priv->base + SUNXI_I2S_CLKD;
++	priv->mclk_div.shift = SUNXI_I2SCLKD_MCLKDIV_SHIFT;
++	priv->mclk_div.width = SUNXI_I2SCLKD_MCLKDIV_WIDTH;
++	priv->mclk_div.flags = 0;
++	priv->mclk_div.lock = NULL;
++	priv->mclk_div.hw.init = &init;
++	priv->mclk_div.table = NULL;
++
++	/* register the clock */
++	priv->clk_mclk = clk_register(&pdev->dev, &priv->mclk_div.hw);
++
++	if (IS_ERR(priv->clk_mclk)) {
++		dev_err(&pdev->dev, "failed to register mclk: %ld\n", PTR_ERR(priv->clk_mclk));
++		return PTR_ERR(priv->clk_mclk);
 +	}
 +
-+	ret = of_clk_add_provider(np, of_clk_src_simple_get, priv->mclk);
++	ret = of_clk_add_provider(np, of_clk_src_simple_get, priv->clk_mclk);
 +	if (ret)
 +		return ret;
 +
@@ -2524,7 +2574,7 @@ index 0000000..05e8209
 +	iisregsave();
 +
 +	//release the module clock
-+	clk_disable(priv->clk_module);
++	clk_disable(priv->clk_iis);
 +
 +	clk_disable(priv->clk_apb);
 +
@@ -2544,7 +2594,7 @@ index 0000000..05e8209
 +	clk_enable(priv->clk_apb);
 +
 +	//release the module clock
-+	clk_enable(priv->clk_module);
++	clk_enable(priv->clk_iis);
 +
 +	iisregrestore();
 +
@@ -2646,32 +2696,27 @@ index 0000000..05e8209
 +		dev_err(dev, "failed to get apb clock\n");
 +		return PTR_ERR(priv->clk_apb);
 +	}
-+	priv->clk_pll2 = devm_clk_get(dev, "pll2");
-+	if (IS_ERR(priv->clk_pll2)) {
-+		dev_err(dev, "failed to get pll2 clock\n");
-+		return PTR_ERR(priv->clk_pll2);
-+	}
-+	priv->clk_module = devm_clk_get(dev, "iis");
-+	if (IS_ERR(priv->clk_module)) {
++	priv->clk_iis = devm_clk_get(dev, "iis");
++	if (IS_ERR(priv->clk_iis)) {
 +		dev_err(dev, "failed to get iis clock\n");
-+		return PTR_ERR(priv->clk_module);
++		return PTR_ERR(priv->clk_iis);
 +	}
 +
-+	/* Enable PLL2 on a basic rate */
-+	ret = clk_set_rate(priv->clk_pll2, 24576000);
++	/* Enable iis on a basic rate */
++	ret = clk_set_rate(priv->clk_iis, 24576000);
 +	if (ret) {
 +		dev_err(dev, "failed to set i2s base clock rate\n");
 +		return ret;
 +	}
-+	if (clk_prepare_enable(priv->clk_pll2)) {
-+		dev_err(dev, "failed to enable pll2 clock\n");
++	if (clk_prepare_enable(priv->clk_iis)) {
++		dev_err(dev, "failed to enable iis clock\n");
 +		return -EINVAL;
 +	}
 +
 +	/* Enable the bus clock */
 +	if (clk_prepare_enable(priv->clk_apb)) {
 +		dev_err(dev, "failed to enable apb clock\n");
-+		clk_disable_unprepare(priv->clk_pll2);
++		clk_disable_unprepare(priv->clk_iis);
 +		return -EINVAL;
 +	}
 +
@@ -2704,7 +2749,7 @@ index 0000000..05e8209
 +
 +err_clk_disable:
 +	clk_disable_unprepare(priv->clk_apb);
-+	clk_disable_unprepare(priv->clk_pll2);
++	clk_disable_unprepare(priv->clk_iis);
 +	return ret;
 +}
 +
@@ -2713,7 +2758,7 @@ index 0000000..05e8209
 +	struct sunxi_priv *priv = platform_get_drvdata(pdev);
 +
 +	clk_disable_unprepare(priv->clk_apb);
-+	clk_disable_unprepare(priv->clk_pll2);
++	clk_disable_unprepare(priv->clk_iis);
 +
 +	return 0;
 +}
@@ -2734,10 +2779,10 @@ index 0000000..05e8209
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.h b/sound/soc/sunxi/sunxi-i2s.h
 new file mode 100644
-index 0000000..158b1f4
+index 0000000..b857cc1
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.h
-@@ -0,0 +1,434 @@
+@@ -0,0 +1,440 @@
 +/*
 + * sound\soc\sunxi\i2s\sunxi-i2s.h
 + * (C) Copyright 2007-2011
@@ -3140,9 +3185,14 @@ index 0000000..158b1f4
 +	SUN7I,	/* A20 SoC */
 +};
 +
++enum sunxi_i2s_mode {
++	IIS_MASTER,
++	IIS_SLAVE,
++};	
++
 +struct sunxi_priv {
 +	struct regmap *regmap;
-+	struct clk *clk_apb, *clk_pll2, *clk_module;
++	struct clk *clk_apb, *clk_iis, *clk_mclk;
 +
 +	enum sunxi_soc_family revision;
 +
@@ -3168,7 +3218,8 @@ index 0000000..158b1f4
 +	u32 pcm_ch_num;		//PCM channel number (1: one channel, 2: two channel)
 +
 +	void __iomem *base;
-+	struct clk *mclk;
++	struct clk_divider mclk_div;
++	enum sunxi_i2s_mode mode;
 +};
 +
 +#endif
