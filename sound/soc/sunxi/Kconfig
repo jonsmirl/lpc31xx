@@ -7,4 +7,10 @@ config SND_SUNXI_SOC_CODEC
 	select REGMAP_MMIO
 	default y
 
+config SND_SUNXI_SOC_I2S
+	tristate "sun4i/sun5i/sun7i I2S"
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	select REGMAP_MMIO
+	default y
+
 endmenu
