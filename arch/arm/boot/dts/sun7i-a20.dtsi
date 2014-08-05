@@ -929,7 +929,7 @@
 			reg = <0x01c22c00 0x40>;
 			interrupts = <0 30 4>;
 			clocks = <&pll2 0>, <&apb0_gates 0>, <&codec_clk>;
-			clock-names = "pll2", "apb", "codec";
+			clock-names = "pll", "apb", "codec";
 			dmas = <&dma 0 19>, <&dma 0 19>;
 			dma-names = "rx", "tx";
 			routing =
