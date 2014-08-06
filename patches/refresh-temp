@@ -1,0 +1,110 @@
+Bottom: 2727ff5d7157c4e0d904d7d76fba7f5b8ed45861
+Top:    fd28ac0163f4f331a0e41db3bd280c27b79af2f1
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-08-06 13:09:01 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
+index 86afdb2..ec9adfa 100644
+--- a/arch/arm/boot/dts/sun7i-a20.dtsi
++++ b/arch/arm/boot/dts/sun7i-a20.dtsi
+@@ -888,7 +888,7 @@
+ 			compatible = "allwinner,sun7i-a20-iis";
+ 			reg = <0x01C22000 0x40>;
+ 			interrupts = <0 16 4>;
+-			clocks = <&apb0_gates 3>, <&iis0_clk>;
++			clocks = <&apb0_gates 3>, <&i2s0_clk>;
+ 			clock-names = "apb", "iis";
+ 			clock-output-names = "mclk0";
+ 			dmas = <&dma 0 3>, <&dma 0 3>;
+@@ -902,7 +902,7 @@
+ 			compatible = "allwinner,sun7i-a20-iis";
+ 			reg = <0x01C22400 0x40>;
+ 			interrupts = <0 87 4>;
+-			clocks = <&apb0_gates 4>, <&iis1_clk>;
++			clocks = <&apb0_gates 4>, <&i2s1_clk>;
+ 			clock-names = "apb", "iis";
+ 			clock-output-names = "mclk1";
+ 			dmas = <&dma 0 4>, <&dma 0 4>;
+@@ -916,7 +916,7 @@
+ 			compatible = "allwinner,sun7i-a20-iis";
+ 			reg = <0x01C24400 0x40>;
+ 			interrupts = <0 90 4>;
+-			clocks = <&apb0_gates 8>, <&iis2_clk>;
++			clocks = <&apb0_gates 8>, <&i2s2_clk>;
+ 			clock-names = "apb", "iis";
+ 			clock-output-names = "mclk2";
+ 			dmas = <&dma 0 6>, <&dma 0 6>;
+diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
+index 0060b31..8f08e4b 100644
+--- a/sound/soc/Kconfig
++++ b/sound/soc/Kconfig
+@@ -52,6 +52,7 @@ source "sound/soc/s6000/Kconfig"
+ source "sound/soc/sh/Kconfig"
+ source "sound/soc/sirf/Kconfig"
+ source "sound/soc/spear/Kconfig"
++source "sound/soc/sunxi/Kconfig"
+ source "sound/soc/tegra/Kconfig"
+ source "sound/soc/txx9/Kconfig"
+ source "sound/soc/ux500/Kconfig"
+diff --git a/sound/soc/Makefile b/sound/soc/Makefile
+index 5f1df02..50c7ab3 100644
+--- a/sound/soc/Makefile
++++ b/sound/soc/Makefile
+@@ -29,6 +29,7 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
+ obj-$(CONFIG_SND_SOC)	+= sh/
+ obj-$(CONFIG_SND_SOC)	+= sirf/
+ obj-$(CONFIG_SND_SOC)	+= spear/
++obj-$(CONFIG_SND_SOC)	+= sunxi/
+ obj-$(CONFIG_SND_SOC)	+= tegra/
+ obj-$(CONFIG_SND_SOC)	+= txx9/
+ obj-$(CONFIG_SND_SOC)	+= ux500/
+diff --git a/sound/soc/sunxi/Kconfig b/sound/soc/sunxi/Kconfig
+index 79511ae..777d0e0 100644
+--- a/sound/soc/sunxi/Kconfig
++++ b/sound/soc/sunxi/Kconfig
+@@ -7,4 +7,10 @@ config SND_SUNXI_SOC_CODEC
+ 	select REGMAP_MMIO
+ 	default y
+ 
++config SND_SUNXI_SOC_I2S
++	tristate "sun4i/sun5i/sun7i I2S"
++	select SND_SOC_GENERIC_DMAENGINE_PCM
++	select REGMAP_MMIO
++	default y
++
+ endmenu
+diff --git a/sound/soc/sunxi/Makefile b/sound/soc/sunxi/Makefile
+index b8950d3..d87b4c1 100644
+--- a/sound/soc/sunxi/Makefile
++++ b/sound/soc/sunxi/Makefile
+@@ -1,2 +1,3 @@
+ obj-$(CONFIG_SND_SUNXI_SOC_CODEC) += sunxi-codec.o
++obj-$(CONFIG_SND_SUNXI_SOC_I2S) += sunxi-i2s.o
+ 
+diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
+index 7a4f657..4982b8b 100644
+--- a/sound/soc/sunxi/sunxi-i2s.c
++++ b/sound/soc/sunxi/sunxi-i2s.c
+@@ -414,7 +414,7 @@ static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
+ 	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_8);
+ 	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
+ 	mdelay(10);
+-	
++	printk("JDS - sunxi_i2s_mclk_prepare done\n");
+ 	return 0;
+ }
+ 
+@@ -661,6 +661,9 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		goto err_clk_disable;
+ 
++	//FIXME
++	clk_prepare_enable(priv->clk_mclk);
++
+ 	dev_set_drvdata(&pdev->dev, priv);
+ 
+ 	ret = devm_snd_soc_register_component(&pdev->dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
