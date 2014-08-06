@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    2727ff5d7157c4e0d904d7d76fba7f5b8ed45861
+Top:    fd28ac0163f4f331a0e41db3bd280c27b79af2f1
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
@@ -77,7 +77,7 @@ index a6c1a3c..6c0d638 100644
  		compatible = "gpio-leds";
  		pinctrl-names = "default";
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 3820bb2..86afdb2 100644
+index 3820bb2..ec9adfa 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -725,6 +725,13 @@
@@ -104,7 +104,7 @@ index 3820bb2..86afdb2 100644
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C22000 0x40>;
 +			interrupts = <0 16 4>;
-+			clocks = <&apb0_gates 3>, <&iis0_clk>;
++			clocks = <&apb0_gates 3>, <&i2s0_clk>;
 +			clock-names = "apb", "iis";
 +			clock-output-names = "mclk0";
 +			dmas = <&dma 0 3>, <&dma 0 3>;
@@ -118,7 +118,7 @@ index 3820bb2..86afdb2 100644
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C22400 0x40>;
 +			interrupts = <0 87 4>;
-+			clocks = <&apb0_gates 4>, <&iis1_clk>;
++			clocks = <&apb0_gates 4>, <&i2s1_clk>;
 +			clock-names = "apb", "iis";
 +			clock-output-names = "mclk1";
 +			dmas = <&dma 0 4>, <&dma 0 4>;
@@ -132,7 +132,7 @@ index 3820bb2..86afdb2 100644
 +			compatible = "allwinner,sun7i-a20-iis";
 +			reg = <0x01C24400 0x40>;
 +			interrupts = <0 90 4>;
-+			clocks = <&apb0_gates 8>, <&iis2_clk>;
++			clocks = <&apb0_gates 8>, <&i2s2_clk>;
 +			clock-names = "apb", "iis";
 +			clock-output-names = "mclk2";
 +			dmas = <&dma 0 6>, <&dma 0 6>;
@@ -160,6 +160,30 @@ index 3820bb2..86afdb2 100644
  		sid: eeprom@01c23800 {
  			compatible = "allwinner,sun7i-a20-sid";
  			reg = <0x01c23800 0x200>;
+diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
+index 0060b31..8f08e4b 100644
+--- a/sound/soc/Kconfig
++++ b/sound/soc/Kconfig
+@@ -52,6 +52,7 @@ source "sound/soc/s6000/Kconfig"
+ source "sound/soc/sh/Kconfig"
+ source "sound/soc/sirf/Kconfig"
+ source "sound/soc/spear/Kconfig"
++source "sound/soc/sunxi/Kconfig"
+ source "sound/soc/tegra/Kconfig"
+ source "sound/soc/txx9/Kconfig"
+ source "sound/soc/ux500/Kconfig"
+diff --git a/sound/soc/Makefile b/sound/soc/Makefile
+index 5f1df02..50c7ab3 100644
+--- a/sound/soc/Makefile
++++ b/sound/soc/Makefile
+@@ -29,6 +29,7 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
+ obj-$(CONFIG_SND_SOC)	+= sh/
+ obj-$(CONFIG_SND_SOC)	+= sirf/
+ obj-$(CONFIG_SND_SOC)	+= spear/
++obj-$(CONFIG_SND_SOC)	+= sunxi/
+ obj-$(CONFIG_SND_SOC)	+= tegra/
+ obj-$(CONFIG_SND_SOC)	+= txx9/
+ obj-$(CONFIG_SND_SOC)	+= ux500/
 diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
 index 0b9571c..94a6bc8 100644
 --- a/sound/soc/codecs/Kconfig
@@ -2040,10 +2064,10 @@ index 0000000..7588860
 +#endif /* _ASOC_TAS_5716_H */
 diff --git a/sound/soc/sunxi/Kconfig b/sound/soc/sunxi/Kconfig
 new file mode 100644
-index 0000000..79511ae
+index 0000000..777d0e0
 --- /dev/null
 +++ b/sound/soc/sunxi/Kconfig
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,16 @@
 +menu "SoC Audio support for Allwinner SoCs"
 +        depends on ARCH_SUNXI
 +
@@ -2053,14 +2077,21 @@ index 0000000..79511ae
 +	select REGMAP_MMIO
 +	default y
 +
++config SND_SUNXI_SOC_I2S
++	tristate "sun4i/sun5i/sun7i I2S"
++	select SND_SOC_GENERIC_DMAENGINE_PCM
++	select REGMAP_MMIO
++	default y
++
 +endmenu
 diff --git a/sound/soc/sunxi/Makefile b/sound/soc/sunxi/Makefile
 new file mode 100644
-index 0000000..b8950d3
+index 0000000..d87b4c1
 --- /dev/null
 +++ b/sound/soc/sunxi/Makefile
-@@ -0,0 +1,2 @@
+@@ -0,0 +1,3 @@
 +obj-$(CONFIG_SND_SUNXI_SOC_CODEC) += sunxi-codec.o
++obj-$(CONFIG_SND_SUNXI_SOC_I2S) += sunxi-i2s.o
 +
 diff --git a/sound/soc/sunxi/i2s/Kconfig b/sound/soc/sunxi/i2s/Kconfig
 new file mode 100644
@@ -4963,10 +4994,10 @@ index 0000000..7bf2275
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
 new file mode 100644
-index 0000000..7a4f657
+index 0000000..4982b8b
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.c
-@@ -0,0 +1,706 @@
+@@ -0,0 +1,709 @@
 +/*
 + * Copyright 2014 Emilio López <emilio@elopez.com.ar>
 + * Copyright 2014 Jon Smirl <jonsmirl@gmail.com>
@@ -5383,7 +5414,7 @@ index 0000000..7a4f657
 +	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_8);
 +	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
 +	mdelay(10);
-+	
++	printk("JDS - sunxi_i2s_mclk_prepare done\n");
 +	return 0;
 +}
 +
@@ -5629,6 +5660,9 @@ index 0000000..7a4f657
 +	ret = sunxi_i2s_mclk_init(pdev, priv);
 +	if (ret)
 +		goto err_clk_disable;
++
++	//FIXME
++	clk_prepare_enable(priv->clk_mclk);
 +
 +	dev_set_drvdata(&pdev->dev, priv);
 +
