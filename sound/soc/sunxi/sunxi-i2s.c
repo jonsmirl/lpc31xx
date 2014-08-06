@@ -414,7 +414,7 @@ static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
 	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_8);
 	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
 	mdelay(10);
-	
+	printk("JDS - sunxi_i2s_mclk_prepare done\n");
 	return 0;
 }
 
@@ -660,6 +660,9 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	ret = sunxi_i2s_mclk_init(pdev, priv);
 	if (ret)
 		goto err_clk_disable;
+
+	//FIXME
+	clk_prepare_enable(priv->clk_mclk);
 
 	dev_set_drvdata(&pdev->dev, priv);
 

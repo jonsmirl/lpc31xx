@@ -888,7 +888,7 @@
 			compatible = "allwinner,sun7i-a20-iis";
 			reg = <0x01C22000 0x40>;
 			interrupts = <0 16 4>;
-			clocks = <&apb0_gates 3>, <&iis0_clk>;
+			clocks = <&apb0_gates 3>, <&i2s0_clk>;
 			clock-names = "apb", "iis";
 			clock-output-names = "mclk0";
 			dmas = <&dma 0 3>, <&dma 0 3>;
@@ -902,7 +902,7 @@
 			compatible = "allwinner,sun7i-a20-iis";
 			reg = <0x01C22400 0x40>;
 			interrupts = <0 87 4>;
-			clocks = <&apb0_gates 4>, <&iis1_clk>;
+			clocks = <&apb0_gates 4>, <&i2s1_clk>;
 			clock-names = "apb", "iis";
 			clock-output-names = "mclk1";
 			dmas = <&dma 0 4>, <&dma 0 4>;
@@ -916,7 +916,7 @@
 			compatible = "allwinner,sun7i-a20-iis";
 			reg = <0x01C24400 0x40>;
 			interrupts = <0 90 4>;
-			clocks = <&apb0_gates 8>, <&iis2_clk>;
+			clocks = <&apb0_gates 8>, <&i2s2_clk>;
 			clock-names = "apb", "iis";
 			clock-output-names = "mclk2";
 			dmas = <&dma 0 6>, <&dma 0 6>;
