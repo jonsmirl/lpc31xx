@@ -3309,8 +3309,9 @@ int snd_soc_dapm_new_dai_widgets(struct snd_soc_dapm_context *dapm,
 		template.name = dai->driver->playback.stream_name;
 		template.sname = dai->driver->playback.stream_name;
 
-		dev_dbg(dai->dev, "ASoC: adding %s widget\n",
+		dev_dbg(dai->dev, "ASoC: adding 2 %s widget\n",
 			template.name);
+		dump_stack();
 
 		w = snd_soc_dapm_new_control(dapm, &template);
 		if (!w) {
