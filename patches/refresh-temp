@@ -1,0 +1,83 @@
+Bottom: 6b53902079bfb9f7617bbdb5c93326cc79ab2647
+Top:    543417b09ae4c1c879a5657d9f86852087d52095
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-08-10 19:56:20 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index 5ef2c24..a9108b1 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -115,10 +115,9 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 			      const struct device_node **p_node,
+ 			      const char **name)
+ {
+-	struct platform_device *pdev;
+ 	struct device_node *node;
+ 	struct clk *clk;
+-	const char *clk_name = NULL;
++	struct of_phandle_args clkspec;
+ 	int ret;
+ 
+ 	/*
+@@ -159,18 +158,12 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 				     "system-clock-frequency",
+ 				     &dai->sysclk);
+ 	} else {
+-		of_property_read_string(node, "clock-output-names", &clk_name);
+-		if (clk_name) {
+-			pdev = of_find_device_by_node(node);
+-printk("JDS - sysclk pdev %p name %s\n", pdev, clk_name);
+-			clk = clk_get(&pdev->dev, clk_name);
+-		
+-printk("JDS - sysclk %p %d\n", clk, (int)clk);
+-			if (!IS_ERR(clk)) {
+-				dai->sysclk = clk_get_rate(clk);
+-printk("JDS - sysclk rate %d\n", dai->sysclk);
+-				clk_put(clk);
+-			}
++		clkspec.np = node;
++		clk = of_clk_get_from_provider(&clkspec);
++
++		if (!IS_ERR(clk)) {
++			dai->sysclk = clk_get_rate(clk);
++			clk_put(clk);
+ 		}
+ 	}
+ 	return 0;
+diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
+index b8d8b8b..1c9095c 100644
+--- a/sound/soc/sunxi/sunxi-i2s.c
++++ b/sound/soc/sunxi/sunxi-i2s.c
+@@ -458,7 +458,8 @@ static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *
+ 	if (ret)
+ 		return ret;
+ 
+-	printk("JDS - sunxi_i2s_mclk_init\n");
++	printk("JDS - sunxi_i2s_mclk_init %p\n", priv->clk_mclk);
++
+ 	return 0;
+ }
+ 
+@@ -593,7 +594,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
+ 	if (!of_device_is_available(np))
+ 		return -ENODEV;
+ 
+-	printk("JDS: sunxi_i2s_probe\n");
++	printk("JDS: sunxi_i2s_probe pdev %p\n", pdev);
+ 	of_id = of_match_device(sunxi_i2s_of_match, dev);
+ 	if (!of_id)
+ 		return -EINVAL;
+@@ -659,9 +660,6 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		goto err_clk_disable;
+ 
+-	//FIXME
+-	clk_prepare_enable(priv->clk_mclk);
+-
+ 	dev_set_drvdata(&pdev->dev, priv);
+ 
+ 	ret = devm_snd_soc_register_component(dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
