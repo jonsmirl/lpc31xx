@@ -1,0 +1,76 @@
+Bottom: 0404dccf13e158715a5a8eb48e1588a553cba63a
+Top:    6b53902079bfb9f7617bbdb5c93326cc79ab2647
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-08-10 15:40:44 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/drivers/clk/clk.c b/drivers/clk/clk.c
+index f95590a..ca38548 100644
+--- a/drivers/clk/clk.c
++++ b/drivers/clk/clk.c
+@@ -9,6 +9,8 @@
+  * Standard functionality for the common clock API.  See Documentation/clk.txt
+  */
+ 
++#define DEBUG
++
+ #include <linux/clk-private.h>
+ #include <linux/clk/clk-conf.h>
+ #include <linux/module.h>
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index 8c4b267..5ef2c24 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -13,6 +13,7 @@
+ #include <linux/module.h>
+ #include <linux/of.h>
+ #include <linux/platform_device.h>
++#include <linux/of_platform.h>
+ #include <linux/string.h>
+ #include <sound/simple_card.h>
+ #include <sound/soc-dai.h>
+@@ -109,11 +110,12 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
+ }
+ 
+ static int
+-asoc_simple_card_sub_parse_of(struct device_node *np,
++asoc_simple_card_sub_parse_of(struct device_node *np, 
+ 			      struct asoc_simple_dai *dai,
+ 			      const struct device_node **p_node,
+ 			      const char **name)
+ {
++	struct platform_device *pdev;
+ 	struct device_node *node;
+ 	struct clk *clk;
+ 	const char *clk_name = NULL;
+@@ -159,9 +161,15 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 	} else {
+ 		of_property_read_string(node, "clock-output-names", &clk_name);
+ 		if (clk_name) {
+-			clk = of_clk_get_by_name(node, clk_name);
++			pdev = of_find_device_by_node(node);
++printk("JDS - sysclk pdev %p name %s\n", pdev, clk_name);
++			clk = clk_get(&pdev->dev, clk_name);
++		
++printk("JDS - sysclk %p %d\n", clk, (int)clk);
+ 			if (!IS_ERR(clk)) {
+ 				dai->sysclk = clk_get_rate(clk);
++printk("JDS - sysclk rate %d\n", dai->sysclk);
++				clk_put(clk);
+ 			}
+ 		}
+ 	}
+diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
+index e5e6e9a..b8d8b8b 100644
+--- a/sound/soc/sunxi/sunxi-i2s.c
++++ b/sound/soc/sunxi/sunxi-i2s.c
+@@ -458,6 +458,7 @@ static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *
+ 	if (ret)
+ 		return ret;
+ 
++	printk("JDS - sunxi_i2s_mclk_init\n");
+ 	return 0;
+ }
