@@ -115,10 +115,9 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 			      const struct device_node **p_node,
 			      const char **name)
 {
-	struct platform_device *pdev;
 	struct device_node *node;
 	struct clk *clk;
-	const char *clk_name = NULL;
+	struct of_phandle_args clkspec;
 	int ret;
 
 	/*
@@ -159,18 +158,12 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
 	} else {
-		of_property_read_string(node, "clock-output-names", &clk_name);
-		if (clk_name) {
-			pdev = of_find_device_by_node(node);
-printk("JDS - sysclk pdev %p name %s\n", pdev, clk_name);
-			clk = clk_get(&pdev->dev, clk_name);
-		
-printk("JDS - sysclk %p %d\n", clk, (int)clk);
-			if (!IS_ERR(clk)) {
-				dai->sysclk = clk_get_rate(clk);
-printk("JDS - sysclk rate %d\n", dai->sysclk);
-				clk_put(clk);
-			}
+		clkspec.np = node;
+		clk = of_clk_get_from_provider(&clkspec);
+
+		if (!IS_ERR(clk)) {
+			dai->sysclk = clk_get_rate(clk);
+			clk_put(clk);
 		}
 	}
 	return 0;

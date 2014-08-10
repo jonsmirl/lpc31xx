@@ -458,7 +458,8 @@ static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *
 	if (ret)
 		return ret;
 
-	printk("JDS - sunxi_i2s_mclk_init\n");
+	printk("JDS - sunxi_i2s_mclk_init %p\n", priv->clk_mclk);
+
 	return 0;
 }
 
@@ -593,7 +594,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	if (!of_device_is_available(np))
 		return -ENODEV;
 
-	printk("JDS: sunxi_i2s_probe\n");
+	printk("JDS: sunxi_i2s_probe pdev %p\n", pdev);
 	of_id = of_match_device(sunxi_i2s_of_match, dev);
 	if (!of_id)
 		return -EINVAL;
@@ -658,9 +659,6 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	ret = sunxi_i2s_mclk_init(pdev, priv);
 	if (ret)
 		goto err_clk_disable;
-
-	//FIXME
-	clk_prepare_enable(priv->clk_mclk);
 
 	dev_set_drvdata(&pdev->dev, priv);
 
