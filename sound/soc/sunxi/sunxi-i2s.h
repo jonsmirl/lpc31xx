@@ -400,11 +400,6 @@ enum sunxi_soc_family {
 	SUN7I,	/* A20 SoC */
 };
 
-enum sunxi_i2s_mode {
-	IIS_MASTER,
-	IIS_SLAVE,
-};	
-
 struct sunxi_priv {
 	struct regmap *regmap;
 	struct clk *clk_apb, *clk_iis, *clk_mclk;
@@ -413,6 +408,7 @@ struct sunxi_priv {
 
 	struct snd_dmaengine_dai_dma_data playback_dma_data;
 	struct snd_dmaengine_dai_dma_data capture_dma_data;
+	struct device *dev;
 
 	u32 slave;		//0: master, 1: slave
 	u32 mono;		//0: stereo, 1: mono
@@ -434,7 +430,6 @@ struct sunxi_priv {
 
 	void __iomem *base;
 	struct clk_divider mclk_div;
-	enum sunxi_i2s_mode mode;
 };
 
 #endif

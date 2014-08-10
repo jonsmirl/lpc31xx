@@ -517,6 +517,8 @@ static int sgtl5000_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
 
+printk("JDS - sgtl5000_set_dai_sysclk %d id %d\n", freq, clk_id);
+
 	switch (clk_id) {
 	case SGTL5000_SYSCLK:
 		sgtl5000->sysclk = freq;
@@ -552,6 +554,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 	 * if frame clock lower than 44.1khz, sample feq should set to
 	 * 32khz or 44.1khz.
 	 */
+	printk("JDS frame_rate %d\n", frame_rate);
 	switch (frame_rate) {
 	case 8000:
 	case 16000:
@@ -565,6 +568,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 		sys_fs = frame_rate;
 		break;
 	}
+	printk("JDS sys_fs %d\n", sys_fs);
 
 	/* set divided factor of frame clock */
 	switch (sys_fs / frame_rate) {
@@ -600,6 +604,8 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 			frame_rate);
 		return -EINVAL;
 	}
+
+	printk("JDS sgtl5000->sysclk %d\n", sgtl5000->sysclk);
 
 	/*
 	 * calculate the divider of mclk/sample_freq,
@@ -1443,8 +1449,6 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	if (!sgtl5000)
 		return -ENOMEM;
 
-	printk("JDS - sgtl5000_i2c_probe\n");
-
 	sgtl5000->regmap = devm_regmap_init_i2c(client, &sgtl5000_regmap);
 	if (IS_ERR(sgtl5000->regmap)) {
 		ret = PTR_ERR(sgtl5000->regmap);
@@ -1462,19 +1466,15 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	printk("JDS - sgtl5000_i2c_probe a\n");
 	ret = clk_prepare_enable(sgtl5000->mclk);
 	if (ret)
 		return ret;
-	printk("JDS - sgtl5000_i2c_probe chip id next\n");
 
 	/* read chip information */
 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
-	printk("JDS - sgtl5000_i2c_probe chip id ret %d\n", ret);
 	if (ret)
 		goto disable_clk;
 
-	printk("JDS - sgtl5000_i2c_probe b\n");
 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
 	    SGTL5000_PARTID_PART_ID) {
 		dev_err(&client->dev,
@@ -1483,14 +1483,12 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		goto disable_clk;
 	}
 
-	printk("JDS - sgtl5000_i2c_probe c\n");
 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
 	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
 	sgtl5000->revision = rev;
 
 	i2c_set_clientdata(client, sgtl5000);
 
-	printk("JDS - sgtl5000_i2c_probe d\n");
 	/* Ensure sgtl5000 will start with sane register values */
 	ret = sgtl5000_fill_defaults(sgtl5000);
 	if (ret)
@@ -1501,7 +1499,6 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	if (ret)
 		goto disable_clk;
 
-	printk("JDS - sgtl5000_i2c_probe finished\n");
 	return 0;
 
 disable_clk:

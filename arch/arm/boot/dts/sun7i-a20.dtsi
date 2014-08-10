@@ -882,11 +882,11 @@
 			status = "disabled";
 		};
 
-		iis0: iis@01c22000 {
+		iis0: iis@01c22400 {
 			#clock-cells = <0>;
 			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-iis";
-			reg = <0x01C22000 0x40>;
+			reg = <0x01C22400 0x40>;
 			interrupts = <0 16 4>;
 			clocks = <&apb0_gates 3>, <&i2s0_clk>;
 			clock-names = "apb", "iis";
@@ -896,11 +896,11 @@
 			status = "disabled";
 		};
 
-		iis1: iis@01c22400 {
+		iis1: iis@01c22000 {
 			#clock-cells = <0>;
 			#sound-dai-cells = <0>;
 			compatible = "allwinner,sun7i-a20-iis";
-			reg = <0x01C22400 0x40>;
+			reg = <0x01C22000 0x40>;
 			interrupts = <0 87 4>;
 			clocks = <&apb0_gates 4>, <&i2s1_clk>;
 			clock-names = "apb", "iis";

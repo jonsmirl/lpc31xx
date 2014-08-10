@@ -116,6 +116,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 {
 	struct device_node *node;
 	struct clk *clk;
+	const char *clk_name = NULL;
 	int ret;
 
 	/*
@@ -156,11 +157,14 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
 	} else {
-		clk = of_clk_get(node, 0);
-		if (!IS_ERR(clk))
-			dai->sysclk = clk_get_rate(clk);
+		of_property_read_string(node, "clock-output-names", &clk_name);
+		if (clk_name) {
+			clk = of_clk_get_by_name(node, clk_name);
+			if (!IS_ERR(clk)) {
+				dai->sysclk = clk_get_rate(clk);
+			}
+		}
 	}
-
 	return 0;
 }
 

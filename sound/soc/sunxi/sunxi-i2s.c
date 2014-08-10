@@ -313,17 +313,16 @@ static int sunxi_i2s_trigger(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-//freq:   1: 22.5792MHz   0: 24.576MHz
 static int sunxi_i2s_set_sysclk(struct snd_soc_dai *cpu_dai, int clk_id, unsigned int freq, int dir)
 {
 	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 
-	if (!freq) {
-		clk_set_rate(priv->clk_iis, 24576000);
+	if ((freq == 24576000) || (freq == 22579200)) {
+		clk_set_rate(priv->clk_iis, freq);
 	} else {
-		clk_set_rate(priv->clk_iis, 22579200);
+		dev_err(priv->dev, "rate must be 24576000 or 22579200, rate is %d\n", freq);
+		return -EINVAL;
 	}
-
 	return 0;
 }
 
@@ -404,16 +403,13 @@ static int sunxi_i2s_dai_remove(struct snd_soc_dai *cpu_dai)
 
 static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
 {
-	struct sunxi_priv *priv =
-		container_of(hw, struct sunxi_priv, mclk_div.hw);
+	struct sunxi_priv *priv = container_of(hw, struct sunxi_priv, mclk_div.hw);
+	int ret;
 
-	priv->mode = IIS_MASTER;
-	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
-	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, SUNXI_I2SCTL_TXEN);
-	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, SUNXI_I2SCTL_RXEN);
-	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_8);
-	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
-	mdelay(10);
+	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_1);
+	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
+	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
+	//udelay(10);
 	printk("JDS - sunxi_i2s_mclk_prepare done\n");
 	return 0;
 }
@@ -601,18 +597,19 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	if (!of_id)
 		return -EINVAL;
 
-	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
 	priv->revision = (enum sunxi_soc_family)of_id->data;
+	priv->dev = dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	priv->base = devm_ioremap_resource(&pdev->dev, res);
+	priv->base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
-	priv->regmap = devm_regmap_init_mmio(&pdev->dev, priv->base,
+	priv->regmap = devm_regmap_init_mmio(dev, priv->base,
 					     &sunxi_i2s_regmap_config);
 	if (IS_ERR(priv->regmap))
 		return PTR_ERR(priv->regmap);
@@ -666,11 +663,11 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, priv);
 
-	ret = devm_snd_soc_register_component(&pdev->dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
+	ret = devm_snd_soc_register_component(dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
 	if (ret)
 		goto err_clk_disable;
 
-	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
+	ret = devm_snd_dmaengine_pcm_register(dev, NULL, 0);
 	if (ret)
 		goto err_clk_disable;
 
