@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    fd28ac0163f4f331a0e41db3bd280c27b79af2f1
+Top:    0404dccf13e158715a5a8eb48e1588a553cba63a
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
@@ -9,14 +9,14 @@ TAS5716 support for Tyler
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index a6c1a3c..6c0d638 100644
+index a6c1a3c..e546055 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -106,6 +106,16 @@
  			status = "okay";
  		};
  
-+		iis0: iis@01c22000 {
++		iis0: iis@01c22400 {
 +			pinctrl-names = "default";
 +			pinctrl-0 = <&i2s0_pins_a>;
 +			status = "okay";
@@ -29,7 +29,7 @@ index a6c1a3c..6c0d638 100644
  		uart0: serial@01c28000 {
  			pinctrl-names = "default";
  			pinctrl-0 = <&uart0_pins_a>;
-@@ -132,6 +142,24 @@
+@@ -132,6 +142,27 @@
  			pinctrl-names = "default";
  			pinctrl-0 = <&i2c1_pins_a>;
  			status = "okay";
@@ -49,19 +49,21 @@ index a6c1a3c..6c0d638 100644
 +				compatible = "fsl,sgtl5000";
 +				reg = <0x0a>;
 +				clocks = <&iis0>;
++
 +				#sound-dai-cells = <0>;
++				VDDA-supply = <&reg_vcc3v3>;
++				VDDIO-supply = <&reg_vcc3v3>;
 +			};
  		};
  
  		i2c2: i2c@01c2b400 {
-@@ -153,6 +181,21 @@
+@@ -153,6 +184,20 @@
  		};
  	};
  
 +	sound {
 +		compatible = "simple-audio-card";
 +		simple-audio-card,format = "i2s";
-+		simple-audio-card,mclk-fs = <256>;
 +
 +		simple-audio-card,cpu {
 +			sound-dai = <&iis0>;
@@ -77,7 +79,7 @@ index a6c1a3c..6c0d638 100644
  		compatible = "gpio-leds";
  		pinctrl-names = "default";
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 3820bb2..ec9adfa 100644
+index 3820bb2..0a03350 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -725,6 +725,13 @@
@@ -98,11 +100,11 @@ index 3820bb2..ec9adfa 100644
  			status = "disabled";
  		};
  
-+		iis0: iis@01c22000 {
++		iis0: iis@01c22400 {
 +			#clock-cells = <0>;
 +			#sound-dai-cells = <0>;
 +			compatible = "allwinner,sun7i-a20-iis";
-+			reg = <0x01C22000 0x40>;
++			reg = <0x01C22400 0x40>;
 +			interrupts = <0 16 4>;
 +			clocks = <&apb0_gates 3>, <&i2s0_clk>;
 +			clock-names = "apb", "iis";
@@ -112,11 +114,11 @@ index 3820bb2..ec9adfa 100644
 +			status = "disabled";
 +		};
 +
-+		iis1: iis@01c22400 {
++		iis1: iis@01c22000 {
 +			#clock-cells = <0>;
 +			#sound-dai-cells = <0>;
 +			compatible = "allwinner,sun7i-a20-iis";
-+			reg = <0x01C22400 0x40>;
++			reg = <0x01C22000 0x40>;
 +			interrupts = <0 87 4>;
 +			clocks = <&apb0_gates 4>, <&i2s1_clk>;
 +			clock-names = "apb", "iis";
@@ -229,61 +231,43 @@ index 1bd6e1c..dc18e5d 100644
  obj-$(CONFIG_SND_SOC_TLV320AIC23_I2C)	+= snd-soc-tlv320aic23-i2c.o
  obj-$(CONFIG_SND_SOC_TLV320AIC23_SPI)	+= snd-soc-tlv320aic23-spi.o
 diff --git a/sound/soc/codecs/sgtl5000.c b/sound/soc/codecs/sgtl5000.c
-index 3d39f0b..07a46b0 100644
+index 3d39f0b..8e7a083 100644
 --- a/sound/soc/codecs/sgtl5000.c
 +++ b/sound/soc/codecs/sgtl5000.c
-@@ -1443,6 +1443,8 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 	if (!sgtl5000)
- 		return -ENOMEM;
+@@ -517,6 +517,8 @@ static int sgtl5000_set_dai_sysclk(struct snd_soc_dai *codec_dai,
+ 	struct snd_soc_codec *codec = codec_dai->codec;
+ 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
  
-+	printk("JDS - sgtl5000_i2c_probe\n");
++printk("JDS - sgtl5000_set_dai_sysclk %d id %d\n", freq, clk_id);
 +
- 	sgtl5000->regmap = devm_regmap_init_i2c(client, &sgtl5000_regmap);
- 	if (IS_ERR(sgtl5000->regmap)) {
- 		ret = PTR_ERR(sgtl5000->regmap);
-@@ -1460,15 +1462,19 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 		return ret;
+ 	switch (clk_id) {
+ 	case SGTL5000_SYSCLK:
+ 		sgtl5000->sysclk = freq;
+@@ -552,6 +554,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
+ 	 * if frame clock lower than 44.1khz, sample feq should set to
+ 	 * 32khz or 44.1khz.
+ 	 */
++	printk("JDS frame_rate %d\n", frame_rate);
+ 	switch (frame_rate) {
+ 	case 8000:
+ 	case 16000:
+@@ -565,6 +568,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
+ 		sys_fs = frame_rate;
+ 		break;
+ 	}
++	printk("JDS sys_fs %d\n", sys_fs);
+ 
+ 	/* set divided factor of frame clock */
+ 	switch (sys_fs / frame_rate) {
+@@ -601,6 +605,8 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
+ 		return -EINVAL;
  	}
  
-+	printk("JDS - sgtl5000_i2c_probe a\n");
- 	ret = clk_prepare_enable(sgtl5000->mclk);
- 	if (ret)
- 		return ret;
-+	printk("JDS - sgtl5000_i2c_probe chip id next\n");
- 
- 	/* read chip information */
- 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
-+	printk("JDS - sgtl5000_i2c_probe chip id ret %d\n", ret);
- 	if (ret)
- 		goto disable_clk;
- 
-+	printk("JDS - sgtl5000_i2c_probe b\n");
- 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
- 	    SGTL5000_PARTID_PART_ID) {
- 		dev_err(&client->dev,
-@@ -1477,12 +1483,14 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 		goto disable_clk;
- 	}
- 
-+	printk("JDS - sgtl5000_i2c_probe c\n");
- 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
- 	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
- 	sgtl5000->revision = rev;
- 
- 	i2c_set_clientdata(client, sgtl5000);
- 
-+	printk("JDS - sgtl5000_i2c_probe d\n");
- 	/* Ensure sgtl5000 will start with sane register values */
- 	ret = sgtl5000_fill_defaults(sgtl5000);
- 	if (ret)
-@@ -1493,6 +1501,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 	if (ret)
- 		goto disable_clk;
- 
-+	printk("JDS - sgtl5000_i2c_probe finished\n");
- 	return 0;
- 
- disable_clk:
++	printk("JDS sgtl5000->sysclk %d\n", sgtl5000->sysclk);
++
+ 	/*
+ 	 * calculate the divider of mclk/sample_freq,
+ 	 * factor of freq =96k can only be 256, since mclk in range (12m,27m)
 diff --git a/sound/soc/codecs/tas5716.c b/sound/soc/codecs/tas5716.c
 new file mode 100644
 index 0000000..3e52bc6
@@ -2062,6 +2046,37 @@ index 0000000..7588860
 +/* TAS5716_V2OM			0x52	V2OM6[31:0] V2OM4[31:0] V2OM2[31:0] */
 +
 +#endif /* _ASOC_TAS_5716_H */
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index 03a7fdc..8c4b267 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -116,6 +116,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ {
+ 	struct device_node *node;
+ 	struct clk *clk;
++	const char *clk_name = NULL;
+ 	int ret;
+ 
+ 	/*
+@@ -156,11 +157,14 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 				     "system-clock-frequency",
+ 				     &dai->sysclk);
+ 	} else {
+-		clk = of_clk_get(node, 0);
+-		if (!IS_ERR(clk))
+-			dai->sysclk = clk_get_rate(clk);
++		of_property_read_string(node, "clock-output-names", &clk_name);
++		if (clk_name) {
++			clk = of_clk_get_by_name(node, clk_name);
++			if (!IS_ERR(clk)) {
++				dai->sysclk = clk_get_rate(clk);
++			}
++		}
+ 	}
+-
+ 	return 0;
+ }
+ 
 diff --git a/sound/soc/sunxi/Kconfig b/sound/soc/sunxi/Kconfig
 new file mode 100644
 index 0000000..777d0e0
@@ -4994,10 +5009,10 @@ index 0000000..7bf2275
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
 new file mode 100644
-index 0000000..4982b8b
+index 0000000..e5e6e9a
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.c
-@@ -0,0 +1,709 @@
+@@ -0,0 +1,706 @@
 +/*
 + * Copyright 2014 Emilio López <emilio@elopez.com.ar>
 + * Copyright 2014 Jon Smirl <jonsmirl@gmail.com>
@@ -5313,17 +5328,16 @@ index 0000000..4982b8b
 +	return ret;
 +}
 +
-+//freq:   1: 22.5792MHz   0: 24.576MHz
 +static int sunxi_i2s_set_sysclk(struct snd_soc_dai *cpu_dai, int clk_id, unsigned int freq, int dir)
 +{
 +	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 +
-+	if (!freq) {
-+		clk_set_rate(priv->clk_iis, 24576000);
++	if ((freq == 24576000) || (freq == 22579200)) {
++		clk_set_rate(priv->clk_iis, freq);
 +	} else {
-+		clk_set_rate(priv->clk_iis, 22579200);
++		dev_err(priv->dev, "rate must be 24576000 or 22579200, rate is %d\n", freq);
++		return -EINVAL;
 +	}
-+
 +	return 0;
 +}
 +
@@ -5404,16 +5418,13 @@ index 0000000..4982b8b
 +
 +static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
 +{
-+	struct sunxi_priv *priv =
-+		container_of(hw, struct sunxi_priv, mclk_div.hw);
++	struct sunxi_priv *priv = container_of(hw, struct sunxi_priv, mclk_div.hw);
++	int ret;
 +
-+	priv->mode = IIS_MASTER;
-+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
-+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, SUNXI_I2SCTL_TXEN);
-+	regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, SUNXI_I2SCTL_RXEN);
-+	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_8);
-+	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
-+	mdelay(10);
++	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_1);
++	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
++	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
++	//udelay(10);
 +	printk("JDS - sunxi_i2s_mclk_prepare done\n");
 +	return 0;
 +}
@@ -5601,18 +5612,19 @@ index 0000000..4982b8b
 +	if (!of_id)
 +		return -EINVAL;
 +
-+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
++	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 +	if (!priv)
 +		return -ENOMEM;
 +
 +	priv->revision = (enum sunxi_soc_family)of_id->data;
++	priv->dev = dev;
 +
 +	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-+	priv->base = devm_ioremap_resource(&pdev->dev, res);
++	priv->base = devm_ioremap_resource(dev, res);
 +	if (IS_ERR(priv->base))
 +		return PTR_ERR(priv->base);
 +
-+	priv->regmap = devm_regmap_init_mmio(&pdev->dev, priv->base,
++	priv->regmap = devm_regmap_init_mmio(dev, priv->base,
 +					     &sunxi_i2s_regmap_config);
 +	if (IS_ERR(priv->regmap))
 +		return PTR_ERR(priv->regmap);
@@ -5666,11 +5678,11 @@ index 0000000..4982b8b
 +
 +	dev_set_drvdata(&pdev->dev, priv);
 +
-+	ret = devm_snd_soc_register_component(&pdev->dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
++	ret = devm_snd_soc_register_component(dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
 +	if (ret)
 +		goto err_clk_disable;
 +
-+	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
++	ret = devm_snd_dmaengine_pcm_register(dev, NULL, 0);
 +	if (ret)
 +		goto err_clk_disable;
 +
@@ -5709,10 +5721,10 @@ index 0000000..4982b8b
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.h b/sound/soc/sunxi/sunxi-i2s.h
 new file mode 100644
-index 0000000..b857cc1
+index 0000000..b7fecb0
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.h
-@@ -0,0 +1,440 @@
+@@ -0,0 +1,435 @@
 +/*
 + * sound\soc\sunxi\i2s\sunxi-i2s.h
 + * (C) Copyright 2007-2011
@@ -6115,11 +6127,6 @@ index 0000000..b857cc1
 +	SUN7I,	/* A20 SoC */
 +};
 +
-+enum sunxi_i2s_mode {
-+	IIS_MASTER,
-+	IIS_SLAVE,
-+};	
-+
 +struct sunxi_priv {
 +	struct regmap *regmap;
 +	struct clk *clk_apb, *clk_iis, *clk_mclk;
@@ -6128,6 +6135,7 @@ index 0000000..b857cc1
 +
 +	struct snd_dmaengine_dai_dma_data playback_dma_data;
 +	struct snd_dmaengine_dai_dma_data capture_dma_data;
++	struct device *dev;
 +
 +	u32 slave;		//0: master, 1: slave
 +	u32 mono;		//0: stereo, 1: mono
@@ -6149,7 +6157,6 @@ index 0000000..b857cc1
 +
 +	void __iomem *base;
 +	struct clk_divider mclk_div;
-+	enum sunxi_i2s_mode mode;
 +};
 +
 +#endif
