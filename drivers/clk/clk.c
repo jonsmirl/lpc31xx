@@ -9,6 +9,8 @@
  * Standard functionality for the common clock API.  See Documentation/clk.txt
  */
 
+#define DEBUG
+
 #include <linux/clk-private.h>
 #include <linux/clk/clk-conf.h>
 #include <linux/module.h>

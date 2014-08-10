@@ -458,6 +458,7 @@ static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *
 	if (ret)
 		return ret;
 
+	printk("JDS - sunxi_i2s_mclk_init\n");
 	return 0;
 }
 
