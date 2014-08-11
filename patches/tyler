@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    106a7e840a912ca03996e883b013627e287f24a8
+Top:    8f4dd14fef8c75965652fe27e1913242bdbc773c
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
@@ -2048,7 +2048,7 @@ index 0000000..7588860
 +
 +#endif /* _ASOC_TAS_5716_H */
 diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
-index 03a7fdc..7b6edb6 100644
+index 03a7fdc..8840c36 100644
 --- a/sound/soc/generic/simple-card.c
 +++ b/sound/soc/generic/simple-card.c
 @@ -13,6 +13,7 @@
@@ -2067,15 +2067,7 @@ index 03a7fdc..7b6edb6 100644
  	int ret;
  
  	/*
-@@ -145,6 +147,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
- 	 */
- 	if (of_property_read_bool(np, "clocks")) {
- 		clk = of_clk_get(np, 0);
-+printk("JDS clk %p\n", clk);
- 		if (IS_ERR(clk)) {
- 			ret = PTR_ERR(clk);
- 			return ret;
-@@ -155,12 +158,19 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+@@ -155,12 +157,19 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
  		of_property_read_u32(np,
  				     "system-clock-frequency",
  				     &dai->sysclk);
