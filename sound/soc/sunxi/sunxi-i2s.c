@@ -319,9 +319,6 @@ static int sunxi_i2s_set_sysclk(struct snd_soc_dai *cpu_dai, int clk_id, unsigne
 
 	if ((freq == 24576000) || (freq == 22579200)) {
 		clk_set_rate(priv->clk_iis, freq);
-	} else {
-		dev_err(priv->dev, "rate must be 24576000 or 22579200, rate is %d\n", freq);
-		return -EINVAL;
 	}
 	return 0;
 }

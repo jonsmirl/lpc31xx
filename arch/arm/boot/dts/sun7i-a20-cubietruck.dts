@@ -193,6 +193,7 @@
 		};
 
 		simple-audio-card,codec {
+			clocks = <&iis0>;
 			sound-dai = <&sgtl5000>;
 		};
 	};

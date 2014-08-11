@@ -147,6 +147,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 	 */
 	if (of_property_read_bool(np, "clocks")) {
 		clk = of_clk_get(np, 0);
+printk("JDS clk %p\n", clk);
 		if (IS_ERR(clk)) {
 			ret = PTR_ERR(clk);
 			return ret;
@@ -157,7 +158,9 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 		of_property_read_u32(np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
-	} else {
+	} 
+/*
+else {
 		clkspec.np = node;
 		clk = of_clk_get_from_provider(&clkspec);
 
@@ -166,6 +169,8 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 			clk_put(clk);
 		}
 	}
+*/
+printk("JDS sysclk %d\n", dai->sysclk);
 	return 0;
 }
 
