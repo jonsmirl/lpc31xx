@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    4ad22f1e526f42b1b13a14c003f49d09dff2106d
+Top:    106a7e840a912ca03996e883b013627e287f24a8
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
@@ -9,7 +9,7 @@ TAS5716 support for Tyler
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index a6c1a3c..e546055 100644
+index a6c1a3c..6bfab05 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -106,6 +106,16 @@
@@ -57,7 +57,7 @@ index a6c1a3c..e546055 100644
  		};
  
  		i2c2: i2c@01c2b400 {
-@@ -153,6 +184,20 @@
+@@ -153,6 +184,21 @@
  		};
  	};
  
@@ -70,6 +70,7 @@ index a6c1a3c..e546055 100644
 +		};
 +
 +		simple-audio-card,codec {
++			clocks = <&iis0>;
 +			sound-dai = <&sgtl5000>;
 +		};
 +	};
@@ -162,19 +163,6 @@ index 3820bb2..0a03350 100644
  		sid: eeprom@01c23800 {
  			compatible = "allwinner,sun7i-a20-sid";
  			reg = <0x01c23800 0x200>;
-diff --git a/drivers/clk/clk.c b/drivers/clk/clk.c
-index f95590a..ca38548 100644
---- a/drivers/clk/clk.c
-+++ b/drivers/clk/clk.c
-@@ -9,6 +9,8 @@
-  * Standard functionality for the common clock API.  See Documentation/clk.txt
-  */
- 
-+#define DEBUG
-+
- #include <linux/clk-private.h>
- #include <linux/clk/clk-conf.h>
- #include <linux/module.h>
 diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
 index 0060b31..8f08e4b 100644
 --- a/sound/soc/Kconfig
@@ -2060,7 +2048,7 @@ index 0000000..7588860
 +
 +#endif /* _ASOC_TAS_5716_H */
 diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
-index 03a7fdc..05d074b 100644
+index 03a7fdc..7b6edb6 100644
 --- a/sound/soc/generic/simple-card.c
 +++ b/sound/soc/generic/simple-card.c
 @@ -13,6 +13,7 @@
@@ -2079,12 +2067,24 @@ index 03a7fdc..05d074b 100644
  	int ret;
  
  	/*
-@@ -156,11 +158,14 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+@@ -145,6 +147,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 	 */
+ 	if (of_property_read_bool(np, "clocks")) {
+ 		clk = of_clk_get(np, 0);
++printk("JDS clk %p\n", clk);
+ 		if (IS_ERR(clk)) {
+ 			ret = PTR_ERR(clk);
+ 			return ret;
+@@ -155,12 +158,19 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 		of_property_read_u32(np,
  				     "system-clock-frequency",
  				     &dai->sysclk);
- 	} else {
+-	} else {
 -		clk = of_clk_get(node, 0);
 -		if (!IS_ERR(clk))
++	} 
++/*
++else {
 +		clkspec.np = node;
 +		clk = of_clk_get_from_provider(&clkspec);
 +
@@ -2094,6 +2094,8 @@ index 03a7fdc..05d074b 100644
 +		}
  	}
 -
++*/
++printk("JDS sysclk %d\n", dai->sysclk);
  	return 0;
  }
  
@@ -5029,10 +5031,10 @@ index 0000000..7bf2275
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
 new file mode 100644
-index 0000000..1c9095c
+index 0000000..296539e
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.c
-@@ -0,0 +1,705 @@
+@@ -0,0 +1,702 @@
 +/*
 + * Copyright 2014 Emilio López <emilio@elopez.com.ar>
 + * Copyright 2014 Jon Smirl <jonsmirl@gmail.com>
@@ -5354,9 +5356,6 @@ index 0000000..1c9095c
 +
 +	if ((freq == 24576000) || (freq == 22579200)) {
 +		clk_set_rate(priv->clk_iis, freq);
-+	} else {
-+		dev_err(priv->dev, "rate must be 24576000 or 22579200, rate is %d\n", freq);
-+		return -EINVAL;
 +	}
 +	return 0;
 +}
