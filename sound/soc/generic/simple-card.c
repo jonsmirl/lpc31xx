@@ -117,7 +117,6 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 {
 	struct device_node *node;
 	struct clk *clk;
-	struct of_phandle_args clkspec;
 	int ret;
 
 	/*
@@ -157,7 +156,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 		of_property_read_u32(np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
-	} 
+	}
 	return 0;
 }
 
