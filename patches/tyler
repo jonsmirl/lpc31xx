@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    8f4dd14fef8c75965652fe27e1913242bdbc773c
+Top:    ad548d5bf94fb7327a0fbfa80527aca1c38cdff8
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
@@ -2048,7 +2048,7 @@ index 0000000..7588860
 +
 +#endif /* _ASOC_TAS_5716_H */
 diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
-index 03a7fdc..8840c36 100644
+index 03a7fdc..588da3d 100644
 --- a/sound/soc/generic/simple-card.c
 +++ b/sound/soc/generic/simple-card.c
 @@ -13,6 +13,7 @@
@@ -2067,27 +2067,17 @@ index 03a7fdc..8840c36 100644
  	int ret;
  
  	/*
-@@ -155,12 +157,19 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+@@ -155,12 +157,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
  		of_property_read_u32(np,
  				     "system-clock-frequency",
  				     &dai->sysclk);
 -	} else {
 -		clk = of_clk_get(node, 0);
 -		if (!IS_ERR(clk))
-+	} 
-+/*
-+else {
-+		clkspec.np = node;
-+		clk = of_clk_get_from_provider(&clkspec);
-+
-+		if (!IS_ERR(clk)) {
- 			dai->sysclk = clk_get_rate(clk);
-+			clk_put(clk);
-+		}
- 	}
+-			dai->sysclk = clk_get_rate(clk);
+-	}
 -
-+*/
-+printk("JDS sysclk %d\n", dai->sysclk);
++	} 
  	return 0;
  }
  
