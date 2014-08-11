@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    543417b09ae4c1c879a5657d9f86852087d52095
+Top:    4ad22f1e526f42b1b13a14c003f49d09dff2106d
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
@@ -2060,7 +2060,7 @@ index 0000000..7588860
 +
 +#endif /* _ASOC_TAS_5716_H */
 diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
-index 03a7fdc..a9108b1 100644
+index 03a7fdc..05d074b 100644
 --- a/sound/soc/generic/simple-card.c
 +++ b/sound/soc/generic/simple-card.c
 @@ -13,6 +13,7 @@
@@ -2071,15 +2071,7 @@ index 03a7fdc..a9108b1 100644
  #include <linux/string.h>
  #include <sound/simple_card.h>
  #include <sound/soc-dai.h>
-@@ -109,13 +110,14 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
- }
- 
- static int
--asoc_simple_card_sub_parse_of(struct device_node *np,
-+asoc_simple_card_sub_parse_of(struct device_node *np, 
- 			      struct asoc_simple_dai *dai,
- 			      const struct device_node **p_node,
- 			      const char **name)
+@@ -116,6 +117,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
  {
  	struct device_node *node;
  	struct clk *clk;
