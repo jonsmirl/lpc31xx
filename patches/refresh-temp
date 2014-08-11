@@ -1,0 +1,29 @@
+Bottom: ad548d5bf94fb7327a0fbfa80527aca1c38cdff8
+Top:    462c1ad16fc010e67e047e83ca700a2840b1cc7f
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-08-10 22:05:12 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index 588da3d..7aeabef 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -117,7 +117,6 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ {
+ 	struct device_node *node;
+ 	struct clk *clk;
+-	struct of_phandle_args clkspec;
+ 	int ret;
+ 
+ 	/*
+@@ -157,7 +156,7 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 		of_property_read_u32(np,
+ 				     "system-clock-frequency",
+ 				     &dai->sysclk);
+-	} 
++	}
+ 	return 0;
+ }
