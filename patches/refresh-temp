@@ -1,0 +1,22 @@
+Bottom: 543417b09ae4c1c879a5657d9f86852087d52095
+Top:    4ad22f1e526f42b1b13a14c003f49d09dff2106d
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-08-10 20:01:35 -0400
+
+Refresh of tyler
+
+---
+
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index a9108b1..05d074b 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -110,7 +110,7 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
+ }
+ 
+ static int
+-asoc_simple_card_sub_parse_of(struct device_node *np, 
++asoc_simple_card_sub_parse_of(struct device_node *np,
+ 			      struct asoc_simple_dai *dai,
+ 			      const struct device_node **p_node,
+ 			      const char **name)
