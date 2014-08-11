@@ -158,18 +158,6 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
 	} 
-/*
-else {
-		clkspec.np = node;
-		clk = of_clk_get_from_provider(&clkspec);
-
-		if (!IS_ERR(clk)) {
-			dai->sysclk = clk_get_rate(clk);
-			clk_put(clk);
-		}
-	}
-*/
-printk("JDS sysclk %d\n", dai->sysclk);
 	return 0;
 }
 
