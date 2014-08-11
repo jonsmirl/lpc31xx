@@ -147,7 +147,6 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 	 */
 	if (of_property_read_bool(np, "clocks")) {
 		clk = of_clk_get(np, 0);
-printk("JDS clk %p\n", clk);
 		if (IS_ERR(clk)) {
 			ret = PTR_ERR(clk);
 			return ret;
