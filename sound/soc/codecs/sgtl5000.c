@@ -450,6 +450,7 @@ static int sgtl5000_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
 	u16 i2sctl = 0;
 
+	WARN_ON(1);
 	sgtl5000->master = 0;
 	/*
 	 * i2s clock and frame master setting.
@@ -611,7 +612,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 	 * calculate the divider of mclk/sample_freq,
 	 * factor of freq =96k can only be 256, since mclk in range (12m,27m)
 	 */
-	switch (sgtl5000->sysclk / sys_fs) {
+	switch (DIV_ROUND_UP(sgtl5000->sysclk, sys_fs)) {
 	case 256:
 		clk_ctl |= SGTL5000_MCLK_FREQ_256FS <<
 			SGTL5000_MCLK_FREQ_SHIFT;
@@ -763,6 +764,7 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 			    SGTL5000_I2S_DLEN_MASK | SGTL5000_I2S_SCLKFREQ_MASK,
 			    i2s_ctl);
 
+	printk("JDS - sgtl5000_pcm_hw_params ok\n");
 	return 0;
 }
 

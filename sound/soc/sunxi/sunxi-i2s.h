@@ -29,8 +29,8 @@
 #define SUNXI_I2S_INT		0x1C /* Digital Audio Interrupt Control Register */
 #define SUNXI_I2S_ISTA		0x20 /* Digital Audio Interrupt Status Register */
 #define SUNXI_I2S_CLKD		0x24 /* Digital Audio Clock Divide Register */
-#define SUNXI_I2S_RXCNT		0x28 /* Digital Audio RX Sample Counter Register */
-#define SUNXI_I2S_TXCNT		0x2C /* Digital Audio TX Sample Counter Register */
+#define SUNXI_I2S_TXCNT		0x28 /* Digital Audio RX Sample Counter Register */
+#define SUNXI_I2S_RXCNT		0x2C /* Digital Audio TX Sample Counter Register */
 #define SUNXI_I2S_TXCHSEL	0x30 /* Digital Audio TX Channel Select register */
 #define SUNXI_I2S_TXCHMAP	0x34 /* Digital Audio TX Channel Mapping Register */
 #define SUNXI_I2S_RXCHSEL	0x38 /* Digital Audio RX Channel Select register */
@@ -191,13 +191,13 @@
 #define SUNXI_I2SFCTL_FRX_SHIFT		24
 #define SUNXI_I2SFCTL_FRX_WIDTH		1
 #define SUNXI_I2SFCTL_TXTL(x) ((x << SUNXI_I2SFCTL_TXTL_SHIFT) & SUNXI_I2SFCTL_TXTL_MASK)
-#define SUNXI_I2SFCTL_TXTL_MASK		(0x3F<<12)
+#define SUNXI_I2SFCTL_TXTL_MASK		(0x7F<<12)
 #define SUNXI_I2SFCTL_TXTL_SHIFT	12
 #define SUNXI_I2SFCTL_TXTL_WIDTH	7
 #define SUNXI_I2SFCTL_RXTL(x) ((x << SUNXI_I2SFCTL_RXTL_SHIFT) & SUNXI_I2SFCTL_RXTL_MASK)
 #define SUNXI_I2SFCTL_RXTL_MASK		(0x3F<<4)
 #define SUNXI_I2SFCTL_RXTL_SHIFT	4
-#define SUNXI_I2SFCTL_RXTL_WIDTH	7
+#define SUNXI_I2SFCTL_RXTL_WIDTH	6
 #define SUNXI_I2SFCTL_TXIM_MASK		(1<<2)
 #define SUNXI_I2SFCTL_TXIM_MOD0		(0<<2)
 #define SUNXI_I2SFCTL_TXIM_MOD1		(1<<2)
@@ -224,7 +224,7 @@
 #define SUNXI_I2SFSTA_RXA_MASK		(1<<8)
 #define SUNXI_I2SFSTA_RXA_SHIFT		8
 #define SUNXI_I2SFSTA_RXA_WIDTH		1
-#define SUNXI_I2SFSTA_RXACNT_MASK	(0x3F<<0)
+#define SUNXI_I2SFSTA_RXACNT_MASK	(0x7F<<0)
 #define SUNXI_I2SFSTA_RXACNT_SHIFT	0
 #define SUNXI_I2SFSTA_RXACNT_WIDTH	7
 
@@ -403,6 +403,7 @@ enum sunxi_soc_family {
 struct sunxi_priv {
 	struct regmap *regmap;
 	struct clk *clk_apb, *clk_iis, *clk_mclk;
+	int sysclk;
 
 	enum sunxi_soc_family revision;
 
@@ -428,7 +429,6 @@ struct sunxi_priv {
 	u32 pcm_lsb_first;	//0: MSB first, 1: LSB first
 	u32 pcm_ch_num;		//PCM channel number (1: one channel, 2: two channel)
 
-	void __iomem *base;
 	struct clk_divider mclk_div;
 };
 
