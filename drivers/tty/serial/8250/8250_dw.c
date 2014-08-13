@@ -258,7 +258,7 @@ static int dw8250_probe_of(struct uart_port *p,
 			   struct dw8250_data *data)
 {
 	struct device_node	*np = p->dev->of_node;
-	struct uart_8250_port *up = up_to_u8250p(p);
+	struct uart_8250_port	*up = up_to_u8250p(p);
 	u32			val;
 	bool has_ucv = true;
 
@@ -295,6 +295,10 @@ static int dw8250_probe_of(struct uart_port *p,
 
 	if (!of_property_read_u32(np, "reg-shift", &val))
 		p->regshift = val;
+
+	/* if dma is specified on the DT, try to use it */
+	if (of_get_property(np, "dmas", NULL))
+		up->dma = &data->dma;
 
 	/* clock got configured through clk api, all done */
 	if (p->uartclk)
