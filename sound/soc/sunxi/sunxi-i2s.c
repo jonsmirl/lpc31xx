@@ -95,6 +95,9 @@ void sunxi_snd_txctrl_i2s(struct sunxi_priv *priv, struct snd_pcm_substream *sub
 	}
 	regmap_write(priv->regmap, SUNXI_I2S_CTL, reg_val);
 
+	regmap_read(priv->regmap, SUNXI_I2S_TXCNT, &reg_val);
+	printk("JDS - SUNXI_I2S_TXCNT %d\n", reg_val);
+
 	//flush TX FIFO
 	regmap_update_bits(priv->regmap, SUNXI_I2S_FCTL, SUNXI_I2SFCTL_FTX_MASK, SUNXI_I2SFCTL_FTX);
 
@@ -108,19 +111,22 @@ void sunxi_snd_txctrl_i2s(struct sunxi_priv *priv, struct snd_pcm_substream *sub
 		/* enable DMA DRQ mode for play */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, SUNXI_I2SINT_TXDRQEN);
 
-		//Global Enable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
-
 	} else {
 		/* IIS TX DISABLE */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_TXEN_MASK, 0);
 
 		/* DISBALE dma DRQ mode */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, 0);
-
-		//Global disable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 	}
+
+/*	{
+	int i;
+	for (i = SUNXI_I2S_CTL; i <= SUNXI_I2S_RXCHMAP; i += 4)  {
+		regmap_read(priv->regmap, i, &reg_val);
+		printk("REG %02x VAL %08x\n", i, reg_val);
+	}
+	}
+*/
 }
 
 void sunxi_snd_rxctrl_i2s(struct sunxi_priv *priv, int on)
@@ -138,18 +144,12 @@ void sunxi_snd_rxctrl_i2s(struct sunxi_priv *priv, int on)
 		/* enable DMA DRQ mode for record */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_RXDRQEN_MASK, SUNXI_I2SINT_RXDRQEN);
 
-		//Global Enable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
-
 	} else {
 		/* IIS RX DISABLE */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_RXEN_MASK, 0);
 
 		/* DISBALE dma DRQ mode */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_RXDRQEN_MASK, 0);
-
-		//Global disable Digital Audio Interface
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, 0);
 	}
 }
 
@@ -166,6 +166,8 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 	u32 reg_val;
 
+	printk("JDS - sunxi_i2s_set_fmt %08x\n", fmt);
+
 	//SDO ON
 	if (priv->revision == SUN4I) {
 		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_SDOEN_ALL, SUNXI_I2SCTL_SDOEN_ALL);
@@ -177,10 +179,14 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	/* master or slave selection */
 	switch(fmt & SND_SOC_DAIFMT_MASTER_MASK){
 	case SND_SOC_DAIFMT_CBM_CFM:   /* codec clk & frm master */
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_MS);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_SLAVE);
+		printk("JDS - sunxi_i2s_set_fmt slave\n");
+		priv->master = 0;
 		break;
 	case SND_SOC_DAIFMT_CBS_CFS:   /* codec clk & frm slave */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, 0);
+		printk("JDS - sunxi_i2s_set_fmt master\n");
+		priv->master = 1;
 		break;
 	default:
 		return -EINVAL;
@@ -189,7 +195,7 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	/* pcm or i2s mode selection */
 	switch(fmt & SND_SOC_DAIFMT_FORMAT_MASK){
 	case SND_SOC_DAIFMT_I2S:        /* I2S mode */
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, SUNXI_I2SCTL_PCM);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_PCM_MASK, 0);
 		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_FMT_MASK, SUNXI_I2SFAT0_FMT_I2S);
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:    /* Right Justified mode */
@@ -243,8 +249,8 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_32BCLK);
 
 	/* PCM REGISTER setup */
-	reg_val = priv->pcm_txtype & 0x3;
-	reg_val |= priv->pcm_rxtype << 2;
+	reg_val = priv->pcm_txtype & SUNXI_I2SFAT1_TXPDM_MASK;
+	reg_val |= priv->pcm_rxtype << SUNXI_I2SFAT1_RXPDM_SHIFT;
 
 	if(!priv->pcm_sync_type)
 		reg_val |= SUNXI_I2SFAT1_SSYNC;				// short sync
@@ -274,10 +280,60 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	return 0;
 }
 
+
 static int sunxi_i2s_hw_params(struct snd_pcm_substream *substream, 
 		struct snd_pcm_hw_params *params, struct snd_soc_dai *cpu_dai)
 {
-	return 0;
+	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
+	unsigned int ret = 0, fmt, div;
+	unsigned long rate = params_rate(params);
+
+	/* set i2s data format */
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S16_LE:
+		fmt = SUNXI_I2SFAT0_SR_16BIT;
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		break;
+	case SNDRV_PCM_FORMAT_S20_3LE:
+		fmt = SUNXI_I2SFAT0_SR_20BIT;
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		fmt = SUNXI_I2SFAT0_SR_24BIT;
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		break;
+	default:
+		return -EINVAL;
+	}
+	regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_SR_MASK, fmt);
+
+	div  = SUNXI_I2SCLKD_MCLKDIV_1;
+	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, div);
+
+	printk("JDS - sunxi_i2s_hw_params sysclk %d rate %ld\n", priv->sysclk, rate);
+
+	if (priv->master) {
+		/* asssumes 32b i2s format */
+		switch (DIV_ROUND_UP(priv->sysclk, rate)) {
+		case 256:
+			div  = SUNXI_I2SCLKD_BCLKDIV_8;
+			break;
+		case 384:
+			div  = SUNXI_I2SCLKD_BCLKDIV_12;
+			break;
+		case 512:
+			div  = SUNXI_I2SCLKD_BCLKDIV_8;
+			break;
+		default:
+			return -EINVAL;
+		}
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
+	}
+
+	return ret;
 }
 
 static int sunxi_i2s_trigger(struct snd_pcm_substream *substream,
@@ -286,6 +342,7 @@ static int sunxi_i2s_trigger(struct snd_pcm_substream *substream,
 	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret = 0;
 
+	printk("JDS - sunxi_i2s_trigger %d\n", cmd);
 	switch (cmd) {
 		case SNDRV_PCM_TRIGGER_START:
 		case SNDRV_PCM_TRIGGER_RESUME:
@@ -319,70 +376,8 @@ static int sunxi_i2s_set_sysclk(struct snd_soc_dai *cpu_dai, int clk_id, unsigne
 
 	if ((freq == 24576000) || (freq == 22579200)) {
 		clk_set_rate(priv->clk_iis, freq);
-	} else {
-		dev_err(priv->dev, "rate must be 24576000 or 22579200, rate is %d\n", freq);
-		return -EINVAL;
 	}
-	return 0;
-}
-
-static int sunxi_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai, int div_id, int div)
-{
-	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
-	u32 reg;
-
-	switch (div_id) {
-	case SUNXI_DIV_MCLK:
-		if (div >= 64)
-			div = SUNXI_I2SCLKD_MCLKDIV_64;
-		else if (div >= 48)
-			div = SUNXI_I2SCLKD_MCLKDIV_48;
-		else if (div >= 32)
-			div = SUNXI_I2SCLKD_MCLKDIV_32;
-		else if (div >= 24)
-			div = SUNXI_I2SCLKD_MCLKDIV_24;
-		else if (div >= 16)
-			div  = SUNXI_I2SCLKD_MCLKDIV_16;
-		else if (div >= 12)
-			div  = SUNXI_I2SCLKD_MCLKDIV_12;
-		else if (div >= 8)
-			div  = SUNXI_I2SCLKD_MCLKDIV_8;
-		else if (div >= 6)
-			div  = SUNXI_I2SCLKD_MCLKDIV_6;
-		else if (div >= 4)
-			div  = SUNXI_I2SCLKD_MCLKDIV_4;
-		else 
-			div  = SUNXI_I2SCLKD_MCLKDIV_2;
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, div);
-		break;
-	case SUNXI_DIV_BCLK:
-		if (div >= 64)
-			div = SUNXI_I2SCLKD_BCLKDIV_64;
-		else if (div >= 32)
-			div = SUNXI_I2SCLKD_BCLKDIV_32;
-		else if (div >= 16)
-			div  = SUNXI_I2SCLKD_BCLKDIV_16;
-		else if (div >= 8)
-			div  = SUNXI_I2SCLKD_BCLKDIV_8;
-		else if (div >= 6)
-			div  = SUNXI_I2SCLKD_BCLKDIV_6;
-		else if (div >= 4)
-			div  = SUNXI_I2SCLKD_BCLKDIV_4;
-		else 
-			div  = SUNXI_I2SCLKD_BCLKDIV_2;
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	//diable MCLK output when high samplerate
-	regmap_read(priv->regmap, SUNXI_I2S_CLKD, &reg);
-	if (!(reg & SUNXI_I2SCLKD_MCLKDIV_MASK)) {
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, 0);
-	} else {
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
-	}
+	priv->sysclk = freq;
 	return 0;
 }
 
@@ -406,10 +401,8 @@ static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
 	struct sunxi_priv *priv = container_of(hw, struct sunxi_priv, mclk_div.hw);
 	int ret;
 
-	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_1);
+//	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, SUNXI_I2SCLKD_MCLKDIV_1);
 	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKOEN_MASK, SUNXI_I2SCLKD_MCLKOEN);
-	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
-	//udelay(10);
 	printk("JDS - sunxi_i2s_mclk_prepare done\n");
 	return 0;
 }
@@ -417,7 +410,7 @@ static int sunxi_i2s_mclk_prepare(struct clk_hw *hw)
 static struct clk_ops sunxi_i2s_clk_divider_ops = {
 };
 
-static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *priv)
+static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *priv, void __iomem *base)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct clk_init_data init;
@@ -438,7 +431,7 @@ static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *
 	init.num_parents = 1;
 
 	/* struct clk_divider assignments */
-	priv->mclk_div.reg = priv->base + SUNXI_I2S_CLKD;
+	priv->mclk_div.reg = base + SUNXI_I2S_CLKD;
 	priv->mclk_div.shift = SUNXI_I2SCLKD_MCLKDIV_SHIFT;
 	priv->mclk_div.width = SUNXI_I2SCLKD_MCLKDIV_WIDTH;
 	priv->mclk_div.flags = 0;
@@ -458,7 +451,8 @@ static int sunxi_i2s_mclk_init(struct platform_device *pdev, struct sunxi_priv *
 	if (ret)
 		return ret;
 
-	printk("JDS - sunxi_i2s_mclk_init\n");
+	printk("JDS - sunxi_i2s_mclk_init %p\n", priv->clk_mclk);
+
 	return 0;
 }
 
@@ -537,8 +531,7 @@ static struct snd_soc_dai_ops sunxi_i2s_dai_ops = {
 	.trigger 	= sunxi_i2s_trigger,
 	.hw_params 	= sunxi_i2s_hw_params,
 	.set_fmt 	= sunxi_i2s_set_fmt,
-	.set_clkdiv = sunxi_i2s_set_clkdiv,
-	.set_sysclk = sunxi_i2s_set_sysclk,
+	.set_sysclk	= sunxi_i2s_set_sysclk,
 };
 
 static struct snd_soc_dai_driver sunxi_i2s_dai = {
@@ -548,7 +541,7 @@ static struct snd_soc_dai_driver sunxi_i2s_dai = {
 	.remove 	= sunxi_i2s_dai_remove,
 	.playback 	= {
 		.channels_min = 1,
-		.channels_max = 2,
+		.channels_max = 8,
 		.rates = SUNXI_I2S_RATES,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | SNDRV_PCM_FMTBIT_S24_LE,
 	},
@@ -563,14 +556,26 @@ static struct snd_soc_dai_driver sunxi_i2s_dai = {
 };
 
 static const struct snd_soc_component_driver sunxi_i2s_component = {
-	.name = "sunxi-i2s",
+	.name	= "sunxi-i2s",
+};
+
+static const struct regmap_range sunxi_i2s_volatile_regs_range[] = {
+	regmap_reg_range(SUNXI_I2S_TXFIFO, SUNXI_I2S_FCTL),
+	regmap_reg_range(SUNXI_I2S_ISTA, SUNXI_I2S_ISTA),
+	regmap_reg_range(SUNXI_I2S_TXCNT, SUNXI_I2S_RXCNT),
+};
+
+static const struct regmap_access_table sunxi_i2s_volatile_regs = {
+	.yes_ranges	= sunxi_i2s_volatile_regs_range,
+	.n_yes_ranges	= ARRAY_SIZE(sunxi_i2s_volatile_regs_range),
 };
 
 static const struct regmap_config sunxi_i2s_regmap_config = {
-	.reg_bits = 32,
-	.reg_stride = 4,
-	.val_bits = 32,
-	.max_register = SUNXI_I2S_RXCHMAP,
+	.reg_bits	= 32,
+	.reg_stride	= 4,
+	.val_bits	= 32,
+	.max_register 	= SUNXI_I2S_RXCHMAP,
+	.volatile_table	= &sunxi_i2s_volatile_regs,
 };
 
 static const struct of_device_id sunxi_i2s_of_match[] = {
@@ -588,12 +593,13 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct sunxi_priv *priv;
 	struct resource *res;
+	void __iomem *base;
 	int ret;
 
 	if (!of_device_is_available(np))
 		return -ENODEV;
 
-	printk("JDS: sunxi_i2s_probe\n");
+	printk("JDS: sunxi_i2s_probe pdev %p\n", pdev);
 	of_id = of_match_device(sunxi_i2s_of_match, dev);
 	if (!of_id)
 		return -EINVAL;
@@ -603,14 +609,13 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	priv->revision = (enum sunxi_soc_family)of_id->data;
-	priv->dev = dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	priv->base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(priv->base))
-		return PTR_ERR(priv->base);
+	base = devm_ioremap_resource(dev, res);
+	if (IS_ERR(base))
+		return PTR_ERR(base);
 
-	priv->regmap = devm_regmap_init_mmio(dev, priv->base,
+	priv->regmap = devm_regmap_init_mmio(dev, base,
 					     &sunxi_i2s_regmap_config);
 	if (IS_ERR(priv->regmap))
 		return PTR_ERR(priv->regmap);
@@ -655,30 +660,28 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 	priv->capture_dma_data.maxburst = 4;
 	priv->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 
-	ret = sunxi_i2s_mclk_init(pdev, priv);
+	ret = sunxi_i2s_mclk_init(pdev, priv, base);
 	if (ret)
-		goto err_clk_disable;
-
-	//FIXME
-	clk_prepare_enable(priv->clk_mclk);
+		return ret;
 
 	dev_set_drvdata(&pdev->dev, priv);
 
 	ret = devm_snd_soc_register_component(dev, &sunxi_i2s_component, &sunxi_i2s_dai, 1);
 	if (ret)
-		goto err_clk_disable;
+		return ret;
 
 	ret = devm_snd_dmaengine_pcm_register(dev, NULL, 0);
 	if (ret)
-		goto err_clk_disable;
+		return ret;
+
+	/* master hardware enable */
+	ret = regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_GEN_MASK, SUNXI_I2SCTL_GEN);
+	if (ret)
+		return ret;
 
 	printk("JDS: sunxi_i2s_probe finished\n");
 	return 0;
 
-err_clk_disable:
-	clk_disable_unprepare(priv->clk_apb);
-	clk_disable_unprepare(priv->clk_iis);
-	return ret;
 }
 
 static int sunxi_i2s_remove(struct platform_device *pdev)

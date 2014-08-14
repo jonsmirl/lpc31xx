@@ -29,8 +29,8 @@
 #define SUNXI_I2S_INT		0x1C /* Digital Audio Interrupt Control Register */
 #define SUNXI_I2S_ISTA		0x20 /* Digital Audio Interrupt Status Register */
 #define SUNXI_I2S_CLKD		0x24 /* Digital Audio Clock Divide Register */
-#define SUNXI_I2S_RXCNT		0x28 /* Digital Audio RX Sample Counter Register */
-#define SUNXI_I2S_TXCNT		0x2C /* Digital Audio TX Sample Counter Register */
+#define SUNXI_I2S_TXCNT		0x28 /* Digital Audio RX Sample Counter Register */
+#define SUNXI_I2S_RXCNT		0x2C /* Digital Audio TX Sample Counter Register */
 #define SUNXI_I2S_TXCHSEL	0x30 /* Digital Audio TX Channel Select register */
 #define SUNXI_I2S_TXCHMAP	0x34 /* Digital Audio TX Channel Mapping Register */
 #define SUNXI_I2S_RXCHSEL	0x38 /* Digital Audio RX Channel Select register */
@@ -60,7 +60,7 @@
 #define SUNXI_I2SCTL_ASS_MASK		(1<<6)
 #define SUNXI_I2SCTL_ASS_SHIFT		6
 #define SUNXI_I2SCTL_ASS_WIDTH		1
-#define SUNXI_I2SCTL_MS			(1<<5)
+#define SUNXI_I2SCTL_SLAVE		(1<<5)
 #define SUNXI_I2SCTL_MS_MASK		(1<<5)
 #define SUNXI_I2SCTL_MS_SHIFT		5
 #define SUNXI_I2SCTL_MS_WIDTH		1
@@ -191,13 +191,13 @@
 #define SUNXI_I2SFCTL_FRX_SHIFT		24
 #define SUNXI_I2SFCTL_FRX_WIDTH		1
 #define SUNXI_I2SFCTL_TXTL(x) ((x << SUNXI_I2SFCTL_TXTL_SHIFT) & SUNXI_I2SFCTL_TXTL_MASK)
-#define SUNXI_I2SFCTL_TXTL_MASK		(0x3F<<12)
+#define SUNXI_I2SFCTL_TXTL_MASK		(0x7F<<12)
 #define SUNXI_I2SFCTL_TXTL_SHIFT	12
 #define SUNXI_I2SFCTL_TXTL_WIDTH	7
 #define SUNXI_I2SFCTL_RXTL(x) ((x << SUNXI_I2SFCTL_RXTL_SHIFT) & SUNXI_I2SFCTL_RXTL_MASK)
 #define SUNXI_I2SFCTL_RXTL_MASK		(0x3F<<4)
 #define SUNXI_I2SFCTL_RXTL_SHIFT	4
-#define SUNXI_I2SFCTL_RXTL_WIDTH	7
+#define SUNXI_I2SFCTL_RXTL_WIDTH	6
 #define SUNXI_I2SFCTL_TXIM_MASK		(1<<2)
 #define SUNXI_I2SFCTL_TXIM_MOD0		(0<<2)
 #define SUNXI_I2SFCTL_TXIM_MOD1		(1<<2)
@@ -224,7 +224,7 @@
 #define SUNXI_I2SFSTA_RXA_MASK		(1<<8)
 #define SUNXI_I2SFSTA_RXA_SHIFT		8
 #define SUNXI_I2SFSTA_RXA_WIDTH		1
-#define SUNXI_I2SFSTA_RXACNT_MASK	(0x3F<<0)
+#define SUNXI_I2SFSTA_RXACNT_MASK	(0x7F<<0)
 #define SUNXI_I2SFSTA_RXACNT_SHIFT	0
 #define SUNXI_I2SFSTA_RXACNT_WIDTH	7
 
@@ -380,45 +380,25 @@
 #define SUNXI_I2SRXCHMAP_CH0_SHIFT	0
 #define SUNXI_I2SRXCHMAP_CH0_WIDTH	3
 
-
-/*------------------------------------------------------------*/
-/* Clock dividers */
-#define SUNXI_DIV_MCLK	0
-#define SUNXI_DIV_BCLK	1
-
-#define SUNXI_I2SCLKD_MCLK_MASK   0x0f
-#define SUNXI_I2SCLKD_MCLK_OFFS   0
-#define SUNXI_I2SCLKD_BCLK_MASK   0x070
-#define SUNXI_I2SCLKD_BCLK_OFFS   4
-#define SUNXI_I2SCLKD_MCLKEN_OFFS 7
-
 /* Supported SoC families - used for quirks */
 enum sunxi_soc_family {
-	SUN4IA,	/* A10 SoC - revision A */
 	SUN4I,	/* A10 SoC - later revisions */
 	SUN5I,	/* A10S/A13 SoCs */
 	SUN7I,	/* A20 SoC */
 };
 
 struct sunxi_priv {
+	enum sunxi_soc_family revision;
 	struct regmap *regmap;
 	struct clk *clk_apb, *clk_iis, *clk_mclk;
-
-	enum sunxi_soc_family revision;
+	struct clk_divider mclk_div;
+	int master, sysclk;
 
 	struct snd_dmaengine_dai_dma_data playback_dma_data;
 	struct snd_dmaengine_dai_dma_data capture_dma_data;
-	struct device *dev;
 
-	u32 slave;		//0: master, 1: slave
-	u32 mono;		//0: stereo, 1: mono
-	u32 samp_fs;		//audio sample rate (unit in kHz)
-	u32 samp_res;		//16 bits, 20 bits , 24 bits, 32 bits)
-	u32 samp_format;	//audio sample format (0: standard I2S, 1: left-justified, 2: right-justified, 3: pcm)
+	/* PCM support */
 	u32 ws_size;		//16 BCLK, 20 BCLK, 24 BCLK, 32 BCLK)
-	u32 mclk_rate;		//mclk frequency divide by fs (128fs, 192fs, 256fs, 384fs, 512fs, 768fs)
-	u32 lrc_pol;		//LRC clock polarity (0: normal ,1: inverted)
-	u32 bclk_pol;		//BCLK polarity (0: normal, 1: inverted)
 	u32 pcm_txtype;		//PCM transmitter type (0: 16-bits linear mode, 1: 8-bits linear mode, 2: u-law, 3: A-law)
 	u32 pcm_rxtype;		//PCM receiver type  (0: 16-bits linear mode, 1: 8-bits linear mode, 2: u-law, 3: A-law)
 	u32 pcm_sw;		//PCM slot width (8: 8 bits, 16: 16 bits)
@@ -428,8 +408,6 @@ struct sunxi_priv {
 	u32 pcm_lsb_first;	//0: MSB first, 1: LSB first
 	u32 pcm_ch_num;		//PCM channel number (1: one channel, 2: two channel)
 
-	void __iomem *base;
-	struct clk_divider mclk_div;
 };
 
 #endif

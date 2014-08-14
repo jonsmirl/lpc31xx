@@ -13,7 +13,6 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
-#include <linux/of_platform.h>
 #include <linux/string.h>
 #include <sound/simple_card.h>
 #include <sound/soc-dai.h>
@@ -34,6 +33,7 @@ static int asoc_simple_card_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct simple_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
 	unsigned int mclk;
 	int ret = 0;
@@ -41,6 +41,10 @@ static int asoc_simple_card_hw_params(struct snd_pcm_substream *substream,
 	if (priv->mclk_fs) {
 		mclk = params_rate(params) * priv->mclk_fs;
 		ret = snd_soc_dai_set_sysclk(codec_dai, 0, mclk,
+					     SND_SOC_CLOCK_IN);
+		if (ret)
+			return ret;
+		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk,
 					     SND_SOC_CLOCK_IN);
 	}
 
@@ -110,15 +114,13 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 }
 
 static int
-asoc_simple_card_sub_parse_of(struct device_node *np, 
+asoc_simple_card_sub_parse_of(struct device_node *np,
 			      struct asoc_simple_dai *dai,
 			      const struct device_node **p_node,
 			      const char **name)
 {
-	struct platform_device *pdev;
 	struct device_node *node;
 	struct clk *clk;
-	const char *clk_name = NULL;
 	int ret;
 
 	/*
@@ -158,21 +160,8 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 		of_property_read_u32(np,
 				     "system-clock-frequency",
 				     &dai->sysclk);
-	} else {
-		of_property_read_string(node, "clock-output-names", &clk_name);
-		if (clk_name) {
-			pdev = of_find_device_by_node(node);
-printk("JDS - sysclk pdev %p name %s\n", pdev, clk_name);
-			clk = clk_get(&pdev->dev, clk_name);
-		
-printk("JDS - sysclk %p %d\n", clk, (int)clk);
-			if (!IS_ERR(clk)) {
-				dai->sysclk = clk_get_rate(clk);
-printk("JDS - sysclk rate %d\n", dai->sysclk);
-				clk_put(clk);
-			}
-		}
 	}
+
 	return 0;
 }
 
