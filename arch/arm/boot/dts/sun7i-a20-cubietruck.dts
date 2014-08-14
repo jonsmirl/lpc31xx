@@ -157,7 +157,7 @@
 			sgtl5000: sgtl5000@a {
 				compatible = "fsl,sgtl5000";
 				reg = <0x0a>;
-				clocks = <&iis0>;
+				pwms = <&pwm 0 100 0>;
 
 				#sound-dai-cells = <0>;
 				VDDA-supply = <&reg_vcc3v3>;
@@ -195,8 +195,8 @@
 		};
 
 		dailink0_master: simple-audio-card,codec {
+			system-clock-frequency = <24000000>;
 			sound-dai = <&sgtl5000>;
-			clocks = <&iis0>;
 		};
 	};
 
