@@ -166,7 +166,8 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 	u32 reg_val;
 
-	WARN_ON(1);
+	printk("JDS - sunxi_i2s_set_fmt %08x\n", fmt);
+
 	//SDO ON
 	if (priv->revision == SUN4I) {
 		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_SDOEN_ALL, SUNXI_I2SCTL_SDOEN_ALL);
@@ -178,10 +179,14 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	/* master or slave selection */
 	switch(fmt & SND_SOC_DAIFMT_MASTER_MASK){
 	case SND_SOC_DAIFMT_CBM_CFM:   /* codec clk & frm master */
-		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_MS);
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_SLAVE);
+		printk("JDS - sunxi_i2s_set_fmt slave\n");
+		priv->master = 0;
 		break;
 	case SND_SOC_DAIFMT_CBS_CFS:   /* codec clk & frm slave */
 		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, 0);
+		printk("JDS - sunxi_i2s_set_fmt master\n");
+		priv->master = 1;
 		break;
 	default:
 		return -EINVAL;
@@ -310,22 +315,23 @@ static int sunxi_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	printk("JDS - sunxi_i2s_hw_params sysclk %d rate %ld\n", priv->sysclk, rate);
 
-	/* asssumes 32b i2s format */
-	switch (DIV_ROUND_UP(priv->sysclk, rate)) {
-	case 256:
-		div  = SUNXI_I2SCLKD_BCLKDIV_8;
-		break;
-	case 384:
-		div  = SUNXI_I2SCLKD_BCLKDIV_12;
-		break;
-	case 512:
-		div  = SUNXI_I2SCLKD_BCLKDIV_8;
-		break;
-	default:
-		return -EINVAL;
+	if (priv->master) {
+		/* asssumes 32b i2s format */
+		switch (DIV_ROUND_UP(priv->sysclk, rate)) {
+		case 256:
+			div  = SUNXI_I2SCLKD_BCLKDIV_8;
+			break;
+		case 384:
+			div  = SUNXI_I2SCLKD_BCLKDIV_12;
+			break;
+		case 512:
+			div  = SUNXI_I2SCLKD_BCLKDIV_8;
+			break;
+		default:
+			return -EINVAL;
+		}
+		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
 	}
-	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
-	
 
 	return ret;
 }
@@ -603,7 +609,6 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	priv->revision = (enum sunxi_soc_family)of_id->data;
-	priv->dev = dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	base = devm_ioremap_resource(dev, res);
