@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    abe9baa130bd6f04ad08c91c2652e61d3de5387d
+Top:    f6e8b9c55bf96b34d899cebd3094217adc493e39
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
@@ -9,7 +9,7 @@ TAS5716 support for Tyler
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index a6c1a3c..ff798ed 100644
+index a6c1a3c..5843f86 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -106,6 +106,16 @@
@@ -57,21 +57,23 @@ index a6c1a3c..ff798ed 100644
  		};
  
  		i2c2: i2c@01c2b400 {
-@@ -153,6 +184,21 @@
+@@ -153,6 +184,23 @@
  		};
  	};
  
 +	sound {
 +		compatible = "simple-audio-card";
 +		simple-audio-card,format = "i2s";
-+		simple-audio-card,mclk-fs = <512>;
++		simple-audio-card,bitclock-master = <&dailink0_master>;
++		simple-audio-card,frame-master = <&dailink0_master>;
 +
 +		simple-audio-card,cpu {
 +			sound-dai = <&iis0>;
 +		};
 +
-+		simple-audio-card,codec {
++		dailink0_master: simple-audio-card,codec {
 +			sound-dai = <&sgtl5000>;
++			clocks = <&iis0>;
 +		};
 +	};
 +
@@ -232,18 +234,27 @@ index 1bd6e1c..dc18e5d 100644
  obj-$(CONFIG_SND_SOC_TLV320AIC23_I2C)	+= snd-soc-tlv320aic23-i2c.o
  obj-$(CONFIG_SND_SOC_TLV320AIC23_SPI)	+= snd-soc-tlv320aic23-spi.o
 diff --git a/sound/soc/codecs/sgtl5000.c b/sound/soc/codecs/sgtl5000.c
-index 3d39f0b..472141b 100644
+index 3d39f0b..dd09d05 100644
 --- a/sound/soc/codecs/sgtl5000.c
 +++ b/sound/soc/codecs/sgtl5000.c
-@@ -450,6 +450,7 @@ static int sgtl5000_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
+@@ -450,6 +450,8 @@ static int sgtl5000_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
  	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
  	u16 i2sctl = 0;
  
-+	WARN_ON(1);
++	printk("JDS - sgtl5000_set_dai_fmt %08x\n", fmt);
++
  	sgtl5000->master = 0;
  	/*
  	 * i2s clock and frame master setting.
-@@ -517,6 +518,8 @@ static int sgtl5000_set_dai_sysclk(struct snd_soc_dai *codec_dai,
+@@ -467,6 +469,7 @@ static int sgtl5000_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
+ 	default:
+ 		return -EINVAL;
+ 	}
++	printk("JDS - sgtl5000_set_dai_fmt master %d\n", sgtl5000->master);
+ 
+ 	/* setting i2s data format */
+ 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+@@ -517,6 +520,8 @@ static int sgtl5000_set_dai_sysclk(struct snd_soc_dai *codec_dai,
  	struct snd_soc_codec *codec = codec_dai->codec;
  	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
  
@@ -252,7 +263,7 @@ index 3d39f0b..472141b 100644
  	switch (clk_id) {
  	case SGTL5000_SYSCLK:
  		sgtl5000->sysclk = freq;
-@@ -552,6 +555,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
+@@ -552,6 +557,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
  	 * if frame clock lower than 44.1khz, sample feq should set to
  	 * 32khz or 44.1khz.
  	 */
@@ -260,7 +271,7 @@ index 3d39f0b..472141b 100644
  	switch (frame_rate) {
  	case 8000:
  	case 16000:
-@@ -565,6 +569,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
+@@ -565,6 +571,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
  		sys_fs = frame_rate;
  		break;
  	}
@@ -268,7 +279,7 @@ index 3d39f0b..472141b 100644
  
  	/* set divided factor of frame clock */
  	switch (sys_fs / frame_rate) {
-@@ -601,11 +606,13 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
+@@ -601,11 +608,13 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
  		return -EINVAL;
  	}
  
@@ -283,7 +294,15 @@ index 3d39f0b..472141b 100644
  	case 256:
  		clk_ctl |= SGTL5000_MCLK_FREQ_256FS <<
  			SGTL5000_MCLK_FREQ_SHIFT;
-@@ -757,6 +764,7 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
+@@ -653,6 +662,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
+ 		t *= 2048;
+ 		do_div(t, in);
+ 		frac_div = t;
++		printk("JDS - SGTL5000_MCLK_FREQ_PLL int %d frac %d\n", int_div, frac_div);
+ 		pll_ctl = int_div << SGTL5000_PLL_INT_DIV_SHIFT |
+ 		    frac_div << SGTL5000_PLL_FRAC_DIV_SHIFT;
+ 
+@@ -757,6 +767,7 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
  			    SGTL5000_I2S_DLEN_MASK | SGTL5000_I2S_SCLKFREQ_MASK,
  			    i2s_ctl);
  
@@ -5035,10 +5054,10 @@ index 0000000..7bf2275
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
 new file mode 100644
-index 0000000..280ec719
+index 0000000..f77f33c
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.c
-@@ -0,0 +1,705 @@
+@@ -0,0 +1,710 @@
 +/*
 + * Copyright 2014 Emilio López <emilio@elopez.com.ar>
 + * Copyright 2014 Jon Smirl <jonsmirl@gmail.com>
@@ -5207,7 +5226,8 @@ index 0000000..280ec719
 +	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 +	u32 reg_val;
 +
-+	WARN_ON(1);
++	printk("JDS - sunxi_i2s_set_fmt %08x\n", fmt);
++
 +	//SDO ON
 +	if (priv->revision == SUN4I) {
 +		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_SDOEN_ALL, SUNXI_I2SCTL_SDOEN_ALL);
@@ -5219,10 +5239,14 @@ index 0000000..280ec719
 +	/* master or slave selection */
 +	switch(fmt & SND_SOC_DAIFMT_MASTER_MASK){
 +	case SND_SOC_DAIFMT_CBM_CFM:   /* codec clk & frm master */
-+		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_MS);
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, SUNXI_I2SCTL_SLAVE);
++		printk("JDS - sunxi_i2s_set_fmt slave\n");
++		priv->master = 0;
 +		break;
 +	case SND_SOC_DAIFMT_CBS_CFS:   /* codec clk & frm slave */
 +		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, 0);
++		printk("JDS - sunxi_i2s_set_fmt master\n");
++		priv->master = 1;
 +		break;
 +	default:
 +		return -EINVAL;
@@ -5351,22 +5375,23 @@ index 0000000..280ec719
 +
 +	printk("JDS - sunxi_i2s_hw_params sysclk %d rate %ld\n", priv->sysclk, rate);
 +
-+	/* asssumes 32b i2s format */
-+	switch (DIV_ROUND_UP(priv->sysclk, rate)) {
-+	case 256:
-+		div  = SUNXI_I2SCLKD_BCLKDIV_8;
-+		break;
-+	case 384:
-+		div  = SUNXI_I2SCLKD_BCLKDIV_12;
-+		break;
-+	case 512:
-+		div  = SUNXI_I2SCLKD_BCLKDIV_8;
-+		break;
-+	default:
-+		return -EINVAL;
++	if (priv->master) {
++		/* asssumes 32b i2s format */
++		switch (DIV_ROUND_UP(priv->sysclk, rate)) {
++		case 256:
++			div  = SUNXI_I2SCLKD_BCLKDIV_8;
++			break;
++		case 384:
++			div  = SUNXI_I2SCLKD_BCLKDIV_12;
++			break;
++		case 512:
++			div  = SUNXI_I2SCLKD_BCLKDIV_8;
++			break;
++		default:
++			return -EINVAL;
++		}
++		regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
 +	}
-+	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_BCLKDIV_MASK, div);
-+	
 +
 +	return ret;
 +}
@@ -5644,7 +5669,6 @@ index 0000000..280ec719
 +		return -ENOMEM;
 +
 +	priv->revision = (enum sunxi_soc_family)of_id->data;
-+	priv->dev = dev;
 +
 +	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 +	base = devm_ioremap_resource(dev, res);
@@ -5746,10 +5770,10 @@ index 0000000..280ec719
 +MODULE_LICENSE("GPL");
 diff --git a/sound/soc/sunxi/sunxi-i2s.h b/sound/soc/sunxi/sunxi-i2s.h
 new file mode 100644
-index 0000000..ab05ad6
+index 0000000..0401af7
 --- /dev/null
 +++ b/sound/soc/sunxi/sunxi-i2s.h
-@@ -0,0 +1,435 @@
+@@ -0,0 +1,413 @@
 +/*
 + * sound\soc\sunxi\i2s\sunxi-i2s.h
 + * (C) Copyright 2007-2011
@@ -5812,7 +5836,7 @@ index 0000000..ab05ad6
 +#define SUNXI_I2SCTL_ASS_MASK		(1<<6)
 +#define SUNXI_I2SCTL_ASS_SHIFT		6
 +#define SUNXI_I2SCTL_ASS_WIDTH		1
-+#define SUNXI_I2SCTL_MS			(1<<5)
++#define SUNXI_I2SCTL_SLAVE		(1<<5)
 +#define SUNXI_I2SCTL_MS_MASK		(1<<5)
 +#define SUNXI_I2SCTL_MS_SHIFT		5
 +#define SUNXI_I2SCTL_MS_WIDTH		1
@@ -6132,46 +6156,25 @@ index 0000000..ab05ad6
 +#define SUNXI_I2SRXCHMAP_CH0_SHIFT	0
 +#define SUNXI_I2SRXCHMAP_CH0_WIDTH	3
 +
-+
-+/*------------------------------------------------------------*/
-+/* Clock dividers */
-+#define SUNXI_DIV_MCLK	0
-+#define SUNXI_DIV_BCLK	1
-+
-+#define SUNXI_I2SCLKD_MCLK_MASK   0x0f
-+#define SUNXI_I2SCLKD_MCLK_OFFS   0
-+#define SUNXI_I2SCLKD_BCLK_MASK   0x070
-+#define SUNXI_I2SCLKD_BCLK_OFFS   4
-+#define SUNXI_I2SCLKD_MCLKEN_OFFS 7
-+
 +/* Supported SoC families - used for quirks */
 +enum sunxi_soc_family {
-+	SUN4IA,	/* A10 SoC - revision A */
 +	SUN4I,	/* A10 SoC - later revisions */
 +	SUN5I,	/* A10S/A13 SoCs */
 +	SUN7I,	/* A20 SoC */
 +};
 +
 +struct sunxi_priv {
++	enum sunxi_soc_family revision;
 +	struct regmap *regmap;
 +	struct clk *clk_apb, *clk_iis, *clk_mclk;
-+	int sysclk;
-+
-+	enum sunxi_soc_family revision;
++	struct clk_divider mclk_div;
++	int master, sysclk;
 +
 +	struct snd_dmaengine_dai_dma_data playback_dma_data;
 +	struct snd_dmaengine_dai_dma_data capture_dma_data;
-+	struct device *dev;
 +
-+	u32 slave;		//0: master, 1: slave
-+	u32 mono;		//0: stereo, 1: mono
-+	u32 samp_fs;		//audio sample rate (unit in kHz)
-+	u32 samp_res;		//16 bits, 20 bits , 24 bits, 32 bits)
-+	u32 samp_format;	//audio sample format (0: standard I2S, 1: left-justified, 2: right-justified, 3: pcm)
++	/* PCM support */
 +	u32 ws_size;		//16 BCLK, 20 BCLK, 24 BCLK, 32 BCLK)
-+	u32 mclk_rate;		//mclk frequency divide by fs (128fs, 192fs, 256fs, 384fs, 512fs, 768fs)
-+	u32 lrc_pol;		//LRC clock polarity (0: normal ,1: inverted)
-+	u32 bclk_pol;		//BCLK polarity (0: normal, 1: inverted)
 +	u32 pcm_txtype;		//PCM transmitter type (0: 16-bits linear mode, 1: 8-bits linear mode, 2: u-law, 3: A-law)
 +	u32 pcm_rxtype;		//PCM receiver type  (0: 16-bits linear mode, 1: 8-bits linear mode, 2: u-law, 3: A-law)
 +	u32 pcm_sw;		//PCM slot width (8: 8 bits, 16: 16 bits)
@@ -6181,7 +6184,6 @@ index 0000000..ab05ad6
 +	u32 pcm_lsb_first;	//0: MSB first, 1: LSB first
 +	u32 pcm_ch_num;		//PCM channel number (1: one channel, 2: two channel)
 +
-+	struct clk_divider mclk_div;
 +};
 +
 +#endif
