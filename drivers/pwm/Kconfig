@@ -226,6 +226,17 @@ config PWM_SPEAR
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-spear.
 
+config PWM_SUNXI
+	tristate "Sunxi PWM Driver (pwm-sunxi)" 
+	depends on ARCH_SUNXI
+	help 
+	  Say Y here if you want Hardware PWM Support 
+ 
+	  To compile this driver as a module, choose M here: the 
+	  module will be called pwm-sunxi.  This driver supports 
+	  a sysfs interface at /sys/class/pwm-sunxi as well as the 
+	  kernel pwm interface. 
+ 
 config PWM_TEGRA
 	tristate "NVIDIA Tegra PWM support"
 	depends on ARCH_TEGRA
