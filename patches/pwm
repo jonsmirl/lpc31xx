@@ -1,5 +1,5 @@
 Bottom: f6e8b9c55bf96b34d899cebd3094217adc493e39
-Top:    600fcef64230102ed3ce5979f8f8edf258d760c0
+Top:    747991009b9642ea8b3e2ca288f23b55b22d602d
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -9,7 +9,7 @@ Add a PWM driver for Allwinner
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index 5843f86..186f862 100644
+index 5843f86..def4394 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -157,7 +157,7 @@
@@ -17,7 +17,7 @@ index 5843f86..186f862 100644
  				compatible = "fsl,sgtl5000";
  				reg = <0x0a>;
 -				clocks = <&iis0>;
-+				pwms = <&pwm 0 100 0>;
++				pwms = <&pwm 0 50 0>;
  
  				#sound-dai-cells = <0>;
  				VDDA-supply = <&reg_vcc3v3>;
@@ -81,10 +81,10 @@ index 5c86a19..c32f827 100644
  obj-$(CONFIG_PWM_TIEHRPWM)	+= pwm-tiehrpwm.o
 diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
 new file mode 100644
-index 0000000..240d01e
+index 0000000..58880e1
 --- /dev/null
 +++ b/drivers/pwm/pwm-sunxi.c
-@@ -0,0 +1,501 @@
+@@ -0,0 +1,513 @@
 +/* pwm-sunxi.c
 + *
 + * pwm module for sun4i (and others) like cubieboard and pcduino
@@ -381,6 +381,21 @@ index 0000000..240d01e
 +	unsigned int prescale, entire_cycles, active_cycles, reg_val;
 +
 +	printk("JDS - sunxi_pwm_config duty %d period %d\n", duty_ns, period_ns);
++	if (period_ns <= 50) {
++		// Just enable the OSC24 clock bypass 
++		switch (pwm->hwpwm) {
++		case 0:
++			regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
++					SUNXI_PWMCTL_PWM0_BYPASS_MASK, SUNXI_PWMCTL_PWM0_BYPASS);
++			break;
++		case 1:
++			regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
++					SUNXI_PWMCTL_PWM1_BYPASS_MASK, SUNXI_PWMCTL_PWM1_BYPASS);
++			break;
++		}
++		return 0;
++	}
++
 +	prescale = pwm_get_best_prescale(period_ns);
 +	if (prescale < 0)
 +		return prescale;
@@ -417,12 +432,9 @@ index 0000000..240d01e
 +	
 +	switch (pwm->hwpwm) {
 +	case 0:
-+		regmap_write(priv->regmap, SUNXI_PWM_CTRL_REG, SUNXI_PWMCTL_PWM0_GATE | SUNXI_PWMCTL_PWM0_EN | SUNXI_PWMCTL_PWM0_BYPASS);
-+#ifdef JDS
 +		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
 +			SUNXI_PWMCTL_PWM0_GATE_MASK | SUNXI_PWMCTL_PWM0_EN_MASK,
 +			SUNXI_PWMCTL_PWM0_GATE | SUNXI_PWMCTL_PWM0_EN);
-+#endif
 +		break;
 +	case 1:
 +		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
