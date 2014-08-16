@@ -1,748 +1,202 @@
-/* pwm-sunxi.c 
- * 
- * pwm module for sun4i (and others) like cubieboard and pcduino 
- * 
- * (C) Copyright 2013 
- * David H. Wilkins  <dwil...@conecuh.com> 
- * 
+/* pwm-sunxi.c
+ *
+ * pwm module for sun4i (and others) like cubieboard and pcduino
+ *
+ * (C) Copyright 2013
+ * David H. Wilkins  <dwil...@conecuh.com>
+ * (C) Copyright 2014
+ * Jon Smirl <jonsmirl@gmail.com>
+ *
  * CHANGELOG:
+ * 8.15.2014 - Jon Smirl
+ * - Total rewrite for mainline inclusion
  * 10.08.2013 - Stefan Voit <stefan.voit@voit-consulting.com>
- * - Added script.bin support for [pwm0_para] and [pwm1_para]: pwm_used, pwm_period, pwm_duty_percent
- * - Added initial setup based on script.bin settings
  * - Removed bug that caused the PWM to pause quickly when changing parameters
  * - Dropped debug/dump functions
  *
  * TODO:
  * - Implement duty_percent=0 to set pwm line to 0 - right now it goes to 100%
- * - Change the script_bin settings loader for pwm_period to allow text based values (100ms, 10hz,...)
- * - Merge h & c file
- * - 
+ * -
  *
- * This program is free software; you can redistribute it and/or 
- * modify it under the terms of the GNU General Public License as 
- * published by the Free Software Foundation; either version 2 of 
- * the License, or (at your option) any later version. 
- * 
- * This program is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.         See the 
- * GNU General Public License for more details. 
- * 
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, 
- * MA 02111-1307 USA 
- */ 
- 
-#include <linux/kobject.h> 
-#include <linux/slab.h> 
-#include <linux/device.h> 
-#include <linux/module.h> 
-#include <linux/kernel.h> 
-#include <linux/platform_device.h> 
-#include <linux/err.h> 
-#include <asm/io.h> 
-#include <asm/delay.h> 
-#include <linux/pwm.h> 
-#include <linux/ctype.h> 
-#include <linux/limits.h> 
-#include <linux/pwm.h> 
-#include <linux/kdev_t.h> 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.         See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ * MA 02111-1307 USA
+ */
+
+#include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/err.h>
+#include <linux/pwm.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
+#include <linux/regmap.h>
+#include <linux/delay.h>
 
-#define SUN4I_PWM_IOREG_MAX 10 
-#define SUN4I_MAX_HARDWARE_PWM_CHANNELS 2 
- 
-/* 
- * structure that defines the pwm control register 
- */ 
- 
-enum sun4i_pwm_prescale { 
-	PRESCALE_DIV120  = 0x00,  /* Divide 24mhz clock by 120 */ 
-	PRESCALE_DIV180  = 0x01, 
-	PRESCALE_DIV240  = 0x02, 
-	PRESCALE_DIV360  = 0x03, 
-	PRESCALE_DIV480  = 0x04, 
-	PRESCALE_INVx05  = 0x05, 
-	PRESCALE_INVx06  = 0x06, 
-	PRESCALE_INVx07  = 0x07, 
-	PRESCALE_DIV12k  = 0x08, 
-	PRESCALE_DIV24k  = 0x09, 
-	PRESCALE_DIV36k  = 0x0a, 
-	PRESCALE_DIV48k  = 0x0b, 
-	PRESCALE_DIV72k  = 0x0c 
-}; 
- 
- 
- 
- 
-struct sun4i_pwm_ctrl { 
-	enum sun4i_pwm_prescale ch0_prescaler:4; /* ch0 Prescale register - values above */ 
-	unsigned int ch0_en:1;                  /* chan 0 enable */ 
-	unsigned int ch0_act_state:1;           /* chan 0 polarity 0=low, 1=high */ 
-	unsigned int ch0_clk_gating:1;          /* Allow clock to run for chan 0 */ 
-	unsigned int ch0_mode:1;                /* Mode - 0 = cycle(running), 1=only 1 pulse */ 
-	unsigned int ch0_pulse_start:1;         /* Write 1 for mode pulse above to start */ 
-	unsigned int unused1:6;                 /* The bit skip count is 6 */ 
-	enum sun4i_pwm_prescale ch1_prescaler:4; /* ch1 Prescale register - values above*/ 
-	unsigned int ch1_en:1;                  /* chan 1 enable */ 
-	unsigned int ch1_act_state:1;           /* chan 1 polarity 0=low, 1=high */ 
-	unsigned int ch1_clk_gating:1;          /* Allow clock to run for chan 1 */ 
-	unsigned int ch1_mode:1;                /* Mode - 0 = cycle(running), 1=only 1 pulse */ 
-	unsigned int ch1_pulse_start:1;         /* Write 1 for mode pulse above to start */ 
-	unsigned int unused2:6;                 /* The bit skip count is 6 */ 
-}; 
- 
- 
-#define A10CLK 24000000  /* Speed of the clock - 24mhz */ 
- 
-#define NO_ENABLE_CHANGE 2  /* Signal to set_pwm_mode to keep the same chan enable bit */ 
- 
-#define PWM_CTRL_ENABLE 1 
-#define PWM_CTRL_DISABLE 0 
- 
-#define MAX_CYCLES 0x0ffff /* max cycle count possible for period active and entire */ 
-struct sun4i_pwm_period { 
-#if MAX_CYCLES > 0x0ff 
-	unsigned int pwm_active_cycles:16;        /* duty cycle */ 
-	unsigned int pwm_entire_cycles:16;        /* period */ 
-#else 
-	unsigned int pwm_active_cycles:8;        /* duty cycle */ 
-	unsigned int unused1:8; 
-	unsigned int pwm_entire_cycles:8;        /* period */ 
-	unsigned int unused2:8; 
-#endif 
-}; 
- 
- 
- 
-union sun4i_pwm_ctrl_u { 
-	struct sun4i_pwm_ctrl s; 
-	unsigned int initializer; 
-}; 
- 
-union sun4i_pwm_period_u { 
-	struct sun4i_pwm_period s; 
-	unsigned int initializer; 
-}; 
- 
- 
-struct sun4i_pwm_available_channel{ 
-	unsigned int use_count; 
-	void *ctrl_addr;                           /* Address of the control register */ 
-	void *pin_addr;                            /* Address of the pin register to change to PWM mode */ 
-	void *period_reg_addr;                     /* Address of the period register for this chan */ 
-	unsigned int channel;                      /* Channel number */ 
-	unsigned long period;                      /* Period in microseconds */ 
-	unsigned long duty;                        /* duty cycle in microseconds */ 
-	unsigned int duty_percent;                 /* percentage (drives duty microseconds if set) */ 
-	enum sun4i_pwm_prescale prescale;           /* best prescale value computed for period */ 
-	union sun4i_pwm_period_u period_reg;       /* period register */ 
-	union sun4i_pwm_ctrl_u ctrl_backup;        /* control register backup at init */ 
-	union sun4i_pwm_ctrl_u ctrl_mask;          /* mask for ctrl register bit we can change */ 
-	union sun4i_pwm_ctrl_u ctrl_current;       /* current control register settings */ 
-	const char *pin_name;                      /* name of the pin */ 
-	const char *name;                          /* name of the pwm device from the pwm i/f */ 
-}; 
- 
+/*------------------------------------------------------------*/
+/* REGISTER definitions */
 
-/* 
- * Forward Declarations 
- */ 
+#define SUNXI_PWM_CTRL_REG	0x00 /* PWM Control Register */
+#define SUNXI_PWM_CH0_PERIOD	0x04 /* PWM Channel 0 Period Register */
+#define SUNXI_PWM_CH1_PERIOD	0x08 /* PWM Channel 1 Period Register */
 
+#define SUNXI_PWM_CHANNEL_MAX 2
 
-#define SUNXI_PWM_DEBUG
+/* SUNXI_PWM_CTRL_REG	0x00	PWM Control Register */
+#define SUNXI_PWMCTL_PWM1_NOTRDY	(1<<29)
+#define SUNXI_PWMCTL_PWM1_RDY_MASK	(1<<29)
+#define SUNXI_PWMCTL_PWM1_RDY_SHIFT	29
+#define SUNXI_PWMCTL_PWM1_RDY_WIDTH	1
+#define SUNXI_PWMCTL_PWM0_NOTRDY	(1<<28)
+#define SUNXI_PWMCTL_PWM0_RDY_MASK	(1<<28)
+#define SUNXI_PWMCTL_PWM0_RDY_SHIFT	28
+#define SUNXI_PWMCTL_PWM0_RDY_WIDTH	1
+#define SUNXI_PWMCTL_PWM1_BYPASS	(1<<24)
+#define SUNXI_PWMCTL_PWM1_BYPASS_MASK	(1<<24)
+#define SUNXI_PWMCTL_PWM1_BYPASS_SHIFT	24
+#define SUNXI_PWMCTL_PWM1_BYPASS_WIDTH	1
+#define SUNXI_PWMCTL_PWM1_START		(1<<23)
+#define SUNXI_PWMCTL_PWM1_START_MASK	(1<<23)
+#define SUNXI_PWMCTL_PWM1_START_SHIFT	23
+#define SUNXI_PWMCTL_PWM1_START_WIDTH	1
+#define SUNXI_PWMCTL_PWM1_MODE		(1<<22)
+#define SUNXI_PWMCTL_PWM1_MODE_MASK	(1<<22)
+#define SUNXI_PWMCTL_PWM1_MODE_SHIFT	22
+#define SUNXI_PWMCTL_PWM1_MODE_WIDTH	1
+#define SUNXI_PWMCTL_PWM1_GATE		(1<<21)
+#define SUNXI_PWMCTL_PWM1_GATE_MASK	(1<<21)
+#define SUNXI_PWMCTL_PWM1_GATE_SHIFT	21
+#define SUNXI_PWMCTL_PWM1_GATE_WIDTH	1
+#define SUNXI_PWMCTL_PWM1_STATE		(1<<20)
+#define SUNXI_PWMCTL_PWM1_STATE_MASK	(1<<20)
+#define SUNXI_PWMCTL_PWM1_STATE_SHIFT	20
+#define SUNXI_PWMCTL_PWM1_STATE_WIDTH	1
+#define SUNXI_PWMCTL_PWM1_EN		(1<<19)
+#define SUNXI_PWMCTL_PWM1_EN_MASK	(1<<19)
+#define SUNXI_PWMCTL_PWM1_EN_SHIFT	19
+#define SUNXI_PWMCTL_PWM1_EN_WIDTH	1
+#define SUNXI_PWMCTL_PWM1_PRE_MASK	(0xf<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_120	(0<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_180	(1<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_240	(2<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_360	(3<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_480	(4<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_12K	(8<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_24K	(9<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_36K	(0xa<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_48K	(0xb<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_72K	(0xc<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_1		(0xf<<15)
+#define SUNXI_PWMCTL_PWM1_PRE_SHIFT	15
+#define SUNXI_PWMCTL_PWM1_PRE_WIDTH	4
+#define SUNXI_PWMCTL_PWM0_BYPASS	(1<<9)
+#define SUNXI_PWMCTL_PWM0_BYPASS_MASK	(1<<9)
+#define SUNXI_PWMCTL_PWM0_BYPASS_SHIFT	9
+#define SUNXI_PWMCTL_PWM0_BYPASS_WIDTH	1
+#define SUNXI_PWMCTL_PWM0_START		(1<<8)
+#define SUNXI_PWMCTL_PWM0_START_MASK	(1<<8)
+#define SUNXI_PWMCTL_PWM0_START_SHIFT	8
+#define SUNXI_PWMCTL_PWM0_START_WIDTH	1
+#define SUNXI_PWMCTL_PWM0_MODE		(1<<7)
+#define SUNXI_PWMCTL_PWM0_MODE_MASK	(1<<7)
+#define SUNXI_PWMCTL_PWM0_MODE_SHIFT	7
+#define SUNXI_PWMCTL_PWM0_MODE_WIDTH	1
+#define SUNXI_PWMCTL_PWM0_GATE		(1<<6)
+#define SUNXI_PWMCTL_PWM0_GATE_MASK	(1<<6)
+#define SUNXI_PWMCTL_PWM0_GATE_SHIFT	6
+#define SUNXI_PWMCTL_PWM0_GATE_WIDTH	1
+#define SUNXI_PWMCTL_PWM0_STATE		(1<<5)
+#define SUNXI_PWMCTL_PWM0_STATE_MASK	(1<<5)
+#define SUNXI_PWMCTL_PWM0_STATE_SHIFT	5
+#define SUNXI_PWMCTL_PWM0_STATE_WIDTH	1
+#define SUNXI_PWMCTL_PWM0_EN		(1<<4)
+#define SUNXI_PWMCTL_PWM0_EN_MASK	(1<<4)
+#define SUNXI_PWMCTL_PWM0_EN_SHIFT	4
+#define SUNXI_PWMCTL_PWM0_EN_WIDTH	1
+#define SUNXI_PWMCTL_PWM0_PRE_MASK	(0xf<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_120	(0<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_180	(1<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_240	(2<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_360	(3<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_480	(4<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_12K	(8<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_24K	(9<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_36K	(0xa<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_48K	(0xb<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_72K	(0xc<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_1		(0xf<<0)
+#define SUNXI_PWMCTL_PWM0_PRE_SHIFT	0
+#define SUNXI_PWMCTL_PWM0_PRE_WIDTH	4
 
-//comment to get debug messages
-#undef SUNXI_PWM_DEBUG
- 
-void release_pwm_sunxi(struct kobject *kobj); 
-void pwm_setup_available_channels(void ); 
-ssize_t pwm_set_mode(unsigned int enable, struct sun4i_pwm_available_channel *chan); 
-enum sun4i_pwm_prescale  pwm_get_best_prescale(unsigned long long period); 
-unsigned int get_entire_cycles(struct sun4i_pwm_available_channel *chan); 
-unsigned int get_active_cycles(struct sun4i_pwm_available_channel *chan); 
-unsigned long convert_string_to_microseconds(const char *buf); 
-int pwm_set_period_and_duty(struct sun4i_pwm_available_channel *chan); 
-void fixup_duty(struct sun4i_pwm_available_channel *chan); 
- 
- 
-static struct class pwm_class; 
- 
-void *PWM_CTRL_REG_BASE = NULL; 
- 
- 
-static struct class_attribute pwm_class_attrs[] = { 
-	__ATTR_NULL 
-}; 
- 
- 
-static struct class pwm_class = { 
-	.name =         "pwm-sunxi", 
-	.owner =        THIS_MODULE, 
-	.class_attrs =  pwm_class_attrs, 
-}; 
- 
- 
-struct device *pwm0; 
-struct device *pwm1; 
- 
- 
-static struct sun4i_pwm_available_channel pwm_available_chan[SUN4I_MAX_HARDWARE_PWM_CHANNELS]; 
-static int sunxi_pwm_class_registered = 0;
+/* SUNXI_PWM_CH0_PERIOD	0x04	PWM Channel 0 Period Register */
+/* SUNXI_PWM_CH1_PERIOD	0x08	PWM Channel 1 Period Register */
+#define SUNXI_PWM_CYCLES_TOTAL_MASK	(0xFFFF<<16)
+#define SUNXI_PWM_CYCLES_TOTAL_SHIFT	16
+#define SUNXI_PWM_CYCLES_TOTAL_WIDTH	16
+#define SUNXI_PWM_CYCLES_ACTIVE_MASK	(0xFFFF<<0)
+#define SUNXI_PWM_CYCLES_ACTIVE_SHIFT	0
+#define SUNXI_PWM_CYCLES_ACTIVE_WIDTH	16
 
-static void __init sunxi_pwm_register_class(void)
-{
-	if (sunxi_pwm_class_registered)
-		return;
+#define MAX_CYCLES 0x0ffff /* max cycle count possible for period active and entire */
 
-	if (class_register(&pwm_class) != 0) {
-		pr_err("pwm-sunxi: class_register failed\n");
-		return;
-	}
-	sunxi_pwm_class_registered = 1;
-}
-
-static int __init sunxi_pwm_init_old(void) 
-{ 
-	int init_enable, init_duty_percent, init_period;
-	struct sun4i_pwm_available_channel *chan;
-	int err = 0;
-
-	pwm_setup_available_channels(); 
-
-	//PWM 0
-	//printk("pwm-sunxi: configuring pwm0...\n");
-	chan = &pwm_available_chan[0];
- 	
-	init_enable=0;
-	init_period=0;
-	init_duty_percent=100;
-
-	//err = script_parser_fetch("pwm0_para", "pwm_used", &init_enable,sizeof(init_enable)/sizeof(int));
-	if (err == 0 && init_enable) {
-		sunxi_pwm_register_class();
-		pwm0 = device_create(&pwm_class, NULL,
-				MKDEV(0, 0), &pwm_available_chan[0], "pwm0");
-		//err = sysfs_create_group(&pwm0->kobj, &pwm_attr_group);
-		if (err)
-			pr_err("pwm-sunxi: sysfs_create_group(pwm0) err %d\n",
-			       err);
-
-		//err = script_parser_fetch("pwm0_para", "pwm_period", &init_period,sizeof(init_period)/sizeof(int));
-		if (err) {
-			pr_err("%s script_parser_fetch '[pwm0_para]' 'pwm_period' err - using 10000\n",	__func__);
-			init_period=10000;
-		}
-
-		//err = script_parser_fetch("pwm0_para", "pwm_duty_percent", &init_duty_percent,sizeof(init_duty_percent)/sizeof(int));
-		if (err) {
-			pr_err("%s script_parser_fetch '[pwm0_para]' 'pwm_duty_percent' err - using 100\n",	__func__);
-			init_duty_percent=100;
-		}
-
-		chan->duty_percent=init_duty_percent;
-		chan->period = init_period; 
-		chan->prescale = pwm_get_best_prescale(init_period); 
-		fixup_duty(chan); 
-#ifdef SUNXI_PWM_DEBUG
-		printk("pwm-sunxi: pwm0 set initial values\n");
-#endif
-		pwm_set_mode(init_enable,chan); 
-		printk("pwm-sunxi: pwm0 configured - period: %ld, duty_percent: %d, duty: %ld\n",
-			chan->period, chan->duty_percent, chan->duty);
-	}
-
-//	if (sunxi_is_sun5i()) /* Only 1 pwm on the A13 / A10s */
-//		return 0;
-
-	//PWM 1
-	//printk("pwm-sunxi: configuring pwm1...\n");
-	chan = &pwm_available_chan[1];
- 	
-	init_enable=0;
-	init_period=0;
-	init_duty_percent=100;
-
-	//err = script_parser_fetch("pwm1_para", "pwm_used", &init_enable,sizeof(init_enable)/sizeof(int));
-	if (err == 0 && init_enable) {
-		sunxi_pwm_register_class();
-		pwm1 = device_create(&pwm_class, NULL,
-				MKDEV(0, 0), &pwm_available_chan[1], "pwm1");
-		//err = sysfs_create_group(&pwm1->kobj, &pwm_attr_group);
-		if (err)
-			pr_err("pwm-sunxi: sysfs_create_group(pwm1) err %d\n",
-			       err);
-
-		//err = script_parser_fetch("pwm1_para", "pwm_period", &init_period,sizeof(init_period)/sizeof(int));
-		if (err) {
-			pr_err("%s script_parser_fetch '[pwm1_para]' 'pwm_period' err - using 10000\n",	__func__);
-			init_period=10000;
-		}
-
-		//err = script_parser_fetch("pwm1_para", "pwm_duty_percent", &init_duty_percent,sizeof(init_duty_percent)/sizeof(int));
-		if (err) {
-			pr_err("%s script_parser_fetch '[pwm1_para]' 'pwm_duty_percent' err - using 100\n",	__func__);
-			init_duty_percent=100;
-		}
-
-		chan->duty_percent=init_duty_percent;
-		chan->period = init_period; 
-		chan->prescale = pwm_get_best_prescale(init_period); 
-		fixup_duty(chan); 
-#ifdef SUNXI_PWM_DEBUG
-		printk("pwm-sunxi: pwm0 set initial values\n");
-#endif
-		pwm_set_mode(init_enable,chan); 
-		printk("pwm-sunxi: pwm1 configured - period: %ld, duty_percent: %d, duty: %ld\n",
-			chan->period, chan->duty_percent, chan->duty);
-	}
-	return 0;
-} 
-
-void sunxi_pwm_exit(void) 
-{ 
-	void *timer_base = NULL; 
-	void *PWM_CTRL_REG_BASE = timer_base + 0x200; 
-
-	//timer_base = ioremap(SW_PA_TIMERC_IO_BASE, 0x400); 
-	if (pwm0) {
-		device_destroy(&pwm_class, pwm0->devt);
-	}
-	if (pwm1) {
-		device_destroy(&pwm_class, pwm1->devt);
-	}
-
-	if (sunxi_pwm_class_registered) {
-		writel(0, PWM_CTRL_REG_BASE + 0); 
-		class_unregister(&pwm_class);
-	}
-}
-
- 
- 
- 
-static const unsigned int prescale_divisor[13] = {120, 
-						  180, 
-						  240, 
-						  360, 
-						  480, 
-						  480, /* Invalid Option */ 
-						  480, /* Invalid Option */ 
-						  480, /* Invalid Option */ 
-						  12000, 
-						  24000, 
-						  36000, 
-						  48000, 
-						  72000}; 
- 
-/* 
- * Find the best prescale value for the period 
- * We want to get the highest period cycle count possible, so we look 
- * make a run through the prescale values looking for numbers over 
- * min_optimal_period_cycles.  If none are found then root though again 
- * taking anything that works 
- */ 
-enum sun4i_pwm_prescale  pwm_get_best_prescale(unsigned long long period_in) { 
-	int i; 
-	unsigned long period = period_in; 
-	const unsigned long min_optimal_period_cycles = MAX_CYCLES / 2; 
-	const unsigned long min_period_cycles = 0x02; 
-	enum sun4i_pwm_prescale best_prescale = 0; 
- 
-	best_prescale = -1; 
-	for(i = 0 ; i < 13 ; i++) { 
-		unsigned long int check_value = (prescale_divisor[i] /24); 
-		if(check_value < 1 || check_value > period) { 
-			break; 
-		} 
-		if(((period / check_value) >= min_optimal_period_cycles) && 
-			((period / check_value) <= MAX_CYCLES)) { 
-			best_prescale = i; 
-			break; 
-		} 
-	} 
- 
-	if(best_prescale > 13) { 
-		for(i = 0 ; i < 13 ; i++) { 
-			unsigned long int check_value = (prescale_divisor[i] /24); 
-			if(check_value < 1 || check_value > period) { 
-				break; 
-			} 
-			if(((period / check_value) >= min_period_cycles) && 
-				((period / check_value) <= MAX_CYCLES)) { 
-				best_prescale = i; 
-				break; 
-			} 
-		} 
-	} 
-	if(best_prescale > 13) { 
-		best_prescale = PRESCALE_DIV480;  /* Something that's not zero - use invalid prescale value */ 
-	} 
- 
-	return best_prescale; 
-} 
- 
-/* 
- * return the number of cycles for the channel period computed from the microseconds 
- * for the period.  Allwinner docs call this "entire" cycles 
- */ 
-unsigned int get_entire_cycles(struct sun4i_pwm_available_channel *chan) { 
-	unsigned int entire_cycles = 0x01; 
-	if ((2 * prescale_divisor[chan->prescale] * MAX_CYCLES) > 0) { 
-		entire_cycles = chan->period / (prescale_divisor[chan->prescale] /24); 
-	} 
-	if(entire_cycles == 0) {entire_cycles = MAX_CYCLES;} 
-	if(entire_cycles > MAX_CYCLES) {entire_cycles = MAX_CYCLES;} 
-#ifdef SUNXI_PWM_DEBUG
-	printk("Best prescale was %d, entire cycles was %u\n",chan->prescale, entire_cycles); 
-#endif
- 
-	return entire_cycles; 
-} 
- 
-/* 
- * return the number of cycles for the channel duty computed from the microseconds 
- * for the duty.  Allwinner docs call this "active" cycles 
- */ 
-unsigned int get_active_cycles(struct sun4i_pwm_available_channel *chan) { 
-	unsigned int active_cycles = 0x01; 
-	unsigned int entire_cycles = get_entire_cycles(chan); 
-	if(chan->duty < 0 && chan->period) { 
-       		active_cycles = entire_cycles-1; 
-	} else if ((2 * prescale_divisor[chan->prescale] * MAX_CYCLES) > 0) { 
-		active_cycles = chan->duty / (prescale_divisor[chan->prescale] /24); 
-	} 
-/*	if(active_cycles == 0) {active_cycles = 0x0ff;} */ 
-#ifdef SUNXI_PWM_DEBUG
-	printk("Best prescale was %d, active cycles was %u (before entire check)\n",chan->prescale, active_cycles); 
-#endif
-	if(active_cycles > MAX_CYCLES) {active_cycles = entire_cycles-1;} 
-#ifdef SUNXI_PWM_DEBUG
-	printk("Best prescale was %d, active cycles was %u (after  entire check)\n",chan->prescale, active_cycles); 
-#endif
-	return active_cycles; 
-} 
- 
-/* 
- * When the duty is set, compute the number of microseconds 
- * based on the period. 
- */ 
- 
-void fixup_duty(struct sun4i_pwm_available_channel *chan) { 
-	if(chan->duty_percent >= 0) { 
-		chan->duty = chan->period * chan->duty_percent / 100; 
-	} 
-} 
- 
-
-int pwm_set_period_and_duty(struct sun4i_pwm_available_channel *chan) { 
-	int return_val = -EINVAL; 
-	unsigned int entire_cycles = get_entire_cycles(chan); 
-	unsigned int active_cycles = get_active_cycles(chan); 
-	chan->period_reg.initializer = 0; 
-	if(entire_cycles >= active_cycles && active_cycles) { 
-		chan->period_reg.s.pwm_entire_cycles = entire_cycles; 
-		chan->period_reg.s.pwm_active_cycles = active_cycles; 
-	} else { 
-		chan->period_reg.s.pwm_entire_cycles = MAX_CYCLES; 
-		chan->period_reg.s.pwm_active_cycles = MAX_CYCLES; 
-	} 
-	writel(chan->period_reg.initializer, chan->period_reg_addr); 
-	return return_val; 
-} 
- 
- 
-ssize_t pwm_set_mode(unsigned int enable, struct sun4i_pwm_available_channel *chan) { 
-	ssize_t status = 0; 
-	if(enable == NO_ENABLE_CHANGE) { 
-		switch (chan->channel) { 
-		case 0: 
-			enable = chan->ctrl_current.s.ch0_en; 
-			break; 
-		case 1: 
-			enable = chan->ctrl_current.s.ch1_en; 
-			break; 
-		default: 
-			status = -EINVAL; 
-			break; 
-		} 
-	} 
-	chan->ctrl_current.initializer = readl(chan->ctrl_addr); 
-	if(enable == 1) { 
-		switch (chan->channel) { 
-		case 0: 
-			chan->ctrl_current.s.ch0_prescaler = 0; 
-			chan->ctrl_current.s.ch0_act_state = 0; 
-			chan->ctrl_current.s.ch0_mode = 0; 
-			chan->ctrl_current.s.ch0_pulse_start = 0; 
-			chan->ctrl_current.s.ch0_en = 0; 
-			chan->ctrl_current.s.ch0_clk_gating = 0; 
-			break; 
-		case 1: 
-			chan->ctrl_current.s.ch1_prescaler = 0; 
-			chan->ctrl_current.s.ch1_act_state = 0; 
-			chan->ctrl_current.s.ch1_mode = 0; 
-			chan->ctrl_current.s.ch1_pulse_start = 0; 
-			chan->ctrl_current.s.ch1_en = 1; 
-			chan->ctrl_current.s.ch1_clk_gating = 0; 
-			break; 
-		default: 
-			status = -EINVAL; 
-			break; 
-		} 
-		if(status) { 
-			return status; 
-		} 
-		if(chan->channel == 0) { 
-			chan->ctrl_current.s.ch0_prescaler = chan->prescale; 
-		} else { 
-			chan->ctrl_current.s.ch1_prescaler = chan->prescale; 
-		} 
-		pwm_set_period_and_duty(chan); 
- 
-		switch (chan->channel) { 
-		case 0: 
-			chan->ctrl_current.s.ch0_en = 1; 
-			chan->ctrl_current.s.ch0_clk_gating = 1; 
-			break; 
-		case 1: 
-			chan->ctrl_current.s.ch1_en = 1; 
-			chan->ctrl_current.s.ch1_clk_gating = 1; 
-			break; 
-		} 
-		writel(chan->ctrl_current.initializer,chan->ctrl_addr); 
- 
-	} else if (enable == 0) { 
-		switch (chan->channel) { 
-		case 0: 
-			chan->ctrl_current.s.ch0_clk_gating = 0; 
-			chan->ctrl_current.s.ch0_en = enable; 
-			break; 
-		case 1: 
-			chan->ctrl_current.s.ch1_clk_gating = 0; 
-			chan->ctrl_current.s.ch1_en = enable; 
-			break; 
-		default: 
-			status = -EINVAL; 
-			break; 
-		} 
-		if(!status) { 
-			writel(chan->ctrl_current.initializer,chan->ctrl_addr); 
-		} 
-	} 
-	return status; 
-} 
- 
- 
- 
-void pwm_setup_available_channels( void ) { 
-	void * timer_base = NULL;  /* 0x01c20c00 */ 
-	void * PWM_CTRL_REG_BASE = timer_base + 0x200;	     /* 0x01c20e00 */ 
-	void * portc_io_base = NULL; /* 0x01c20800 */ 
-	//void * PB_CFG0_REG = (portc_io_base + 0x24);	       /* 0x01C20824 */ 
-	//void * PI_CFG0_REG = (portc_io_base + 0x120);	      /* 0x01c20920 */ 
-	//timer_base = ioremap(SW_PA_TIMERC_IO_BASE, 0x400);  /* 0x01c20c00 */ 
-	//portc_io_base = ioremap(SW_PA_PORTC_IO_BASE,0x400); /* 0x01c20800 */ 
- 
-	/*void * PB_PULL0_REG = (portc_io_base + 0x040);*/	     /* 0x01c20840 */ 
-	/*void * PI_PULL0_REG = (portc_io_base + 0x13c);*/	     /* 0x01c2091c */ 
-	/*void * PH_CFG0_REG = (portc_io_base + 0xfc);*/	       /* 0x01c208fc */ 
-	/*void * PH_CFG1_REG = (portc_io_base + 0x100);*/	      /* 0x01c20900 */ 
-	/*void * PH_PULL0_REG = (portc_io_base + 0x118);*/	     /* 0x01c20918 */ 
- 
-	pwm_available_chan[0].use_count = 0; 
-	pwm_available_chan[0].ctrl_addr = PWM_CTRL_REG_BASE; 
-	pwm_available_chan[0].period_reg_addr = pwm_available_chan[0].ctrl_addr + 0x04; 
-	pwm_available_chan[0].channel = 0; 
-	pwm_available_chan[0].ctrl_backup.initializer = readl(pwm_available_chan[0].ctrl_addr); 
-	pwm_available_chan[0].ctrl_mask.initializer = 0; 
-	pwm_available_chan[0].ctrl_mask.s.ch0_prescaler = 0x0f; 
-	pwm_available_chan[0].ctrl_mask.s.ch0_en = 0x01; 
-	pwm_available_chan[0].ctrl_mask.s.ch0_act_state = 0x01; 
-	pwm_available_chan[0].ctrl_mask.s.ch0_clk_gating = 0x00; 
-	pwm_available_chan[0].ctrl_mask.s.ch0_mode = 0x01; 
-	pwm_available_chan[0].ctrl_mask.s.ch0_pulse_start = 0x01; 
-	pwm_available_chan[0].ctrl_current.initializer = 0; 
- 
-	pwm_available_chan[0].period = 10000; 
-	pwm_available_chan[0].duty_percent = 100; 
-	*(unsigned int *)&pwm_available_chan[0].period_reg = 0; 
-	pwm_available_chan[0].prescale = 0; 
- 
- 
-	pwm_available_chan[1].use_count = 0; 
-	pwm_available_chan[1].ctrl_addr = PWM_CTRL_REG_BASE; 
-	pwm_available_chan[1].period_reg_addr = pwm_available_chan[1].ctrl_addr + 0x08; 
-	pwm_available_chan[1].channel = 1; 
-	pwm_available_chan[1].ctrl_backup.initializer = readl(pwm_available_chan[1].ctrl_addr); 
-	pwm_available_chan[1].ctrl_mask.initializer = 0; 
-	pwm_available_chan[1].ctrl_mask.s.ch1_prescaler = 0x0f; 
-	pwm_available_chan[1].ctrl_mask.s.ch1_en = 0x01; 
-	pwm_available_chan[1].ctrl_mask.s.ch1_act_state = 0x01; 
-	pwm_available_chan[1].ctrl_mask.s.ch1_clk_gating = 0x00; 
-	pwm_available_chan[1].ctrl_mask.s.ch1_mode = 0x01; 
-	pwm_available_chan[1].ctrl_mask.s.ch1_pulse_start = 0x01; 
-	pwm_available_chan[1].ctrl_current.initializer = 0; 
-	pwm_available_chan[1].period = 10000; 
-	pwm_available_chan[1].duty_percent = 50; 
-	*(unsigned int *)&pwm_available_chan[1].period_reg = 0; 
-	pwm_available_chan[1].prescale = 0; 
- 
- 
-} 
-
-static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
-			  int duty_ns, int period_ns)
-{ 
-	struct sunxi_pwm_chip *fpc = to_sunxi_chip(chip);
-
-	if (pwm == NULL || period_ns == 0 || duty_ns > period_ns) 
-		return -EINVAL; 
- 
-	pwm->chan->period = period_ns / 1000; 
-	pwm->chan->prescale = pwm_get_best_prescale(pwm->chan->period); 
-	pwm->chan->duty = duty_ns / 1000; 
-	fixup_duty(pwm->chan); 
-	pwm_set_mode(NO_ENABLE_CHANGE,pwm->chan); 
-	return 0; 
-} 
+/* Supported SoC families - used for quirks */
+enum sunxi_soc_family {
+	SUN4I,	/* A10 SoC - later revisions */
+	SUN5I,	/* A10S/A13 SoCs */
+	SUN7I,	/* A20 SoC */
+};
 
 /*
+ * structure that defines the pwm control register
+ */
 
-struct sunxi_pwm_device { 
-	struct sun4i_pwm_available_channel *chan; 
-}; 
- 
-struct sunxi_pwm_device pwm_devices[2] = { 
-	[0] = {.chan = &pwm_available_chan[0]}, 
-	[1] = {.chan = &pwm_available_chan[1]} 
-}; 
- 
-struct pwm_device *pwm_request(int pwm_id, const char *label) 
-{ 
-	struct pwm_device *pwm; 
-	int found = 0; 
- 
-	if(pwm_id < 2 && pwm_id >= 0) { 
-		pwm = &pwm_devices[pwm_id]; 
-		found = 1; 
-	} 
-	if (found) { 
-		if (pwm->chan->use_count == 0) { 
-			pwm->chan->use_count++; 
-			pwm->chan->name = label; 
-		} else 
-			pwm = ERR_PTR(-EBUSY); 
-	} else 
-		pwm = ERR_PTR(-ENOENT); 
- 
-	return pwm; 
-} 
-EXPORT_SYMBOL(pwm_request); 
- 
- 
-EXPORT_SYMBOL(pwm_config); 
- 
- 
-int pwm_enable(struct pwm_device *pwm) 
-{ 
-	if (pwm == NULL) { 
-		return -EINVAL; 
-	} 
-	pwm_set_mode(PWM_CTRL_ENABLE,pwm->chan); 
-	return 0; 
-} 
-EXPORT_SYMBOL(pwm_enable); 
- 
-void pwm_disable(struct pwm_device *pwm) 
-{ 
-	if (pwm == NULL) { 
-		return; 
-	} 
-	pwm_set_mode(PWM_CTRL_DISABLE,pwm->chan); 
-} 
-EXPORT_SYMBOL(pwm_disable); 
- 
-void pwm_free(struct pwm_device *pwm) 
-{ 
-	if (pwm->chan->use_count) { 
-		pwm->chan->use_count--; 
-	} else 
-		pr_warning("PWM device already freed\n"); 
-} 
-EXPORT_SYMBOL(pwm_free); 
-*/
- 
-
-#define SUNXI_SC		0x00
-#define SUNXI_SC_CLK_MASK	0x3
-#define SUNXI_SC_CLK_SHIFT	3
-#define SUNXI_SC_CLK(c)	(((c) + 1) << SUNXI_SC_CLK_SHIFT)
-#define SUNXI_SC_PS_MASK	0x7
-#define SUNXI_SC_PS_SHIFT	0
-
-#define SUNXI_CNT		0x04
-#define SUNXI_MOD		0x08
-
-#define SUNXI_CSC_BASE	0x0C
-#define SUNXI_CSC_MSB	BIT(5)
-#define SUNXI_CSC_MSA	BIT(4)
-#define SUNXI_CSC_ELSB	BIT(3)
-#define SUNXI_CSC_ELSA	BIT(2)
-#define SUNXI_CSC(_channel)	(SUNXI_CSC_BASE + ((_channel) * 8))
-
-#define SUNXI_CV_BASE	0x10
-#define SUNXI_CV(_channel)	(SUNXI_CV_BASE + ((_channel) * 8))
-
-#define SUNXI_CNTIN	0x4C
-#define SUNXI_STATUS	0x50
-
-#define SUNXI_MODE	0x54
-#define SUNXI_MODE_SUNXIEN	BIT(0)
-#define SUNXI_MODE_INIT	BIT(2)
-#define SUNXI_MODE_PWMSYNC	BIT(3)
-
-#define SUNXI_SYNC	0x58
-#define SUNXI_OUTINIT	0x5C
-#define SUNXI_OUTMASK	0x60
-#define SUNXI_COMBINE	0x64
-#define SUNXI_DEADTIME	0x68
-#define SUNXI_EXTTRIG	0x6C
-#define SUNXI_POL		0x70
-#define SUNXI_FMS		0x74
-#define SUNXI_FILTER	0x78
-#define SUNXI_FLTCTRL	0x7C
-#define SUNXI_QDCTRL	0x80
-#define SUNXI_CONF	0x84
-#define SUNXI_FLTPOL	0x88
-#define SUNXI_SYNCONF	0x8C
-#define SUNXI_INVCTRL	0x90
-#define SUNXI_SWOCTRL	0x94
-#define SUNXI_PWMLOAD	0x98
-
-enum sunxi_pwm_clk {
-	SUNXI_PWM_CLK_SYS,
-	SUNXI_PWM_CLK_FIX,
-	SUNXI_PWM_CLK_EXT,
-	SUNXI_PWM_CLK_CNTEN,
-	SUNXI_PWM_CLK_MAX
+enum sun4i_pwm_prescale {
+	PRESCALE_DIV120  = 0x00,  /* Divide 24mhz clock by 120 */
+	PRESCALE_DIV180  = 0x01,
+	PRESCALE_DIV240  = 0x02,
+	PRESCALE_DIV360  = 0x03,
+	PRESCALE_DIV480  = 0x04,
+	PRESCALE_INVx05  = 0x05,
+	PRESCALE_INVx06  = 0x06,
+	PRESCALE_INVx07  = 0x07,
+	PRESCALE_DIV12k  = 0x08,
+	PRESCALE_DIV24k  = 0x09,
+	PRESCALE_DIV36k  = 0x0a,
+	PRESCALE_DIV48k  = 0x0b,
+	PRESCALE_DIV72k  = 0x0c
 };
+
+static const unsigned int prescale_divisor[] = {120,
+						  180,
+						  240,
+						  360,
+						  480,
+						  480, /* Invalid Option */
+						  480, /* Invalid Option */
+						  480, /* Invalid Option */
+						  12000,
+						  24000,
+						  36000,
+						  48000,
+						  72000};
+
 
 struct sunxi_pwm_chip {
 	struct pwm_chip chip;
-
-	struct mutex lock;
-
-	unsigned int use_count;
-	unsigned int cnt_select;
-	unsigned int clk_ps;
-
-	void __iomem *base;
-
-	int period_ns;
-
-	struct clk *clk[SUNXI_PWM_CLK_MAX];
+	struct clk *clk, *clk_pwm[SUNXI_PWM_CHANNEL_MAX];
+	struct clk_divider pwmclk_div;
+	struct clk_onecell_data clk_data;
+	struct regmap *regmap;
 };
 
 static inline struct sunxi_pwm_chip *to_sunxi_chip(struct pwm_chip *chip)
@@ -750,348 +204,389 @@ static inline struct sunxi_pwm_chip *to_sunxi_chip(struct pwm_chip *chip)
 	return container_of(chip, struct sunxi_pwm_chip, chip);
 }
 
-static int sunxi_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
-{
-	struct sunxi_pwm_chip *fpc = to_sunxi_chip(chip);
 
-	return clk_prepare_enable(fpc->clk[SUNXI_PWM_CLK_SYS]);
+/*
+ * Find the best prescale value for the period
+ * We want to get the highest period cycle count possible, so we look
+ * make a run through the prescale values looking for numbers over
+ * min_optimal_period_cycles.  If none are found then root though again
+ * taking anything that works
+ */
+enum sun4i_pwm_prescale pwm_get_best_prescale(unsigned long long period_in) 
+{
+	int i;
+	unsigned long period = period_in;
+	const unsigned long min_optimal_period_cycles = MAX_CYCLES / 2;
+	const unsigned long min_period_cycles = 0x02;
+	enum sun4i_pwm_prescale best_prescale = 0;
+
+	best_prescale = -1;
+	for(i = 0 ; i < ARRAY_SIZE(prescale_divisor) ; i++) {
+		unsigned long int check_value = (prescale_divisor[i] / 24);
+		if(check_value < 1 || check_value > period) {
+			break;
+		}
+		if(((period / check_value) >= min_optimal_period_cycles) &&
+			((period / check_value) <= MAX_CYCLES)) {
+			best_prescale = i;
+			break;
+		}
+	}
+
+	if(best_prescale > ARRAY_SIZE(prescale_divisor)) {
+		for(i = 0 ; i < ARRAY_SIZE(prescale_divisor) ; i++) {
+			unsigned long int check_value = (prescale_divisor[i] / 24);
+			if(check_value < 1 || check_value > period) {
+				break;
+			}
+			if(((period / check_value) >= min_period_cycles) &&
+				((period / check_value) <= MAX_CYCLES)) {
+				best_prescale = i;
+				break;
+			}
+		}
+	}
+	if(best_prescale > ARRAY_SIZE(prescale_divisor)) {
+		best_prescale = PRESCALE_DIV480;  /* Something that's not zero - use invalid prescale value */
+	}
+
+	return best_prescale;
 }
 
-static void sunxi_pwm_free(struct pwm_chip *chip, struct pwm_device *pwm)
+/*
+ * return the number of cycles for the channel period computed from the microseconds
+ * for the period.  Allwinner docs call this "entire" cycles
+ */
+unsigned int get_entire_cycles(struct pwm_chip *chip, unsigned int prescale, unsigned int period) 
 {
-	struct sunxi_pwm_chip *fpc = to_sunxi_chip(chip);
+	unsigned int entire_cycles = 0x01;
 
-	clk_disable_unprepare(fpc->clk[SUNXI_PWM_CLK_SYS]);
+	if ((2 * prescale_divisor[prescale] * MAX_CYCLES) > 0) {
+		entire_cycles = period / (prescale_divisor[prescale] / 24);
+	}
+	if (entire_cycles == 0) {
+		entire_cycles = MAX_CYCLES;
+	}
+	if (entire_cycles > MAX_CYCLES) {
+		entire_cycles = MAX_CYCLES;
+	}
+	dev_dbg(chip->dev, "Best prescale was %d, entire cycles was %u\n", prescale, entire_cycles);
+
+	return entire_cycles;
 }
 
-static int sunxi_pwm_calculate_default_ps(struct sunxi_pwm_chip *fpc,
-					enum sunxi_pwm_clk index)
+/*
+ * return the number of cycles for the channel duty computed from the microseconds
+ * for the duty.  Allwinner docs call this "active" cycles
+ */
+unsigned int get_active_cycles(struct pwm_chip *chip, unsigned int entire_cycles, 
+		unsigned int prescale, unsigned int period) 
 {
-	unsigned long sys_rate, cnt_rate;
-	unsigned long long ratio;
+	unsigned int active_cycles = 0x01;
 
-	sys_rate = clk_get_rate(fpc->clk[SUNXI_PWM_CLK_SYS]);
-	if (!sys_rate)
-		return -EINVAL;
+	if ((2 * prescale_divisor[prescale] * MAX_CYCLES) > 0) {
+		active_cycles = period / (prescale_divisor[prescale] / 24);
+	}
+	dev_dbg(chip->dev, "Best prescale was %d, active cycles was %u (before entire check)\n", prescale, active_cycles);
 
-	cnt_rate = clk_get_rate(fpc->clk[fpc->cnt_select]);
-	if (!cnt_rate)
-		return -EINVAL;
+	if(active_cycles > MAX_CYCLES) {
+		active_cycles = entire_cycles - 1;
+	}
+	dev_dbg(chip->dev, "Best prescale was %d, active cycles was %u (after  entire check)\n", prescale, active_cycles);
 
-	switch (index) {
-	case SUNXI_PWM_CLK_SYS:
-		fpc->clk_ps = 1;
+	return active_cycles;
+}
+
+static int sunxi_pwm_busy(struct sunxi_pwm_chip *priv)
+{
+	int i, reg_val;
+
+	for (i = 0; i < 50; i++) {
+		regmap_read(priv->regmap, SUNXI_PWM_CTRL_REG, &reg_val);
+		if ((reg_val & (SUNXI_PWMCTL_PWM1_NOTRDY | SUNXI_PWMCTL_PWM0_NOTRDY)) == 0)
+			return 0;
+		mdelay(1);
+	}
+	return -EIO;
+}
+
+
+static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+			  int duty_ns, int period_ns)
+{
+	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
+	unsigned int period, prescale, duty, entire_cycles, active_cycles, reg_val;
+	int ret;
+
+	period = period_ns / 1000;
+	prescale = pwm_get_best_prescale(period);
+	duty = duty_ns / 1000;
+
+	entire_cycles = get_entire_cycles(chip, prescale, period);
+	active_cycles = get_active_cycles(chip, entire_cycles, prescale, period);
+	if(entire_cycles >= active_cycles && active_cycles) {
+		entire_cycles = MAX_CYCLES;
+		active_cycles = MAX_CYCLES;
+	}
+
+	reg_val = (entire_cycles << SUNXI_PWM_CYCLES_ACTIVE_SHIFT) & SUNXI_PWM_CYCLES_ACTIVE_MASK;
+	reg_val = (active_cycles << SUNXI_PWM_CYCLES_ACTIVE_SHIFT) & SUNXI_PWM_CYCLES_ACTIVE_MASK;
+
+	switch (pwm->hwpwm) {
+	case 0:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG, SUNXI_PWMCTL_PWM0_PRE_MASK, prescale);
+		regmap_write(priv->regmap, SUNXI_PWM_CH0_PERIOD, reg_val);
 		break;
-	case SUNXI_PWM_CLK_FIX:
-		ratio = 2 * cnt_rate - 1;
-		do_div(ratio, sys_rate);
-		fpc->clk_ps = ratio;
-		break;
-	case SUNXI_PWM_CLK_EXT:
-		ratio = 4 * cnt_rate - 1;
-		do_div(ratio, sys_rate);
-		fpc->clk_ps = ratio;
+	case 1:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG, SUNXI_PWMCTL_PWM1_PRE_MASK, prescale);
+		regmap_write(priv->regmap, SUNXI_PWM_CH1_PERIOD, reg_val);
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	return 0;
-}
-
-static unsigned long sunxi_pwm_calculate_cycles(struct sunxi_pwm_chip *fpc,
-					      unsigned long period_ns)
-{
-	unsigned long long c, c0;
-
-	c = clk_get_rate(fpc->clk[fpc->cnt_select]);
-	c = c * period_ns;
-	do_div(c, 1000000000UL);
-
-	do {
-		c0 = c;
-		do_div(c0, (1 << fpc->clk_ps));
-		if (c0 <= 0xFFFF)
-			return (unsigned long)c0;
-	} while (++fpc->clk_ps < 8);
-
-	return 0;
-}
-
-static unsigned long sunxi_pwm_calculate_period_cycles(struct sunxi_pwm_chip *fpc,
-						     unsigned long period_ns,
-						     enum sunxi_pwm_clk index)
-{
-	int ret;
-
-	ret = sunxi_pwm_calculate_default_ps(fpc, index);
-	if (ret) {
-		dev_err(fpc->chip.dev,
-			"failed to calculate default prescaler: %d\n",
-			ret);
-		return 0;
-	}
-
-	return sunxi_pwm_calculate_cycles(fpc, period_ns);
-}
-
-static unsigned long sunxi_pwm_calculate_period(struct sunxi_pwm_chip *fpc,
-					      unsigned long period_ns)
-{
-	enum sunxi_pwm_clk m0, m1;
-	unsigned long fix_rate, ext_rate, cycles;
-
-	cycles = sunxi_pwm_calculate_period_cycles(fpc, period_ns,
-			SUNXI_PWM_CLK_SYS);
-	if (cycles) {
-		fpc->cnt_select = SUNXI_PWM_CLK_SYS;
-		return cycles;
-	}
-
-	fix_rate = clk_get_rate(fpc->clk[SUNXI_PWM_CLK_FIX]);
-	ext_rate = clk_get_rate(fpc->clk[SUNXI_PWM_CLK_EXT]);
-
-	if (fix_rate > ext_rate) {
-		m0 = SUNXI_PWM_CLK_FIX;
-		m1 = SUNXI_PWM_CLK_EXT;
-	} else {
-		m0 = SUNXI_PWM_CLK_EXT;
-		m1 = SUNXI_PWM_CLK_FIX;
-	}
-
-	cycles = sunxi_pwm_calculate_period_cycles(fpc, period_ns, m0);
-	if (cycles) {
-		fpc->cnt_select = m0;
-		return cycles;
-	}
-
-	fpc->cnt_select = m1;
-
-	return sunxi_pwm_calculate_period_cycles(fpc, period_ns, m1);
-}
-
-static unsigned long sunxi_pwm_calculate_duty(struct sunxi_pwm_chip *fpc,
-					    unsigned long period_ns,
-					    unsigned long duty_ns)
-{
-	unsigned long long val, duty;
-
-	val = readl(fpc->base + SUNXI_MOD);
-	duty = duty_ns * (val + 1);
-	do_div(duty, period_ns);
-
-	return (unsigned long)duty;
-}
-
-static int sunxi_pwm_set_polarity(struct pwm_chip *chip,
-				struct pwm_device *pwm,
-				enum pwm_polarity polarity)
-{
-	struct sunxi_pwm_chip *fpc = to_sunxi_chip(chip);
-	u32 val;
-
-	val = readl(fpc->base + SUNXI_POL);
-
-	if (polarity == PWM_POLARITY_INVERSED)
-		val |= BIT(pwm->hwpwm);
-	else
-		val &= ~BIT(pwm->hwpwm);
-
-	writel(val, fpc->base + SUNXI_POL);
-
-	return 0;
-}
-
-static int sunxi_counter_clock_enable(struct sunxi_pwm_chip *fpc)
-{
-	u32 val;
-	int ret;
-
-	if (fpc->use_count != 0)
-		return 0;
-
-	/* select counter clock source */
-	val = readl(fpc->base + SUNXI_SC);
-	val &= ~(SUNXI_SC_CLK_MASK << SUNXI_SC_CLK_SHIFT);
-	val |= SUNXI_SC_CLK(fpc->cnt_select);
-	writel(val, fpc->base + SUNXI_SC);
-
-	ret = clk_prepare_enable(fpc->clk[fpc->cnt_select]);
+	ret = sunxi_pwm_busy(priv);
 	if (ret)
 		return ret;
-
-	ret = clk_prepare_enable(fpc->clk[SUNXI_PWM_CLK_CNTEN]);
-	if (ret) {
-		clk_disable_unprepare(fpc->clk[fpc->cnt_select]);
-		return ret;
-	}
-
-	fpc->use_count++;
 
 	return 0;
 }
 
 static int sunxi_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
-	struct sunxi_pwm_chip *fpc = to_sunxi_chip(chip);
-	u32 val;
+	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
 	int ret;
+	
+	ret = sunxi_pwm_busy(priv);
+	if (ret)
+		return ret;
 
-	mutex_lock(&fpc->lock);
-	val = readl(fpc->base + SUNXI_OUTMASK);
-	val &= ~BIT(pwm->hwpwm);
-	writel(val, fpc->base + SUNXI_OUTMASK);
-
-	ret = sunxi_counter_clock_enable(fpc);
-	mutex_unlock(&fpc->lock);
-
-	return ret;
-}
-
-static void sunxi_counter_clock_disable(struct sunxi_pwm_chip *fpc)
-{
-	u32 val;
-
-	/*
-	 * already disabled, do nothing
-	 */
-	if (fpc->use_count == 0)
-		return;
-
-	/* there are still users, so can't disable yet */
-	if (--fpc->use_count > 0)
-		return;
-
-	/* no users left, disable PWM counter clock */
-	val = readl(fpc->base + SUNXI_SC);
-	val &= ~(SUNXI_SC_CLK_MASK << SUNXI_SC_CLK_SHIFT);
-	writel(val, fpc->base + SUNXI_SC);
-
-	clk_disable_unprepare(fpc->clk[SUNXI_PWM_CLK_CNTEN]);
-	clk_disable_unprepare(fpc->clk[fpc->cnt_select]);
+	switch (pwm->hwpwm) {
+	case 0:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+			SUNXI_PWMCTL_PWM0_GATE_MASK | SUNXI_PWMCTL_PWM0_EN_MASK,
+			SUNXI_PWMCTL_PWM0_GATE | SUNXI_PWMCTL_PWM0_EN);
+		break;
+	case 1:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+			SUNXI_PWMCTL_PWM1_GATE_MASK | SUNXI_PWMCTL_PWM1_EN_MASK,
+			SUNXI_PWMCTL_PWM1_GATE | SUNXI_PWMCTL_PWM1_EN);
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
 }
 
 static void sunxi_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
-	struct sunxi_pwm_chip *fpc = to_sunxi_chip(chip);
-	u32 val;
-
-	mutex_lock(&fpc->lock);
-	val = readl(fpc->base + SUNXI_OUTMASK);
-	val |= BIT(pwm->hwpwm);
-	writel(val, fpc->base + SUNXI_OUTMASK);
-
-	sunxi_counter_clock_disable(fpc);
-
-	val = readl(fpc->base + SUNXI_OUTMASK);
-
-	if ((val & 0xFF) == 0xFF)
-		fpc->period_ns = 0;
-
-	mutex_unlock(&fpc->lock);
-}
-
-static const struct pwm_ops sunxi_pwm_ops = {
-	.request = sunxi_pwm_request,
-	.free = sunxi_pwm_free,
-	.config = sunxi_pwm_config,
-	.set_polarity = sunxi_pwm_set_polarity,
-	.enable = sunxi_pwm_enable,
-	.disable = sunxi_pwm_disable,
-	.owner = THIS_MODULE,
-};
-
-static int sunxi_pwm_init(struct sunxi_pwm_chip *fpc)
-{
+	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
 	int ret;
 
-	ret = clk_prepare_enable(fpc->clk[SUNXI_PWM_CLK_SYS]);
+	ret = sunxi_pwm_busy(priv);
+	if (ret)
+		return;
+
+	switch (pwm->hwpwm) {
+	case 0:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+			SUNXI_PWMCTL_PWM0_GATE_MASK | SUNXI_PWMCTL_PWM0_EN_MASK, 0);
+		break;
+	case 1:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+			SUNXI_PWMCTL_PWM1_GATE_MASK | SUNXI_PWMCTL_PWM1_EN_MASK, 0);
+		break;
+	default:
+		return;
+	}
+	return;
+}
+
+static int sunxi_pwm_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
+			       enum pwm_polarity polarity)
+{
+	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
+	int ret;
+
+	ret = sunxi_pwm_busy(priv);
 	if (ret)
 		return ret;
 
-	writel(0x00, fpc->base + SUNXI_CNTIN);
-	writel(0x00, fpc->base + SUNXI_OUTINIT);
-	writel(0xFF, fpc->base + SUNXI_OUTMASK);
-
-	clk_disable_unprepare(fpc->clk[SUNXI_PWM_CLK_SYS]);
-
+	switch (pwm->hwpwm) {
+	case 0:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+			SUNXI_PWMCTL_PWM0_STATE_MASK,
+			(polarity == PWM_POLARITY_INVERSED) << SUNXI_PWMCTL_PWM0_STATE_SHIFT);
+		break;
+	case 1:
+		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+			SUNXI_PWMCTL_PWM1_STATE_MASK,
+			(polarity == PWM_POLARITY_INVERSED) << SUNXI_PWMCTL_PWM1_STATE_SHIFT);
+		break;
+	default:
+		return -EINVAL;
+	}
 	return 0;
 }
 
+static const struct pwm_ops sunxi_pwm_ops = {
+	.config = sunxi_pwm_config,
+	.enable = sunxi_pwm_enable,
+	.disable = sunxi_pwm_disable,
+	.set_polarity = sunxi_pwm_polarity,
+	.owner = THIS_MODULE,
+};
+
+static int sunxi_pwm_clk_init(struct platform_device *pdev, struct sunxi_pwm_chip *priv, void __iomem *base)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct clk_init_data init;
+	const char *clk_name = NULL;
+	const char *clk_parent = __clk_get_name(priv->clk);
+	int i, ret = 0;
+	int flags = 0;
+
+	init.ops = &clk_divider_ops;
+	init.flags = flags | CLK_IS_BASIC;
+	init.parent_names = &clk_parent;
+	init.num_parents = 1;
+
+	/* struct clk_divider assignments */
+	priv->pwmclk_div.reg = base;
+	priv->pwmclk_div.shift = 0;
+	priv->pwmclk_div.width = 0;
+	priv->pwmclk_div.flags = 0;
+	priv->pwmclk_div.lock = NULL;
+	priv->pwmclk_div.hw.init = &init;
+	priv->pwmclk_div.table = NULL;
+
+	ret = of_property_read_string_index(np, "clock-output-names", 0, &clk_name);
+	if (ret)
+		return ret;
+
+	printk("JDS - sunxi_pwm_pwmclk_init %s\n", clk_name);
+
+	init.name = clk_name;
+
+	/* register the clock */
+	priv->clk_pwm[0] = clk_register(&pdev->dev, &priv->pwmclk_div.hw);
+	if (IS_ERR(priv->clk_pwm[i])) {
+		dev_err(&pdev->dev, "failed to register pwmclk: %ld\n", PTR_ERR(priv->clk_pwm[i]));
+		return PTR_ERR(priv->clk_pwm[i]);
+	}
+
+	ret = of_property_read_string_index(np, "clock-output-names", 1, &clk_name);
+	if (ret)
+		return ret;
+
+	printk("JDS - sunxi_pwm_pwmclk_init %s\n", clk_name);
+
+	init.name = clk_name;
+
+	/* register the clock */
+	priv->clk_pwm[1] = clk_register(&pdev->dev, &priv->pwmclk_div.hw);
+	if (IS_ERR(priv->clk_pwm[i])) {
+		dev_err(&pdev->dev, "failed to register pwmclk: %ld\n", PTR_ERR(priv->clk_pwm[i]));
+		return PTR_ERR(priv->clk_pwm[i]);
+	}
+
+	priv->clk_data.clks = priv->clk_pwm;
+	priv->clk_data.clk_num = 2;
+	ret = of_clk_add_provider(np, of_clk_src_onecell_get, &priv->clk_data);
+	if (ret)
+		return ret;
+	return 0;
+}
+
+static const struct regmap_range sunxi_pwm_volatile_regs_range[] = {
+	regmap_reg_range(SUNXI_PWM_CTRL_REG, SUNXI_PWM_CTRL_REG),
+};
+
+static const struct regmap_access_table sunxi_pwm_volatile_regs = {
+	.yes_ranges	= sunxi_pwm_volatile_regs_range,
+	.n_yes_ranges	= ARRAY_SIZE(sunxi_pwm_volatile_regs_range),
+};
+
+static const struct regmap_config sunxi_pwm_regmap_config = {
+	.reg_bits	= 32,
+	.reg_stride	= 4,
+	.val_bits	= 32,
+	.max_register	= SUNXI_PWM_CH1_PERIOD,
+	.volatile_table	= &sunxi_pwm_volatile_regs,
+};
+
 static int sunxi_pwm_probe(struct platform_device *pdev)
 {
-	struct sunxi_pwm_chip *fpc;
+	void __iomem *base;
+	struct sunxi_pwm_chip *priv;
 	struct resource *res;
 	int ret;
 
-	fpc = devm_kzalloc(&pdev->dev, sizeof(*fpc), GFP_KERNEL);
-	if (!fpc)
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
 		return -ENOMEM;
 
-	mutex_init(&fpc->lock);
-
-	fpc->chip.dev = &pdev->dev;
+	priv->chip.dev = &pdev->dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	fpc->base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(fpc->base))
-		return PTR_ERR(fpc->base);
+	base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(base))
+		return PTR_ERR(base);
 
-	fpc->clk[SUNXI_PWM_CLK_SYS] = devm_clk_get(&pdev->dev, "ftm_sys");
-	if (IS_ERR(fpc->clk[SUNXI_PWM_CLK_SYS])) {
-		dev_err(&pdev->dev, "failed to get \"ftm_sys\" clock\n");
-		return PTR_ERR(fpc->clk[SUNXI_PWM_CLK_SYS]);
+	priv->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->clk)) {
+		dev_err(&pdev->dev, "failed to get Osc24M clock\n");
+		return PTR_ERR(priv->clk);
 	}
 
-	fpc->clk[SUNXI_PWM_CLK_FIX] = devm_clk_get(fpc->chip.dev, "ftm_fix");
-	if (IS_ERR(fpc->clk[SUNXI_PWM_CLK_FIX]))
-		return PTR_ERR(fpc->clk[SUNXI_PWM_CLK_FIX]);
+	priv->regmap = devm_regmap_init_mmio(&pdev->dev, base,
+					     &sunxi_pwm_regmap_config);
+	if (IS_ERR(priv->regmap))
+		return PTR_ERR(priv->regmap);
 
-	fpc->clk[SUNXI_PWM_CLK_EXT] = devm_clk_get(fpc->chip.dev, "ftm_ext");
-	if (IS_ERR(fpc->clk[SUNXI_PWM_CLK_EXT]))
-		return PTR_ERR(fpc->clk[SUNXI_PWM_CLK_EXT]);
+	priv->chip.ops = &sunxi_pwm_ops;
+	priv->chip.base = -1;
+	priv->chip.npwm = 2;
+	priv->chip.of_xlate = of_pwm_xlate_with_flags;
+	priv->chip.of_pwm_n_cells = 3;
 
-	fpc->clk[SUNXI_PWM_CLK_CNTEN] =
-				devm_clk_get(fpc->chip.dev, "ftm_cnt_clk_en");
-	if (IS_ERR(fpc->clk[SUNXI_PWM_CLK_CNTEN]))
-		return PTR_ERR(fpc->clk[SUNXI_PWM_CLK_CNTEN]);
-
-	fpc->chip.ops = &sunxi_pwm_ops;
-	fpc->chip.of_xlate = of_pwm_xlate_with_flags;
-	fpc->chip.of_pwm_n_cells = 3;
-	fpc->chip.base = -1;
-	fpc->chip.npwm = 8;
-	fpc->chip.can_sleep = true;
-
-	ret = pwmchip_add(&fpc->chip);
+	ret = pwmchip_add(&priv->chip);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to add PWM chip: %d\n", ret);
 		return ret;
 	}
 
-	platform_set_drvdata(pdev, fpc);
+	ret = sunxi_pwm_clk_init(pdev, priv, base);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create PWM clocks: %d\n", ret);
+		return ret;
+	}
 
-	return sunxi_pwm_init(fpc);
+	platform_set_drvdata(pdev, priv);
+
+	printk("JDS pwm initialized\n");
+	return 0;
 }
 
 static int sunxi_pwm_remove(struct platform_device *pdev)
 {
-	struct sunxi_pwm_chip *fpc = platform_get_drvdata(pdev);
+	struct sunxi_pwm_chip *priv = platform_get_drvdata(pdev);
 
-	return pwmchip_remove(&fpc->chip);
+	return pwmchip_remove(&priv->chip);
 }
 
-static const struct of_device_id sunxi_pwm_dt_ids[] = {
-	{ .compatible = "allwinner,sun7i-a20-pwm", },
-	{ .compatible = "allwinner,sun4i-a10-pwm", },
-	{ /* sentinel */ }
+static const struct of_device_id sunxi_pwm_of_match[] = {
+	{ .compatible = "allwinner,sun4i-a10-pwm", .data = (void *)SUN4I},
+	{ .compatible = "allwinner,sun5i-a13-pwm", .data = (void *)SUN5I},
+	{ .compatible = "allwinner,sun7i-a20-pwm", .data = (void *)SUN7I},
+	{}
 };
-MODULE_DEVICE_TABLE(of, sunxi_pwm_dt_ids);
+MODULE_DEVICE_TABLE(of, sunxi_pwm_of_match);
 
 static struct platform_driver sunxi_pwm_driver = {
 	.driver = {
 		.name = "sunxi-pwm",
-		.of_match_table = sunxi_pwm_dt_ids,
+		.of_match_table = sunxi_pwm_of_match,
 	},
 	.probe = sunxi_pwm_probe,
 	.remove = sunxi_pwm_remove,
