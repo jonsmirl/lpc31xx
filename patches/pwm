@@ -1,5 +1,5 @@
 Bottom: f6e8b9c55bf96b34d899cebd3094217adc493e39
-Top:    ec0a7ef983b3c998ee277cc244e0bda3350b96c2
+Top:    554f64a33f842e136c0d4cdf8740a970f3d80584
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -683,50 +683,3 @@ index 0000000..72f040e
 +MODULE_LICENSE("GPL");
 +
 +
-diff --git a/sound/soc/codecs/sgtl5000.c b/sound/soc/codecs/sgtl5000.c
-index dd09d05..99b1bf1 100644
---- a/sound/soc/codecs/sgtl5000.c
-+++ b/sound/soc/codecs/sgtl5000.c
-@@ -1461,6 +1461,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 		return ret;
- 	}
- 
-+	printk("JDS - sgtl5000_i2c_probe 1\n");
- 	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
- 	if (IS_ERR(sgtl5000->mclk)) {
- 		ret = PTR_ERR(sgtl5000->mclk);
-@@ -1471,15 +1472,18 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 		return ret;
- 	}
- 
-+	printk("JDS - sgtl5000_i2c_probe 2\n");
- 	ret = clk_prepare_enable(sgtl5000->mclk);
- 	if (ret)
- 		return ret;
- 
-+	printk("JDS - sgtl5000_i2c_probe 3\n");
- 	/* read chip information */
- 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
- 	if (ret)
- 		goto disable_clk;
- 
-+	printk("JDS - sgtl5000_i2c_probe 4\n");
- 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
- 	    SGTL5000_PARTID_PART_ID) {
- 		dev_err(&client->dev,
-@@ -1487,6 +1491,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 		ret = -ENODEV;
- 		goto disable_clk;
- 	}
-+	printk("JDS - sgtl5000_i2c_probe 5\n");
- 
- 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
- 	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
-@@ -1504,6 +1509,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 	if (ret)
- 		goto disable_clk;
- 
-+	printk("JDS - sgtl5000_i2c_probe ok\n");
- 	return 0;
- 
- disable_clk:
