@@ -294,6 +294,21 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	unsigned int prescale, entire_cycles, active_cycles, reg_val;
 
 	printk("JDS - sunxi_pwm_config duty %d period %d\n", duty_ns, period_ns);
+	if (period_ns <= 50) {
+		// Just enable the OSC24 clock bypass 
+		switch (pwm->hwpwm) {
+		case 0:
+			regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+					SUNXI_PWMCTL_PWM0_BYPASS_MASK, SUNXI_PWMCTL_PWM0_BYPASS);
+			break;
+		case 1:
+			regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
+					SUNXI_PWMCTL_PWM1_BYPASS_MASK, SUNXI_PWMCTL_PWM1_BYPASS);
+			break;
+		}
+		return 0;
+	}
+
 	prescale = pwm_get_best_prescale(period_ns);
 	if (prescale < 0)
 		return prescale;
@@ -330,12 +345,9 @@ static int sunxi_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 	
 	switch (pwm->hwpwm) {
 	case 0:
-		regmap_write(priv->regmap, SUNXI_PWM_CTRL_REG, SUNXI_PWMCTL_PWM0_GATE | SUNXI_PWMCTL_PWM0_EN | SUNXI_PWMCTL_PWM0_BYPASS);
-#ifdef JDS
 		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
 			SUNXI_PWMCTL_PWM0_GATE_MASK | SUNXI_PWMCTL_PWM0_EN_MASK,
 			SUNXI_PWMCTL_PWM0_GATE | SUNXI_PWMCTL_PWM0_EN);
-#endif
 		break;
 	case 1:
 		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
