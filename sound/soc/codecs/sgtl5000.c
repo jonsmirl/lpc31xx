@@ -1461,7 +1461,6 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	printk("JDS - sgtl5000_i2c_probe 1\n");
 	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
 	if (IS_ERR(sgtl5000->mclk)) {
 		ret = PTR_ERR(sgtl5000->mclk);
@@ -1472,18 +1471,15 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	printk("JDS - sgtl5000_i2c_probe 2\n");
 	ret = clk_prepare_enable(sgtl5000->mclk);
 	if (ret)
 		return ret;
 
-	printk("JDS - sgtl5000_i2c_probe 3\n");
 	/* read chip information */
 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
 	if (ret)
 		goto disable_clk;
 
-	printk("JDS - sgtl5000_i2c_probe 4\n");
 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
 	    SGTL5000_PARTID_PART_ID) {
 		dev_err(&client->dev,
@@ -1491,7 +1487,6 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		ret = -ENODEV;
 		goto disable_clk;
 	}
-	printk("JDS - sgtl5000_i2c_probe 5\n");
 
 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
 	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
@@ -1509,7 +1504,6 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	if (ret)
 		goto disable_clk;
 
-	printk("JDS - sgtl5000_i2c_probe ok\n");
 	return 0;
 
 disable_clk:
