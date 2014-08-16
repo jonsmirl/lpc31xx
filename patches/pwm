@@ -1,5 +1,5 @@
 Bottom: f6e8b9c55bf96b34d899cebd3094217adc493e39
-Top:    0a99e4d62801afe34959432eb3fd0fca8e1595e8
+Top:    ec0a7ef983b3c998ee277cc244e0bda3350b96c2
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -730,17 +730,3 @@ index dd09d05..99b1bf1 100644
  	return 0;
  
  disable_clk:
-diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
-index 231d2c2..2bc4085 100644
---- a/sound/soc/generic/simple-card.c
-+++ b/sound/soc/generic/simple-card.c
-@@ -8,6 +8,9 @@
-  * it under the terms of the GNU General Public License version 2 as
-  * published by the Free Software Foundation.
-  */
-+
-+#define DEBUG
-+
- #include <linux/clk.h>
- #include <linux/device.h>
- #include <linux/module.h>
