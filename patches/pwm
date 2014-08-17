@@ -1,5 +1,5 @@
 Bottom: a1d2ee10d887ca2a9fd3048cf77e80433ae02ae7
-Top:    fcbe416da67dae0f15228d3e41f397ec0ea7f4d2
+Top:    c81efa5a70cf652856388e565e1c3c7fb452bcd0
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -44,10 +44,10 @@ index 5c86a19..c32f827 100644
  obj-$(CONFIG_PWM_TIEHRPWM)	+= pwm-tiehrpwm.o
 diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
 new file mode 100644
-index 0000000..bc89a7c
+index 0000000..52f9c95
 --- /dev/null
 +++ b/drivers/pwm/pwm-sunxi.c
-@@ -0,0 +1,521 @@
+@@ -0,0 +1,534 @@
 +/* pwm-sunxi.c
 + *
 + * pwm module for sun4i (and others) like cubieboard and pcduino
@@ -187,7 +187,7 @@ index 0000000..bc89a7c
 +
 +/* SUNXI_PWM_CH0_PERIOD	0x04	PWM Channel 0 Period Register */
 +/* SUNXI_PWM_CH1_PERIOD	0x08	PWM Channel 1 Period Register */
-+#define SUNXI_PWM_CYCLES_TOTAL_MASK	(0xFFFF<<16)
++#define SUNXI_PWM_CYCLES_TOTAL_MASK	(0xFFFFL<<16)
 +#define SUNXI_PWM_CYCLES_TOTAL_SHIFT	16
 +#define SUNXI_PWM_CYCLES_TOTAL_WIDTH	16
 +#define SUNXI_PWM_CYCLES_ACTIVE_MASK	(0xFFFF<<0)
@@ -209,7 +209,7 @@ index 0000000..bc89a7c
 + * structure that defines the pwm control register
 + */
 +
-+static const unsigned int prescale_divisor[] = {
++static unsigned int prescale_divisor[] = {
 +	120, 180, 240, 360, 480, 480, 480, 480,
 +	12000, 24000, 36000, 48000, 72000, 72000, 72000, 1
 +};
@@ -327,7 +327,7 @@ index 0000000..bc89a7c
 +	mutex_lock(&priv->lock);
 +
 +	// If period less than two cycles, just enable the OSC24 clock bypass 
-+	if (period_ns < (2 * 1000 / OSC24 + 1)) {
++	if ((priv->revision != SUN4I) && (period_ns < (2 * 1000 / OSC24 + 1))) {
 +		switch (pwm->hwpwm) {
 +		case 0:
 +			regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
@@ -350,7 +350,7 @@ index 0000000..bc89a7c
 +	active_cycles = compute_cycles(priv, prescale, duty_ns);
 +
 +	reg_val = (entire_cycles << SUNXI_PWM_CYCLES_TOTAL_SHIFT) & SUNXI_PWM_CYCLES_TOTAL_MASK;
-+	reg_val = (active_cycles << SUNXI_PWM_CYCLES_ACTIVE_SHIFT) & SUNXI_PWM_CYCLES_ACTIVE_MASK;
++	reg_val |= (active_cycles << SUNXI_PWM_CYCLES_ACTIVE_SHIFT) & SUNXI_PWM_CYCLES_ACTIVE_MASK;
 +
 +	switch (pwm->hwpwm) {
 +	case 0:
@@ -396,6 +396,18 @@ index 0000000..bc89a7c
 +	}
 +	if ((priv->revision == SUN5I) || (priv->revision == SUN7I))
 +		ret = sunxi_pwm_busy(priv);
++
++{
++	int reg_val;
++	regmap_read(priv->regmap, SUNXI_PWM_CTRL_REG, &reg_val);
++	printk("JDS - SUNXI_PWM_CTRL_REG %08x\n", reg_val);
++	regmap_read(priv->regmap, SUNXI_PWM_CH0_PERIOD, &reg_val);
++	printk("JDS - SUNXI_PWM_CH0_PERIOD %08x\n", reg_val);
++	regmap_read(priv->regmap, SUNXI_PWM_CH1_PERIOD, &reg_val);
++	printk("JDS - SUNXI_PWM_CH1_PERIOD %08x\n", reg_val);
++	
++}
++
 +exit:
 +	mutex_unlock(&priv->lock);
 +	return ret;
@@ -496,9 +508,10 @@ index 0000000..bc89a7c
 +
 +	priv->chip.dev = &pdev->dev;
 +	priv->revision = (enum sunxi_soc_family)of_id->data;
-+	if (priv->revision == SUN4I)
++	if (priv->revision == SUN4I) {
 +		priv->max_cycles = MAX_CYCLES_SUN4I;
-+	else
++		prescale_divisor[15] = 72000; //A10 does not support prescale = 1
++	} else
 +		priv->max_cycles = MAX_CYCLES;
 +
 +	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
