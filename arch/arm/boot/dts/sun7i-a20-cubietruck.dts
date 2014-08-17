@@ -176,7 +176,7 @@
 			sgtl5000: sgtl5000@a {
 				compatible = "fsl,sgtl5000";
 				reg = <0x0a>;
-				clocks = <&iis0>;
+				pwms = <&pwm 0 40 0>;
 
 				#sound-dai-cells = <0>;
 				VDDA-supply = <&reg_vcc3v3>;
@@ -206,16 +206,14 @@
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
-		simple-audio-card,bitclock-master = <&dailink0_master>;
-		simple-audio-card,frame-master = <&dailink0_master>;
 
 		simple-audio-card,cpu {
 			sound-dai = <&iis0>;
 		};
 
-		dailink0_master: simple-audio-card,codec {
+		simple-audio-card,codec {
+			clock = <&iis0>;
 			sound-dai = <&sgtl5000>;
-			clocks = <&iis0>;
 		};
 	};
 
