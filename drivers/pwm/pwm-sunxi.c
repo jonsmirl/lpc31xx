@@ -14,10 +14,6 @@
  * - Removed bug that caused the PWM to pause quickly when changing parameters
  * - Dropped debug/dump functions
  *
- * TODO:
- * - Implement duty_percent=0 to set pwm line to 0 - right now it goes to 100%
- * -
- *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
@@ -34,9 +30,8 @@
  * MA 02111-1307 USA
  */
 
-#define DEBUG
-
 #include <linux/module.h>
+#include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/err.h>
 #include <linux/pwm.h>
@@ -172,6 +167,8 @@ struct sunxi_pwm_chip {
 	struct pwm_chip chip;
 	struct clk *clk;
 	struct regmap *regmap;
+	struct mutex lock;
+	enum sunxi_soc_family revision;
 };
 
 static inline struct sunxi_pwm_chip *to_sunxi_chip(struct pwm_chip *chip)
@@ -199,7 +196,6 @@ int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in)
 	for(i = 0 ; i < ARRAY_SIZE(prescale_divisor) ; i++) {
 
 		clk_pico = 1000000L * prescale_divisor[i] / OSC24;
-		printk("JDS - period %ld clk_pico %ld div %ld\n", period, clk_pico, period / clk_pico);
 		if(clk_pico < 1 || clk_pico > period) {
 			continue;
 		}
@@ -215,7 +211,6 @@ int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in)
 			if(clk_pico < 1 || clk_pico > period) {
 				continue;
 			}
-			printk("JDS - period %ld clk_pico %ld\n", period, clk_pico);
 			if(((period / clk_pico) >= min_period_cycles) &&
 				((period / clk_pico) <= MAX_CYCLES)) {
 				best_prescale = i;
@@ -240,14 +235,13 @@ unsigned int compute_cycles(struct sunxi_pwm_chip *priv, int prescale, int perio
 	unsigned int cycles;
 
 	clk_pico = 1000000L * prescale_divisor[prescale] / OSC24;
-	printk("JDS - clk_pico %ld\n", clk_pico);
 	cycles = DIV_ROUND_CLOSEST(period * 1000L, clk_pico);
 	if (cycles > MAX_CYCLES)
 		cycles = MAX_CYCLES;
 	if (cycles < 2)
 		cycles = 2;
 
-	dev_dbg(priv->chip.dev, "Best prescale was %d, entire cycles was %u\n", prescale, cycles);
+	dev_dbg(priv->chip.dev, "Best prescale was %d, cycles is %u\n", prescale, cycles);
 
 	return cycles;
 }
@@ -258,13 +252,12 @@ static int sunxi_pwm_busy(struct sunxi_pwm_chip *priv)
 
 	for (i = 0; i < 50; i++) {
 		regmap_read(priv->regmap, SUNXI_PWM_CTRL_REG, &reg_val);
-		printk("JDS - busy %08x\n", reg_val);
 		if ((reg_val & (SUNXI_PWMCTL_PWM1_NOTRDY | SUNXI_PWMCTL_PWM0_NOTRDY)) == 0)
 			return 0;
 		mdelay(1);
 	}
 	dev_dbg(priv->chip.dev, "PWM busy timeout\n");
-	return -EIO;
+	return -EBUSY;
 }
 
 
@@ -272,14 +265,14 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 			  int duty_ns, int period_ns)
 {
 	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
-	int prescale, entire_cycles, active_cycles;
+	int prescale, entire_cycles, active_cycles, ret = 0;
 	unsigned int reg_val;
 
 	
-	printk("JDS - sunxi_pwm_config duty %d period %d\n", duty_ns, period_ns);
-
 	if ((duty_ns <= 0) || (period_ns <= 0))
 		return 0;
+
+	mutex_lock(&priv->lock);
 
 	// If period less than two cycles, just enable the OSC24 clock bypass 
 	if (period_ns < (2 * 1000 / OSC24 + 1)) {
@@ -293,13 +286,14 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 					SUNXI_PWMCTL_PWM1_BYPASS_MASK, SUNXI_PWMCTL_PWM1_BYPASS);
 			break;
 		}
-		return 0;
+		goto exit;
 	}
 
 	prescale = pwm_get_best_prescale(priv, period_ns);
-	if (prescale < 0)
-		return prescale;
-
+	if (prescale < 0) {
+		ret = prescale;
+		goto exit;
+	}
 	entire_cycles = compute_cycles(priv, prescale, period_ns);
 	active_cycles = compute_cycles(priv, prescale, duty_ns);
 
@@ -320,16 +314,19 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		regmap_write(priv->regmap, SUNXI_PWM_CH1_PERIOD, reg_val);
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
 	}
-	return 0;
+exit:
+	mutex_lock(&priv->lock);
+	return ret;
 }
 
 static int sunxi_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
-	int ret;
+	int ret = 0;
 	
+	mutex_lock(&priv->lock);
 	switch (pwm->hwpwm) {
 	case 0:
 		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
@@ -342,21 +339,21 @@ static int sunxi_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 			SUNXI_PWMCTL_PWM1_GATE | SUNXI_PWMCTL_PWM1_EN);
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		goto exit;
 	}
-
-	ret = sunxi_pwm_busy(priv);
-	if (ret)
-		return ret;
-	return 0;
+	if ((priv->revision == SUN5I) || (priv->revision == SUN7I))
+		ret = sunxi_pwm_busy(priv);
+exit:
+	mutex_unlock(&priv->lock);
+	return ret;
 }
 
 static void sunxi_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
 
-	printk("JDS = sunxi_pwm_disable\n");
-
+	mutex_lock(&priv->lock);
 	switch (pwm->hwpwm) {
 	case 0:
 		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
@@ -366,9 +363,8 @@ static void sunxi_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
 			SUNXI_PWMCTL_PWM1_GATE_MASK | SUNXI_PWMCTL_PWM1_EN_MASK, 0);
 		break;
-	default:
-		return;
 	}
+	mutex_unlock(&priv->lock);
 	return;
 }
 
@@ -376,9 +372,9 @@ static int sunxi_pwm_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
 			       enum pwm_polarity polarity)
 {
 	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
+	int ret = 0;
 
-	printk("JDS = sunxi_pwm_polarity\n");
-
+	mutex_lock(&priv->lock);
 	switch (pwm->hwpwm) {
 	case 0:
 		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
@@ -391,9 +387,10 @@ static int sunxi_pwm_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
 			(polarity == PWM_POLARITY_INVERSED) << SUNXI_PWMCTL_PWM1_STATE_SHIFT);
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
 	}
-	return 0;
+	mutex_lock(&priv->lock);
+	return ret;
 }
 
 static const struct pwm_ops sunxi_pwm_ops = {
@@ -421,34 +418,55 @@ static const struct regmap_config sunxi_pwm_regmap_config = {
 	.volatile_table	= &sunxi_pwm_volatile_regs,
 };
 
+static const struct of_device_id sunxi_pwm_of_match[] = {
+	{ .compatible = "allwinner,sun4i-a10-pwm", .data = (void *)SUN4I},
+	{ .compatible = "allwinner,sun5i-a13-pwm", .data = (void *)SUN5I},
+	{ .compatible = "allwinner,sun7i-a20-pwm", .data = (void *)SUN7I},
+	{}
+};
+MODULE_DEVICE_TABLE(of, sunxi_pwm_of_match);
+
 static int sunxi_pwm_probe(struct platform_device *pdev)
 {
+	const struct of_device_id *of_id;
 	void __iomem *base;
 	struct sunxi_pwm_chip *priv;
 	struct resource *res;
 	int ret;
+
+	of_id = of_match_device(sunxi_pwm_of_match, &pdev->dev);
+	if (!of_id)
+		return -EINVAL;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
 	priv->chip.dev = &pdev->dev;
+	priv->revision = (enum sunxi_soc_family)of_id->data;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 
+	priv->regmap = devm_regmap_init_mmio(&pdev->dev, base,
+					     &sunxi_pwm_regmap_config);
+	if (IS_ERR(priv->regmap))
+		return PTR_ERR(priv->regmap);
+
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk)) {
 		dev_err(&pdev->dev, "failed to get Osc24M clock\n");
 		return PTR_ERR(priv->clk);
 	}
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable Osc24M clock\n");
+		return ret;
+	}
 
-	priv->regmap = devm_regmap_init_mmio(&pdev->dev, base,
-					     &sunxi_pwm_regmap_config);
-	if (IS_ERR(priv->regmap))
-		return PTR_ERR(priv->regmap);
+	mutex_init(&priv->lock);
 
 	priv->chip.ops = &sunxi_pwm_ops;
 	priv->chip.base = -1;
@@ -459,29 +477,26 @@ static int sunxi_pwm_probe(struct platform_device *pdev)
 	ret = pwmchip_add(&priv->chip);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to add PWM chip: %d\n", ret);
-		return ret;
+		goto error;
 	}
 
 	platform_set_drvdata(pdev, priv);
-
-	printk("JDS pwm initialized\n");
 	return 0;
+
+error:
+	mutex_destroy(&priv->lock);
+	clk_disable_unprepare(priv->clk);
+	return ret;
 }
 
 static int sunxi_pwm_remove(struct platform_device *pdev)
 {
 	struct sunxi_pwm_chip *priv = platform_get_drvdata(pdev);
 
+	mutex_destroy(&priv->lock);
+	clk_disable_unprepare(priv->clk);
 	return pwmchip_remove(&priv->chip);
 }
-
-static const struct of_device_id sunxi_pwm_of_match[] = {
-	{ .compatible = "allwinner,sun4i-a10-pwm", .data = (void *)SUN4I},
-	{ .compatible = "allwinner,sun5i-a13-pwm", .data = (void *)SUN5I},
-	{ .compatible = "allwinner,sun7i-a20-pwm", .data = (void *)SUN7I},
-	{}
-};
-MODULE_DEVICE_TABLE(of, sunxi_pwm_of_match);
 
 static struct platform_driver sunxi_pwm_driver = {
 	.driver = {
