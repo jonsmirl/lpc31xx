@@ -144,6 +144,7 @@
 #define SUNXI_PWM_CYCLES_ACTIVE_SHIFT	0
 #define SUNXI_PWM_CYCLES_ACTIVE_WIDTH	16
 
+#define MAX_CYCLES_SUN4I 0x0ffL /* max cycle count possible for period active and entire */
 #define MAX_CYCLES 0x0ffffL /* max cycle count possible for period active and entire */
 #define OSC24 24L /* 24Mhz system oscillator */
 
@@ -169,6 +170,7 @@ struct sunxi_pwm_chip {
 	struct regmap *regmap;
 	struct mutex lock;
 	enum sunxi_soc_family revision;
+	unsigned long max_cycles;
 };
 
 static inline struct sunxi_pwm_chip *to_sunxi_chip(struct pwm_chip *chip)
@@ -186,11 +188,12 @@ static inline struct sunxi_pwm_chip *to_sunxi_chip(struct pwm_chip *chip)
 int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in) 
 {
 	int i;
-	unsigned long period = period_in * 1000; /* convert to picoseconds */
-	unsigned long int clk_pico;
-	const unsigned long min_optimal_period_cycles = MAX_CYCLES / 2;
+	unsigned long int clk_pico, period, min_optimal_period_cycles;
 	const unsigned long min_period_cycles = 0x02;
 	int best_prescale = 0;
+
+	period = period_in * 1000; /* convert to picoseconds */
+	min_optimal_period_cycles = priv->max_cycles / 2;
 
 	best_prescale = -1;
 	for(i = 0 ; i < ARRAY_SIZE(prescale_divisor) ; i++) {
@@ -200,7 +203,7 @@ int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in)
 			continue;
 		}
 		if(((period / clk_pico) >= min_optimal_period_cycles) &&
-			((period / clk_pico) <= MAX_CYCLES)) {
+			((period / clk_pico) <= priv->max_cycles)) {
 			best_prescale = i;
 		}
 	}
@@ -212,7 +215,7 @@ int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in)
 				continue;
 			}
 			if(((period / clk_pico) >= min_period_cycles) &&
-				((period / clk_pico) <= MAX_CYCLES)) {
+				((period / clk_pico) <= priv->max_cycles)) {
 				best_prescale = i;
 			}
 		}
@@ -231,17 +234,16 @@ int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in)
  */
 unsigned int compute_cycles(struct sunxi_pwm_chip *priv, int prescale, int period) 
 {
-	unsigned long int clk_pico;
-	unsigned int cycles;
+	unsigned long int clk_pico, cycles;
 
 	clk_pico = 1000000L * prescale_divisor[prescale] / OSC24;
 	cycles = DIV_ROUND_CLOSEST(period * 1000L, clk_pico);
-	if (cycles > MAX_CYCLES)
-		cycles = MAX_CYCLES;
+	if (cycles > priv->max_cycles)
+		cycles = priv->max_cycles;
 	if (cycles < 2)
 		cycles = 2;
 
-	dev_dbg(priv->chip.dev, "Best prescale was %d, cycles is %u\n", prescale, cycles);
+	dev_dbg(priv->chip.dev, "Best prescale was %d, cycles is %lu\n", prescale, cycles);
 
 	return cycles;
 }
@@ -444,6 +446,10 @@ static int sunxi_pwm_probe(struct platform_device *pdev)
 
 	priv->chip.dev = &pdev->dev;
 	priv->revision = (enum sunxi_soc_family)of_id->data;
+	if (priv->revision == SUN4I)
+		priv->max_cycles = MAX_CYCLES_SUN4I;
+	else
+		priv->max_cycles = MAX_CYCLES;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	base = devm_ioremap_resource(&pdev->dev, res);
