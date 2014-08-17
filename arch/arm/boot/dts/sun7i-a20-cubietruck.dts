@@ -157,7 +157,7 @@
 			sgtl5000: sgtl5000@a {
 				compatible = "fsl,sgtl5000";
 				reg = <0x0a>;
-				pwms = <&pwm 0 50 0>;
+				pwms = <&pwm 0 200 0>;
 
 				#sound-dai-cells = <0>;
 				VDDA-supply = <&reg_vcc3v3>;
