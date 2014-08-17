@@ -1,5 +1,5 @@
 Bottom: f6e8b9c55bf96b34d899cebd3094217adc493e39
-Top:    d176274f78d9fd871b072c9dec403343f731196e
+Top:    a1d2ee10d887ca2a9fd3048cf77e80433ae02ae7
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-17 10:24:02 -0400
 
@@ -8,7 +8,7 @@ Date:   2014-08-17 10:24:02 -0400
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index 5843f86..def4394 100644
+index 5843f86..7fe6355 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -157,7 +157,7 @@
@@ -16,7 +16,7 @@ index 5843f86..def4394 100644
  				compatible = "fsl,sgtl5000";
  				reg = <0x0a>;
 -				clocks = <&iis0>;
-+				pwms = <&pwm 0 50 0>;
++				pwms = <&pwm 0 200 0>;
  
  				#sound-dai-cells = <0>;
  				VDDA-supply = <&reg_vcc3v3>;
