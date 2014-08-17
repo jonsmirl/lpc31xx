@@ -860,7 +860,9 @@
 			compatible = "allwinner,sun7i-a20-pwm";
 			reg = <0x01c20e00 0xc>;
 			clocks = <&osc24M>;
+			#clock-cells = <1>;
 			#pwm-cells = <3>;
+			clock-output-names = "pwm0", "pwm1";
 			status = "disabled";
 		};
 
