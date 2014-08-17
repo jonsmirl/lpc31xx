@@ -1,5 +1,5 @@
 Bottom: a1d2ee10d887ca2a9fd3048cf77e80433ae02ae7
-Top:    c81efa5a70cf652856388e565e1c3c7fb452bcd0
+Top:    cb9a06ee0947891fb744441360cf92ea9007ff38
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -44,10 +44,10 @@ index 5c86a19..c32f827 100644
  obj-$(CONFIG_PWM_TIEHRPWM)	+= pwm-tiehrpwm.o
 diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
 new file mode 100644
-index 0000000..52f9c95
+index 0000000..b0d71ce
 --- /dev/null
 +++ b/drivers/pwm/pwm-sunxi.c
-@@ -0,0 +1,534 @@
+@@ -0,0 +1,522 @@
 +/* pwm-sunxi.c
 + *
 + * pwm module for sun4i (and others) like cubieboard and pcduino
@@ -396,18 +396,6 @@ index 0000000..52f9c95
 +	}
 +	if ((priv->revision == SUN5I) || (priv->revision == SUN7I))
 +		ret = sunxi_pwm_busy(priv);
-+
-+{
-+	int reg_val;
-+	regmap_read(priv->regmap, SUNXI_PWM_CTRL_REG, &reg_val);
-+	printk("JDS - SUNXI_PWM_CTRL_REG %08x\n", reg_val);
-+	regmap_read(priv->regmap, SUNXI_PWM_CH0_PERIOD, &reg_val);
-+	printk("JDS - SUNXI_PWM_CH0_PERIOD %08x\n", reg_val);
-+	regmap_read(priv->regmap, SUNXI_PWM_CH1_PERIOD, &reg_val);
-+	printk("JDS - SUNXI_PWM_CH1_PERIOD %08x\n", reg_val);
-+	
-+}
-+
 +exit:
 +	mutex_unlock(&priv->lock);
 +	return ret;
