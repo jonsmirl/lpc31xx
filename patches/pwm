@@ -1,5 +1,5 @@
 Bottom: f6e8b9c55bf96b34d899cebd3094217adc493e39
-Top:    747991009b9642ea8b3e2ca288f23b55b22d602d
+Top:    b8f051c116cdcae65507f5655e1b8c6179140388
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -81,10 +81,10 @@ index 5c86a19..c32f827 100644
  obj-$(CONFIG_PWM_TIEHRPWM)	+= pwm-tiehrpwm.o
 diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
 new file mode 100644
-index 0000000..58880e1
+index 0000000..4d2f0b1
 --- /dev/null
 +++ b/drivers/pwm/pwm-sunxi.c
-@@ -0,0 +1,513 @@
+@@ -0,0 +1,522 @@
 +/* pwm-sunxi.c
 + *
 + * pwm module for sun4i (and others) like cubieboard and pcduino
@@ -273,7 +273,7 @@ index 0000000..58880e1
 + * min_optimal_period_cycles.  If none are found then root though again
 + * taking anything that works
 + */
-+int pwm_get_best_prescale(int period_in) 
++int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in) 
 +{
 +	int i;
 +	unsigned long period = period_in * 1000; /* convert to picoseconds */
@@ -312,6 +312,7 @@ index 0000000..58880e1
 +	if(best_prescale > ARRAY_SIZE(prescale_divisor))
 +		return -EINVAL;
 +
++	dev_dbg(priv->chip.dev, "Best prescale is %d\n", best_prescale);
 +	return best_prescale;
 +}
 +
@@ -325,6 +326,7 @@ index 0000000..58880e1
 +	unsigned int entire_cycles;
 +
 +	clk_pico = 1000000L * prescale_divisor[prescale] / OSC24;
++	printk("JDS - clk_pico %ld\n", clk_pico);
 +	entire_cycles = DIV_ROUND_CLOSEST(period * 1000L, clk_pico);
 +	if (entire_cycles > MAX_CYCLES)
 +		entire_cycles = MAX_CYCLES;
@@ -378,11 +380,18 @@ index 0000000..58880e1
 +			  int duty_ns, int period_ns)
 +{
 +	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
-+	unsigned int prescale, entire_cycles, active_cycles, reg_val;
++	int prescale, entire_cycles, active_cycles;
++	unsigned int reg_val;
++
++	if (duty_ns <= 0)
++		return -EINVAL;
++	if (period_ns <= 0)
++		return -EINVAL;
 +
 +	printk("JDS - sunxi_pwm_config duty %d period %d\n", duty_ns, period_ns);
-+	if (period_ns <= 50) {
-+		// Just enable the OSC24 clock bypass 
++
++	// If period less than two cycles, just enable the OSC24 clock bypass 
++	if (period_ns < (2 * 1000 / OSC24 + 1)) {
 +		switch (pwm->hwpwm) {
 +		case 0:
 +			regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
@@ -396,7 +405,7 @@ index 0000000..58880e1
 +		return 0;
 +	}
 +
-+	prescale = pwm_get_best_prescale(period_ns);
++	prescale = pwm_get_best_prescale(priv, period_ns);
 +	if (prescale < 0)
 +		return prescale;
 +
@@ -696,3 +705,24 @@ index dd09d05..50934ee 100644
  	i2c_set_clientdata(client, sgtl5000);
  
  	/* Ensure sgtl5000 will start with sane register values */
+diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
+index f77f33c..e1061a2 100644
+--- a/sound/soc/sunxi/sunxi-i2s.c
++++ b/sound/soc/sunxi/sunxi-i2s.c
+@@ -119,14 +119,14 @@ void sunxi_snd_txctrl_i2s(struct sunxi_priv *priv, struct snd_pcm_substream *sub
+ 		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, 0);
+ 	}
+ 
+-/*	{
++	{
+ 	int i;
+ 	for (i = SUNXI_I2S_CTL; i <= SUNXI_I2S_RXCHMAP; i += 4)  {
+ 		regmap_read(priv->regmap, i, &reg_val);
+ 		printk("REG %02x VAL %08x\n", i, reg_val);
+ 	}
+ 	}
+-*/
++
+ }
+ 
+ void sunxi_snd_rxctrl_i2s(struct sunxi_priv *priv, int on)
