@@ -346,18 +346,6 @@ static int sunxi_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 	}
 	if ((priv->revision == SUN5I) || (priv->revision == SUN7I))
 		ret = sunxi_pwm_busy(priv);
-
-{
-	int reg_val;
-	regmap_read(priv->regmap, SUNXI_PWM_CTRL_REG, &reg_val);
-	printk("JDS - SUNXI_PWM_CTRL_REG %08x\n", reg_val);
-	regmap_read(priv->regmap, SUNXI_PWM_CH0_PERIOD, &reg_val);
-	printk("JDS - SUNXI_PWM_CH0_PERIOD %08x\n", reg_val);
-	regmap_read(priv->regmap, SUNXI_PWM_CH1_PERIOD, &reg_val);
-	printk("JDS - SUNXI_PWM_CH1_PERIOD %08x\n", reg_val);
-	
-}
-
 exit:
 	mutex_unlock(&priv->lock);
 	return ret;
