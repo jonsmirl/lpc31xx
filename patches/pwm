@@ -1,5 +1,5 @@
 Bottom: a1d2ee10d887ca2a9fd3048cf77e80433ae02ae7
-Top:    0d022b5a171a72c13ac45551b290a02d53557ea8
+Top:    647d8a2b5b7fb00d9d922e5485577ad3e9c56f54
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -44,7 +44,7 @@ index 5c86a19..c32f827 100644
  obj-$(CONFIG_PWM_TIEHRPWM)	+= pwm-tiehrpwm.o
 diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
 new file mode 100644
-index 0000000..068b70c
+index 0000000..95bdaf2
 --- /dev/null
 +++ b/drivers/pwm/pwm-sunxi.c
 @@ -0,0 +1,515 @@
@@ -367,7 +367,7 @@ index 0000000..068b70c
 +		ret = -EINVAL;
 +	}
 +exit:
-+	mutex_lock(&priv->lock);
++	mutex_unlock(&priv->lock);
 +	return ret;
 +}
 +
@@ -439,7 +439,7 @@ index 0000000..068b70c
 +	default:
 +		ret = -EINVAL;
 +	}
-+	mutex_lock(&priv->lock);
++	mutex_unlock(&priv->lock);
 +	return ret;
 +}
 +
