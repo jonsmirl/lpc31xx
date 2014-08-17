@@ -1,0 +1,30 @@
+Bottom: 0d022b5a171a72c13ac45551b290a02d53557ea8
+Top:    647d8a2b5b7fb00d9d922e5485577ad3e9c56f54
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-08-17 12:40:46 -0400
+
+Refresh of pwm
+
+---
+
+diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
+index 068b70c..95bdaf2 100644
+--- a/drivers/pwm/pwm-sunxi.c
++++ b/drivers/pwm/pwm-sunxi.c
+@@ -317,7 +317,7 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		ret = -EINVAL;
+ 	}
+ exit:
+-	mutex_lock(&priv->lock);
++	mutex_unlock(&priv->lock);
+ 	return ret;
+ }
+ 
+@@ -389,7 +389,7 @@ static int sunxi_pwm_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	default:
+ 		ret = -EINVAL;
+ 	}
+-	mutex_lock(&priv->lock);
++	mutex_unlock(&priv->lock);
+ 	return ret;
+ }
