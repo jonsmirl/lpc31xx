@@ -860,6 +860,7 @@
 			reg = <0x01c20e00 0xc>;
 			clocks = <&osc24M>;
 			#pwm-cells = <3>;
+			clock-output-names = "pwm0", "pwm1";
 			status = "disabled";
 		};
 
