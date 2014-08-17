@@ -317,7 +317,7 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		ret = -EINVAL;
 	}
 exit:
-	mutex_lock(&priv->lock);
+	mutex_unlock(&priv->lock);
 	return ret;
 }
 
@@ -389,7 +389,7 @@ static int sunxi_pwm_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
 	default:
 		ret = -EINVAL;
 	}
-	mutex_lock(&priv->lock);
+	mutex_unlock(&priv->lock);
 	return ret;
 }
 
