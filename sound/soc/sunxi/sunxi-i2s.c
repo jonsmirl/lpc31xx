@@ -119,14 +119,14 @@ void sunxi_snd_txctrl_i2s(struct sunxi_priv *priv, struct snd_pcm_substream *sub
 		regmap_update_bits(priv->regmap, SUNXI_I2S_INT, SUNXI_I2SINT_TXDRQEN_MASK, 0);
 	}
 
-/*	{
+	{
 	int i;
 	for (i = SUNXI_I2S_CTL; i <= SUNXI_I2S_RXCHMAP; i += 4)  {
 		regmap_read(priv->regmap, i, &reg_val);
 		printk("REG %02x VAL %08x\n", i, reg_val);
 	}
 	}
-*/
+
 }
 
 void sunxi_snd_rxctrl_i2s(struct sunxi_priv *priv, int on)

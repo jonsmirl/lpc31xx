@@ -186,7 +186,7 @@ static inline struct sunxi_pwm_chip *to_sunxi_chip(struct pwm_chip *chip)
  * min_optimal_period_cycles.  If none are found then root though again
  * taking anything that works
  */
-int pwm_get_best_prescale(int period_in) 
+int pwm_get_best_prescale(struct sunxi_pwm_chip *priv, int period_in) 
 {
 	int i;
 	unsigned long period = period_in * 1000; /* convert to picoseconds */
@@ -225,6 +225,7 @@ int pwm_get_best_prescale(int period_in)
 	if(best_prescale > ARRAY_SIZE(prescale_divisor))
 		return -EINVAL;
 
+	dev_dbg(priv->chip.dev, "Best prescale is %d\n", best_prescale);
 	return best_prescale;
 }
 
@@ -238,6 +239,7 @@ unsigned int get_entire_cycles(struct sunxi_pwm_chip *priv, int prescale, int pe
 	unsigned int entire_cycles;
 
 	clk_pico = 1000000L * prescale_divisor[prescale] / OSC24;
+	printk("JDS - clk_pico %ld\n", clk_pico);
 	entire_cycles = DIV_ROUND_CLOSEST(period * 1000L, clk_pico);
 	if (entire_cycles > MAX_CYCLES)
 		entire_cycles = MAX_CYCLES;
@@ -291,11 +293,18 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 			  int duty_ns, int period_ns)
 {
 	struct sunxi_pwm_chip *priv = to_sunxi_chip(chip);
-	unsigned int prescale, entire_cycles, active_cycles, reg_val;
+	int prescale, entire_cycles, active_cycles;
+	unsigned int reg_val;
+
+	if (duty_ns <= 0)
+		return -EINVAL;
+	if (period_ns <= 0)
+		return -EINVAL;
 
 	printk("JDS - sunxi_pwm_config duty %d period %d\n", duty_ns, period_ns);
-	if (period_ns <= 50) {
-		// Just enable the OSC24 clock bypass 
+
+	// If period less than two cycles, just enable the OSC24 clock bypass 
+	if (period_ns < (2 * 1000 / OSC24 + 1)) {
 		switch (pwm->hwpwm) {
 		case 0:
 			regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
@@ -309,7 +318,7 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		return 0;
 	}
 
-	prescale = pwm_get_best_prescale(period_ns);
+	prescale = pwm_get_best_prescale(priv, period_ns);
 	if (prescale < 0)
 		return prescale;
 
