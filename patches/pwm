@@ -1,5 +1,5 @@
 Bottom: d176274f78d9fd871b072c9dec403343f731196e
-Top:    b8f051c116cdcae65507f5655e1b8c6179140388
+Top:    59932c7f5aa5116db722aa6f074260cca1e323b8
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -44,10 +44,10 @@ index 5c86a19..c32f827 100644
  obj-$(CONFIG_PWM_TIEHRPWM)	+= pwm-tiehrpwm.o
 diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
 new file mode 100644
-index 0000000..4d2f0b1
+index 0000000..e9be384
 --- /dev/null
 +++ b/drivers/pwm/pwm-sunxi.c
-@@ -0,0 +1,522 @@
+@@ -0,0 +1,500 @@
 +/* pwm-sunxi.c
 + *
 + * pwm module for sun4i (and others) like cubieboard and pcduino
@@ -199,7 +199,7 @@ index 0000000..4d2f0b1
 +#define SUNXI_PWM_CYCLES_ACTIVE_SHIFT	0
 +#define SUNXI_PWM_CYCLES_ACTIVE_WIDTH	16
 +
-+#define MAX_CYCLES 0x0ffff /* max cycle count possible for period active and entire */
++#define MAX_CYCLES 0x0ffffL /* max cycle count possible for period active and entire */
 +#define OSC24 24L /* 24Mhz system oscillator */
 +
 +/* Supported SoC families - used for quirks */
@@ -249,6 +249,7 @@ index 0000000..4d2f0b1
 +	for(i = 0 ; i < ARRAY_SIZE(prescale_divisor) ; i++) {
 +
 +		clk_pico = 1000000L * prescale_divisor[i] / OSC24;
++		printk("JDS - period %ld clk_pico %ld div %ld\n", period, clk_pico, period / clk_pico);
 +		if(clk_pico < 1 || clk_pico > period) {
 +			continue;
 +		}
@@ -264,7 +265,7 @@ index 0000000..4d2f0b1
 +			if(clk_pico < 1 || clk_pico > period) {
 +				continue;
 +			}
-+			printk("JDS - period %ld check %ld\n", period, clk_pico);
++			printk("JDS - period %ld clk_pico %ld\n", period, clk_pico);
 +			if(((period / clk_pico) >= min_period_cycles) &&
 +				((period / clk_pico) <= MAX_CYCLES)) {
 +				best_prescale = i;
@@ -283,44 +284,22 @@ index 0000000..4d2f0b1
 + * return the number of cycles for the channel period computed from the nanoseconds
 + * for the period.  Allwinner docs call this "entire" cycles
 + */
-+unsigned int get_entire_cycles(struct sunxi_pwm_chip *priv, int prescale, int period) 
++unsigned int compute_cycles(struct sunxi_pwm_chip *priv, int prescale, int period) 
 +{
 +	unsigned long int clk_pico;
-+	unsigned int entire_cycles;
++	unsigned int cycles;
 +
 +	clk_pico = 1000000L * prescale_divisor[prescale] / OSC24;
 +	printk("JDS - clk_pico %ld\n", clk_pico);
-+	entire_cycles = DIV_ROUND_CLOSEST(period * 1000L, clk_pico);
-+	if (entire_cycles > MAX_CYCLES)
-+		entire_cycles = MAX_CYCLES;
-+	if (entire_cycles < 2)
-+		entire_cycles = 2;
++	cycles = DIV_ROUND_CLOSEST(period * 1000L, clk_pico);
++	if (cycles > MAX_CYCLES)
++		cycles = MAX_CYCLES;
++	if (cycles < 2)
++		cycles = 2;
 +
-+	dev_dbg(priv->chip.dev, "Best prescale was %d, entire cycles was %u\n", prescale, entire_cycles);
++	dev_dbg(priv->chip.dev, "Best prescale was %d, entire cycles was %u\n", prescale, cycles);
 +
-+	return entire_cycles;
-+}
-+
-+/*
-+ * return the number of cycles for the channel duty computed from the nanoseconds
-+ * for the duty.  Allwinner docs call this "active" cycles
-+ */
-+unsigned int get_active_cycles(struct sunxi_pwm_chip *priv, unsigned int entire_cycles, 
-+		unsigned int prescale, int duty) 
-+{
-+	unsigned long int clk_pico;
-+	unsigned int active_cycles;
-+
-+	clk_pico = 1000000L * prescale_divisor[prescale] / OSC24;
-+	active_cycles = DIV_ROUND_CLOSEST(duty * 1000L, clk_pico);
-+	if (active_cycles >= entire_cycles)
-+		active_cycles = entire_cycles - 1;
-+	if (active_cycles == 0)
-+		active_cycles = 1;
-+
-+	dev_dbg(priv->chip.dev, "Best prescale was %d, active cycles was %u\n", prescale, active_cycles);
-+
-+	return entire_cycles;
++	return cycles;
 +}
 +
 +static int sunxi_pwm_busy(struct sunxi_pwm_chip *priv)
@@ -346,12 +325,11 @@ index 0000000..4d2f0b1
 +	int prescale, entire_cycles, active_cycles;
 +	unsigned int reg_val;
 +
-+	if (duty_ns <= 0)
-+		return -EINVAL;
-+	if (period_ns <= 0)
-+		return -EINVAL;
-+
++	
 +	printk("JDS - sunxi_pwm_config duty %d period %d\n", duty_ns, period_ns);
++
++	if ((duty_ns <= 0) || (period_ns <= 0))
++		return 0;
 +
 +	// If period less than two cycles, just enable the OSC24 clock bypass 
 +	if (period_ns < (2 * 1000 / OSC24 + 1)) {
@@ -372,8 +350,8 @@ index 0000000..4d2f0b1
 +	if (prescale < 0)
 +		return prescale;
 +
-+	entire_cycles = get_entire_cycles(priv, prescale, period_ns);
-+	active_cycles = get_active_cycles(priv, entire_cycles, prescale, duty_ns);
++	entire_cycles = compute_cycles(priv, prescale, period_ns);
++	active_cycles = compute_cycles(priv, prescale, duty_ns);
 +
 +	reg_val = (entire_cycles << SUNXI_PWM_CYCLES_TOTAL_SHIFT) & SUNXI_PWM_CYCLES_TOTAL_MASK;
 +	reg_val = (active_cycles << SUNXI_PWM_CYCLES_ACTIVE_SHIFT) & SUNXI_PWM_CYCLES_ACTIVE_MASK;
@@ -381,13 +359,13 @@ index 0000000..4d2f0b1
 +	switch (pwm->hwpwm) {
 +	case 0:
 +		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
-+				SUNXI_PWMCTL_PWM0_PRE_MASK | SUNXI_PWMCTL_PWM0_EN_MASK,
++				SUNXI_PWMCTL_PWM0_BYPASS_MASK | SUNXI_PWMCTL_PWM0_PRE_MASK | SUNXI_PWMCTL_PWM0_EN_MASK,
 +				prescale << SUNXI_PWMCTL_PWM0_PRE_SHIFT | SUNXI_PWMCTL_PWM0_EN);
 +		regmap_write(priv->regmap, SUNXI_PWM_CH0_PERIOD, reg_val);
 +		break;
 +	case 1:
 +		regmap_update_bits(priv->regmap, SUNXI_PWM_CTRL_REG,
-+				SUNXI_PWMCTL_PWM1_PRE_MASK | SUNXI_PWMCTL_PWM1_EN_MASK,
++				SUNXI_PWMCTL_PWM1_BYPASS_MASK | SUNXI_PWMCTL_PWM1_PRE_MASK | SUNXI_PWMCTL_PWM1_EN_MASK,
 +				prescale << SUNXI_PWMCTL_PWM1_PRE_SHIFT | SUNXI_PWMCTL_PWM1_EN);
 +		regmap_write(priv->regmap, SUNXI_PWM_CH1_PERIOD, reg_val);
 +		break;
