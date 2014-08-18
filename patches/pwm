@@ -3,7 +3,8 @@ Top:    a77c405f6a9b0d046dec2bf2aeb80b28b6d25aa3
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
-Add a PWM driver for Allwinner
+This adds a generic PWM framework driver for the PWM controller
+found on Allwinner SoCs.x
 
 
 ---
