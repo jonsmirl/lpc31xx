@@ -153,18 +153,11 @@ void sunxi_snd_rxctrl_i2s(struct sunxi_priv *priv, int on)
 	}
 }
 
-static inline int sunxi_snd_is_clkmaster(struct sunxi_priv *priv)
-{
-	u32 reg_val;
-
-	regmap_read(priv->regmap, SUNXI_I2S_CTL, &reg_val);
-	return ((reg_val & SUNXI_I2SCTL_MS_MASK) ? 0 : 1);
-}
-
 static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 {
 	struct sunxi_priv *priv = snd_soc_dai_get_drvdata(cpu_dai);
 	u32 reg_val;
+	int ret;
 
 	printk("JDS - sunxi_i2s_set_fmt %08x\n", fmt);
 
@@ -187,6 +180,16 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 		regmap_update_bits(priv->regmap, SUNXI_I2S_CTL, SUNXI_I2SCTL_MS_MASK, 0);
 		printk("JDS - sunxi_i2s_set_fmt master\n");
 		priv->master = 1;
+		/* Enable iis on a basic rate */
+		ret = clk_set_rate(priv->clk_iis, 24576000);
+		if (ret) {
+			dev_err(priv->dev, "failed to set i2s base clock rate\n");
+			return ret;
+		}
+		if (clk_prepare_enable(priv->clk_iis)) {
+			dev_err(priv->dev, "failed to enable iis clock\n");
+			return -EINVAL;
+		}
 		break;
 	default:
 		return -EINVAL;
@@ -576,6 +579,7 @@ static const struct regmap_config sunxi_i2s_regmap_config = {
 	.val_bits	= 32,
 	.max_register 	= SUNXI_I2S_RXCHMAP,
 	.volatile_table	= &sunxi_i2s_volatile_regs,
+	.fast_io	= true,
 };
 
 static const struct of_device_id sunxi_i2s_of_match[] = {
@@ -609,6 +613,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	priv->revision = (enum sunxi_soc_family)of_id->data;
+	priv->dev = &pdev->dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	base = devm_ioremap_resource(dev, res);
@@ -631,7 +636,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to get iis clock\n");
 		return PTR_ERR(priv->clk_iis);
 	}
-
+#ifdef JDS
 	/* Enable iis on a basic rate */
 	ret = clk_set_rate(priv->clk_iis, 24576000);
 	if (ret) {
@@ -642,7 +647,7 @@ static int sunxi_i2s_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to enable iis clock\n");
 		return -EINVAL;
 	}
-
+#endif
 	/* Enable the bus clock */
 	if (clk_prepare_enable(priv->clk_apb)) {
 		dev_err(dev, "failed to enable apb clock\n");
