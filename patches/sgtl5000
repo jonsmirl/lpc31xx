@@ -1,5 +1,5 @@
 Bottom: c675feca01b53c52af15098c64548065b43ed15a
-Top:    c63040a0874e4d576af521fdc830803fe9782aa0
+Top:    fb407fce18baecba15d62668868dbcfa77f667f6
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-17 10:24:02 -0400
 
@@ -31,14 +31,12 @@ index 5843f86..96913bb 100644
  	};
  
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 0a03350..32a9ea1 100644
+index 0a03350..63542e3 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
-@@ -860,7 +860,9 @@
- 			compatible = "allwinner,sun7i-a20-pwm";
+@@ -861,6 +861,7 @@
  			reg = <0x01c20e00 0xc>;
  			clocks = <&osc24M>;
-+			#clock-cells = <1>;
  			#pwm-cells = <3>;
 +			clock-output-names = "pwm0", "pwm1";
  			status = "disabled";
