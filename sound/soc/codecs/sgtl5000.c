@@ -1487,15 +1487,15 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		if (ret)
 			return ret;
 	}
-	printk("JDS sgtl5000_i2c_probe 1\n");
 
 	/* read chip information */
 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
-	printk("JDS sgtl5000_i2c_probe 1a %d\n", ret);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev,
+			"Unable to read I2C %d\n", reg);
 		goto disable_clk;
+	}
 
-	printk("JDS sgtl5000_i2c_probe 2\n");
 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
 	    SGTL5000_PARTID_PART_ID) {
 		dev_err(&client->dev,
@@ -1504,12 +1504,10 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		goto disable_clk;
 	}
 
-	printk("JDS sgtl5000_i2c_probe 3\n");
 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
 	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
 	sgtl5000->revision = rev;
 
-	printk("JDS sgtl5000_i2c_probe 4\n");
 	i2c_set_clientdata(client, sgtl5000);
 
 	/* Ensure sgtl5000 will start with sane register values */
