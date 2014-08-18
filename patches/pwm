@@ -6,6 +6,8 @@ Date:   2014-08-14 11:30:41 -0400
 This adds a generic PWM framework driver for the PWM controller
 found on Allwinner SoCs.x
 
+Signed-off-by: Jon Smirl <jonsmirl@gmail.com>
+
 
 ---
 
