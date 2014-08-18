@@ -1,5 +1,5 @@
 Bottom: c675feca01b53c52af15098c64548065b43ed15a
-Top:    fb407fce18baecba15d62668868dbcfa77f667f6
+Top:    184bab3f09d85302c9173f2fbd192502ab9adfa8
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-17 10:24:02 -0400
 
@@ -43,7 +43,7 @@ index 0a03350..63542e3 100644
  		};
  
 diff --git a/sound/soc/codecs/sgtl5000.c b/sound/soc/codecs/sgtl5000.c
-index dd09d05..50934ee 100644
+index dd09d05..37e7fcf 100644
 --- a/sound/soc/codecs/sgtl5000.c
 +++ b/sound/soc/codecs/sgtl5000.c
 @@ -16,6 +16,7 @@
@@ -82,7 +82,7 @@ index dd09d05..50934ee 100644
  
  	sgtl5000 = devm_kzalloc(&client->dev, sizeof(struct sgtl5000_priv),
  								GFP_KERNEL);
-@@ -1464,22 +1467,35 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
+@@ -1464,21 +1467,34 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
  	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
  	if (IS_ERR(sgtl5000->mclk)) {
  		ret = PTR_ERR(sgtl5000->mclk);
@@ -111,35 +111,22 @@ index dd09d05..50934ee 100644
 +		if (ret)
 +			return ret;
  	}
--
+ 
 -	ret = clk_prepare_enable(sgtl5000->mclk);
 -	if (ret)
 -		return ret;
-+	printk("JDS sgtl5000_i2c_probe 1\n");
- 
+-
  	/* read chip information */
  	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
-+	printk("JDS sgtl5000_i2c_probe 1a %d\n", ret);
- 	if (ret)
+-	if (ret)
++	if (ret) {
++		dev_err(&client->dev,
++			"Unable to read I2C %d\n", reg);
  		goto disable_clk;
++	}
  
-+	printk("JDS sgtl5000_i2c_probe 2\n");
  	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
  	    SGTL5000_PARTID_PART_ID) {
- 		dev_err(&client->dev,
-@@ -1488,10 +1504,12 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
- 		goto disable_clk;
- 	}
- 
-+	printk("JDS sgtl5000_i2c_probe 3\n");
- 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
- 	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
- 	sgtl5000->revision = rev;
- 
-+	printk("JDS sgtl5000_i2c_probe 4\n");
- 	i2c_set_clientdata(client, sgtl5000);
- 
- 	/* Ensure sgtl5000 will start with sane register values */
 diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
 index 231d2c2..2bc4085 100644
 --- a/sound/soc/generic/simple-card.c
