@@ -1,5 +1,5 @@
 Bottom: 1765b7205e4ef693174589cf06b8cfe8c4e417a4
-Top:    8d3922de15ecd577f617e19235bb6ef421d75ea4
+Top:    fa05dccbd564b9f45a501d8081218ba68af25a87
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-17 10:24:02 -0400
 
@@ -31,7 +31,7 @@ index 1fb13f99..2267a54 100644
  	};
  
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index b273092..ed05a86 100644
+index b273092..d9967052 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
 @@ -860,6 +860,7 @@
@@ -42,6 +42,33 @@ index b273092..ed05a86 100644
  			status = "disabled";
  		};
  
+@@ -887,7 +888,7 @@
+ 			compatible = "allwinner,sun7i-a20-iis";
+ 			reg = <0x01C22400 0x40>;
+ 			interrupts = <0 16 4>;
+-			clocks = <&apb0_gates 3>, <&i2s0_clk>;
++			clocks = <&apb0_gates 3>, <&iis0_clk>;
+ 			clock-names = "apb", "iis";
+ 			clock-output-names = "mclk0";
+ 			dmas = <&dma 0 3>, <&dma 0 3>;
+@@ -901,7 +902,7 @@
+ 			compatible = "allwinner,sun7i-a20-iis";
+ 			reg = <0x01C22000 0x40>;
+ 			interrupts = <0 87 4>;
+-			clocks = <&apb0_gates 4>, <&i2s1_clk>;
++			clocks = <&apb0_gates 4>, <&iis1_clk>;
+ 			clock-names = "apb", "iis";
+ 			clock-output-names = "mclk1";
+ 			dmas = <&dma 0 4>, <&dma 0 4>;
+@@ -915,7 +916,7 @@
+ 			compatible = "allwinner,sun7i-a20-iis";
+ 			reg = <0x01C24400 0x40>;
+ 			interrupts = <0 90 4>;
+-			clocks = <&apb0_gates 8>, <&i2s2_clk>;
++			clocks = <&apb0_gates 8>, <&iis2_clk>;
+ 			clock-names = "apb", "iis";
+ 			clock-output-names = "mclk2";
+ 			dmas = <&dma 0 6>, <&dma 0 6>;
 diff --git a/sound/soc/codecs/sgtl5000.c b/sound/soc/codecs/sgtl5000.c
 index a7c777a..8df83f9 100644
 --- a/sound/soc/codecs/sgtl5000.c
