@@ -1,5 +1,5 @@
 Bottom: d6b6821caf97a60fad45a27cf1cb4be567fa05eb
-Top:    a77c405f6a9b0d046dec2bf2aeb80b28b6d25aa3
+Top:    96006c32970dc4eefb8c80517fdc046485a1197e
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-14 11:30:41 -0400
 
@@ -48,10 +48,10 @@ index 5c86a19..c32f827 100644
  obj-$(CONFIG_PWM_TIEHRPWM)	+= pwm-tiehrpwm.o
 diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
 new file mode 100644
-index 0000000..b81a673
+index 0000000..2f5e9a7
 --- /dev/null
 +++ b/drivers/pwm/pwm-sunxi.c
-@@ -0,0 +1,517 @@
+@@ -0,0 +1,519 @@
 +/* pwm-sunxi.c
 + *
 + * pwm module for sun4i (and others) like cubieboard and pcduino
@@ -83,6 +83,8 @@ index 0000000..b81a673
 + * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 + * MA 02111-1307 USA
 + */
++
++#define DEBUG
 +
 +#include <linux/module.h>
 +#include <linux/of_platform.h>
