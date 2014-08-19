@@ -1,9 +1,10 @@
 Version: 1
-Previous: 836d43024fcbd1732d2c5dfd4d0a304b7d0f3c35
-Head: e39d30a3f8e450fa6a780035dcf87559d2bb62e9
+Previous: 11df80445b923f15bea1372903582c8acab16783
+Head: bddd0f46bef202acb0be01d457e714277f78af13
 Applied:
   pwm: 8045fa4c9bc1b23851a43759635117c3319ebea9
   tyler: e39d30a3f8e450fa6a780035dcf87559d2bb62e9
+  refresh-temp: bddd0f46bef202acb0be01d457e714277f78af13
 Unapplied:
   sgtl5000: d08cd028c4349f5e24941f0cb5eeb6588c8ee9d4
 Hidden:
