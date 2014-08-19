@@ -1,5 +1,5 @@
-Bottom: a4b23c70d5e3d665c2698ca57c1ae21828c06678
-Top:    e31b5973bff780b88525ffc606d449c9c90d1e61
+Bottom: ace9271b373bf417b1e2769c7a3b74d23a8c5713
+Top:    1d1949107d4fedf6a22ba9a0313d6664b97a426a
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-17 10:24:02 -0400
 
@@ -8,10 +8,10 @@ Date:   2014-08-17 10:24:02 -0400
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index 5843f86..96913bb 100644
+index 1fb13f99..2267a54 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-@@ -157,7 +157,7 @@
+@@ -176,7 +176,7 @@
  			sgtl5000: sgtl5000@a {
  				compatible = "fsl,sgtl5000";
  				reg = <0x0a>;
@@ -20,7 +20,7 @@ index 5843f86..96913bb 100644
  
  				#sound-dai-cells = <0>;
  				VDDA-supply = <&reg_vcc3v3>;
-@@ -195,8 +195,8 @@
+@@ -214,8 +214,8 @@
  		};
  
  		dailink0_master: simple-audio-card,codec {
@@ -31,10 +31,10 @@ index 5843f86..96913bb 100644
  	};
  
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
-index 0a03350..63542e3 100644
+index b273092..ed05a86 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
 +++ b/arch/arm/boot/dts/sun7i-a20.dtsi
-@@ -861,6 +861,7 @@
+@@ -860,6 +860,7 @@
  			reg = <0x01c20e00 0xc>;
  			clocks = <&osc24M>;
  			#pwm-cells = <3>;
@@ -43,7 +43,7 @@ index 0a03350..63542e3 100644
  		};
  
 diff --git a/sound/soc/codecs/sgtl5000.c b/sound/soc/codecs/sgtl5000.c
-index dd09d05..37e7fcf 100644
+index a7c777a..8df83f9 100644
 --- a/sound/soc/codecs/sgtl5000.c
 +++ b/sound/soc/codecs/sgtl5000.c
 @@ -16,6 +16,7 @@
@@ -71,7 +71,7 @@ index dd09d05..37e7fcf 100644
  	case 256:
  		clk_ctl |= SGTL5000_MCLK_FREQ_256FS <<
  			SGTL5000_MCLK_FREQ_SHIFT;
-@@ -1446,8 +1448,9 @@ static int sgtl5000_fill_defaults(struct sgtl5000_priv *sgtl5000)
+@@ -1451,8 +1453,9 @@ static int sgtl5000_fill_defaults(struct sgtl5000_priv *sgtl5000)
  static int sgtl5000_i2c_probe(struct i2c_client *client,
  			      const struct i2c_device_id *id)
  {
@@ -82,7 +82,7 @@ index dd09d05..37e7fcf 100644
  
  	sgtl5000 = devm_kzalloc(&client->dev, sizeof(struct sgtl5000_priv),
  								GFP_KERNEL);
-@@ -1464,21 +1467,34 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
+@@ -1469,21 +1472,34 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
  	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
  	if (IS_ERR(sgtl5000->mclk)) {
  		ret = PTR_ERR(sgtl5000->mclk);
@@ -128,7 +128,7 @@ index dd09d05..37e7fcf 100644
  	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
  	    SGTL5000_PARTID_PART_ID) {
 diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
-index 231d2c2..2bc4085 100644
+index e10dd51..c123fa7 100644
 --- a/sound/soc/generic/simple-card.c
 +++ b/sound/soc/generic/simple-card.c
 @@ -8,6 +8,9 @@
