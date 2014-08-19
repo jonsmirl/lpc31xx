@@ -1,0 +1,22 @@
+Bottom: a77c405f6a9b0d046dec2bf2aeb80b28b6d25aa3
+Top:    96006c32970dc4eefb8c80517fdc046485a1197e
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2014-08-19 16:32:04 -0400
+
+Refresh of pwm
+
+---
+
+diff --git a/drivers/pwm/pwm-sunxi.c b/drivers/pwm/pwm-sunxi.c
+index b81a673..2f5e9a7 100644
+--- a/drivers/pwm/pwm-sunxi.c
++++ b/drivers/pwm/pwm-sunxi.c
+@@ -30,6 +30,8 @@
+  * MA 02111-1307 USA
+  */
+ 
++#define DEBUG
++
+ #include <linux/module.h>
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>
