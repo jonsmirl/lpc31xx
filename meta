@@ -1,10 +1,9 @@
 Version: 1
-Previous: e3e115bc79c606767e3d2bee3ebf47a464f44f72
-Head: 594dce9f27bf949cec70faec2f42870e9001a00b
+Previous: 395c54cfed10e90f8ffe32f04aac086e4834ab1b
+Head: 0aadffd84d9851154a9a9f965653a8dcc8a1c0e5
 Applied:
   pwm: 8045fa4c9bc1b23851a43759635117c3319ebea9
-  old-allwinner-i2s: 407bb714f1eba89970ad524adf32cf517558ef55
-  refresh-temp: 594dce9f27bf949cec70faec2f42870e9001a00b
+  old-allwinner-i2s: 0aadffd84d9851154a9a9f965653a8dcc8a1c0e5
 Unapplied:
   tyler: 23b31d755052f01a4c0f055cb3aa840ee7c54108
   sgtl5000: 2587398a2a08e6ab63615919c9e2068217239b7f
