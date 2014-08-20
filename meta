@@ -1,12 +1,12 @@
 Version: 1
-Previous: 5fb22ddba7ab6d4f7dbbf9a24b4db2abaffa90ec
-Head: cf40d0d99b774595e6a6dcec162c9bb051797123
+Previous: bc515fe62dfa48a173d9a53821d9e549ca1b52bb
+Head: 2960aa42f840b39b90da50bcf78d407c2d58d3bf
 Applied:
   pwm: 8045fa4c9bc1b23851a43759635117c3319ebea9
   old-allwinner-i2s: 0aadffd84d9851154a9a9f965653a8dcc8a1c0e5
   tas5716: 2752cf160dd5ff979fc5aeb4528ae06b50434e07
   sgtl5000: cf40d0d99b774595e6a6dcec162c9bb051797123
+  simple-card: 2960aa42f840b39b90da50bcf78d407c2d58d3bf
 Unapplied:
   tyler: 12c78011d719a9701fb3e18789a9e8739734109b
-  simple-card: 37f0cd042af830bb2db8c82556fda5dbc25dc3f7
 Hidden:
