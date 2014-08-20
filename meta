@@ -1,10 +1,10 @@
 Version: 1
-Previous: d11bb7ed9e129355a838fccf12f6af331552ff8e
-Head: 8fa7cf2b5cf0cf106dc69d7bf8a0345762d494aa
+Previous: 5c87d9ccf86f055d6ae39fb804d7bc697a5282b1
+Head: 0aadffd84d9851154a9a9f965653a8dcc8a1c0e5
 Applied:
   pwm: 8045fa4c9bc1b23851a43759635117c3319ebea9
   old-allwinner-i2s: 0aadffd84d9851154a9a9f965653a8dcc8a1c0e5
-  tyler: 8fa7cf2b5cf0cf106dc69d7bf8a0345762d494aa
 Unapplied:
+  tyler: 8fa7cf2b5cf0cf106dc69d7bf8a0345762d494aa
   sgtl5000: 00837f5dc5b8d00d978458247920c4015e097cdd
 Hidden:
