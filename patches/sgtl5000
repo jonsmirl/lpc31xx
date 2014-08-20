@@ -1,5 +1,5 @@
 Bottom: 1765b7205e4ef693174589cf06b8cfe8c4e417a4
-Top:    fa05dccbd564b9f45a501d8081218ba68af25a87
+Top:    07bc5862ed6c2545c842cffec9d51bf25b79fb40
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-17 10:24:02 -0400
 
@@ -8,7 +8,7 @@ Date:   2014-08-17 10:24:02 -0400
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index 1fb13f99..2267a54 100644
+index 1fb13f99..3cb91f2 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -176,7 +176,7 @@
@@ -20,11 +20,20 @@ index 1fb13f99..2267a54 100644
  
  				#sound-dai-cells = <0>;
  				VDDA-supply = <&reg_vcc3v3>;
-@@ -214,8 +214,8 @@
+@@ -206,16 +206,14 @@
+ 	sound {
+ 		compatible = "simple-audio-card";
+ 		simple-audio-card,format = "i2s";
+-		simple-audio-card,bitclock-master = <&dailink0_master>;
+-		simple-audio-card,frame-master = <&dailink0_master>;
+ 
+ 		simple-audio-card,cpu {
+ 			sound-dai = <&iis0>;
  		};
  
- 		dailink0_master: simple-audio-card,codec {
-+			system-clock-frequency = <24000000>;
+-		dailink0_master: simple-audio-card,codec {
++		simple-audio-card,codec {
++			clock = <&iis0>;
  			sound-dai = <&sgtl5000>;
 -			clocks = <&iis0>;
  		};
