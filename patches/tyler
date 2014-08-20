@@ -1,4 +1,4 @@
-Bottom: e1f1c6339770dccc366b5c6b86cf435bf9e86712
+Bottom: a2df69de6865beddc38b9253657a01b912a36740
 Top:    07bc5862ed6c2545c842cffec9d51bf25b79fb40
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
@@ -8,77 +8,6 @@ TAS5716 support for Tyler
 
 ---
 
-diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index bb2f515..3cb91f2 100644
---- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-+++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-@@ -125,6 +125,16 @@
- 			status = "okay";
- 		};
- 
-+		iis0: iis@01c22400 {
-+			pinctrl-names = "default";
-+			pinctrl-0 = <&i2s0_pins_a>;
-+			status = "okay";
-+		};
-+
-+		codec: codec@01c22c00 {
-+			status = "okay";
-+		};
-+
- 		uart0: serial@01c28000 {
- 			pinctrl-names = "default";
- 			pinctrl-0 = <&uart0_pins_a>;
-@@ -151,6 +161,27 @@
- 			pinctrl-names = "default";
- 			pinctrl-0 = <&i2c1_pins_a>;
- 			status = "okay";
-+
-+			tas5716: tas5716@36 {
-+				compatible = "ti,tas5716";
-+				reg = <0x36>;
-+				#sound-dai-cells = <0>;
-+
-+				power-down = <&pio 6 1 0>;
-+				reset = <&pio 6 3 0>;
-+				mute = <&pio 6 5 0>;
-+				/*ti,hpsel = <&pio 0 0 0>;*/
-+			};
-+
-+			sgtl5000: sgtl5000@a {
-+				compatible = "fsl,sgtl5000";
-+				reg = <0x0a>;
-+				pwms = <&pwm 0 40 0>;
-+
-+				#sound-dai-cells = <0>;
-+				VDDA-supply = <&reg_vcc3v3>;
-+				VDDIO-supply = <&reg_vcc3v3>;
-+			};
- 		};
- 
- 		i2c2: i2c@01c2b400 {
-@@ -172,6 +203,21 @@
- 		};
- 	};
- 
-+	sound {
-+		compatible = "simple-audio-card";
-+		simple-audio-card,format = "i2s";
-+
-+		simple-audio-card,cpu {
-+			sound-dai = <&iis0>;
-+		};
-+
-+		simple-audio-card,codec {
-+			clock = <&iis0>;
-+			sound-dai = <&sgtl5000>;
-+		};
-+	};
-+
-+
- 	leds {
- 		compatible = "gpio-leds";
- 		pinctrl-names = "default";
 diff --git a/arch/arm/boot/dts/sun7i-a20.dtsi b/arch/arm/boot/dts/sun7i-a20.dtsi
 index 6deea0d..d9967052 100644
 --- a/arch/arm/boot/dts/sun7i-a20.dtsi
