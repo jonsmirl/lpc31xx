@@ -206,15 +206,13 @@
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
-		simple-audio-card,bitclock-master = <&dailink0_master>;
-		simple-audio-card,frame-master = <&dailink0_master>;
 
 		simple-audio-card,cpu {
 			sound-dai = <&iis0>;
 		};
 
-		dailink0_master: simple-audio-card,codec {
-			system-clock-frequency = <24000000>;
+		simple-audio-card,codec {
+			clock = <&iis0>;
 			sound-dai = <&sgtl5000>;
 		};
 	};
