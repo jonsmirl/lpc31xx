@@ -1,6 +1,6 @@
 Version: 1
-Previous: ae2329da097e553fafc62965370f6ada4a48d15a
-Head: 020e56113268d57e85a675e51e5c2fac0358763d
+Previous: 4191796f568d5c73c74b054c67fb9eaa8580f58c
+Head: 49482b9c6b6beca47a85f40de2ba361b28e46276
 Applied:
   pwm: 8045fa4c9bc1b23851a43759635117c3319ebea9
   old-allwinner-i2s: 0aadffd84d9851154a9a9f965653a8dcc8a1c0e5
@@ -8,6 +8,7 @@ Applied:
   sgtl5000: cf40d0d99b774595e6a6dcec162c9bb051797123
   simple-card: 3d66f9486985f4f60849e4fbc1cae7f95f41990e
   cubietruck-support: 020e56113268d57e85a675e51e5c2fac0358763d
+  refresh-temp: 49482b9c6b6beca47a85f40de2ba361b28e46276
 Unapplied:
   tyler: 2b414d5b70ef5dde29ff17d4f751900fa2aa519d
 Hidden:
