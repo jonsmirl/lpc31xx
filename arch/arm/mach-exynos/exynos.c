@@ -252,6 +252,8 @@ static const struct of_device_id exynos_dt_pmu_match[] = {
 	{ .compatible = "samsung,exynos4212-pmu" },
 	{ .compatible = "samsung,exynos4412-pmu" },
 	{ .compatible = "samsung,exynos5250-pmu" },
+	{ .compatible = "samsung,exynos5260-pmu" },
+	{ .compatible = "samsung,exynos5410-pmu" },
 	{ .compatible = "samsung,exynos5420-pmu" },
 	{ /*sentinel*/ },
 };
@@ -354,6 +356,15 @@ static void __init exynos_reserve(void)
 #endif
 }
 
+static void __init exynos_dt_fixup(void)
+{
+	/*
+	 * Some versions of uboot pass garbage entries in the memory node,
+	 * use the old CONFIG_ARM_NR_BANKS
+	 */
+	of_fdt_limit_memory(8);
+}
+
 DT_MACHINE_START(EXYNOS_DT, "SAMSUNG EXYNOS (Flattened Device Tree)")
 	/* Maintainer: Thomas Abraham <thomas.abraham@linaro.org> */
 	/* Maintainer: Kukjin Kim <kgene.kim@samsung.com> */
@@ -368,4 +379,5 @@ DT_MACHINE_START(EXYNOS_DT, "SAMSUNG EXYNOS (Flattened Device Tree)")
 	.dt_compat	= exynos_dt_compat,
 	.restart	= exynos_restart,
 	.reserve	= exynos_reserve,
+	.dt_fixup	= exynos_dt_fixup,
 MACHINE_END

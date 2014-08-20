@@ -328,8 +328,17 @@ static void set_pchan_interrupt(struct sun4i_dma_dev *priv,
 	spin_unlock_irqrestore(&priv->lock, flags);
 }
 
-static int execute_vchan_pending(struct sun4i_dma_dev *priv,
-				 struct sun4i_dma_vchan *vchan)
+/**
+ * Execute pending operations on a vchan
+ *
+ * When given a vchan, this function will try to acquire a suitable
+ * pchan and, if successful, will configure it to fulfill a promise
+ * from the next pending contract.
+ *
+ * This function must be called with &vchan->vc.lock held.
+ */
+static int __execute_vchan_pending(struct sun4i_dma_dev *priv,
+				   struct sun4i_dma_vchan *vchan)
 {
 	struct sun4i_dma_promise *promise = NULL;
 	struct sun4i_dma_contract *contract = NULL;
@@ -963,7 +972,7 @@ static void sun4i_dma_issue_pending(struct dma_chan *chan)
 	 * them into the engine to get the ball rolling.
 	 */
 	if (vchan_issue_pending(&vchan->vc))
-		execute_vchan_pending(priv, vchan);
+		__execute_vchan_pending(priv, vchan);
 
 	spin_unlock_irqrestore(&vchan->vc.lock, flags);
 }
@@ -1059,7 +1068,7 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
 	for (i = 0; i < DMA_NR_MAX_VCHANS; i++) {
 		vchan = &priv->vchans[i];
 		spin_lock_irqsave(&vchan->vc.lock, flags);
-		execute_vchan_pending(priv, vchan);
+		__execute_vchan_pending(priv, vchan);
 		spin_unlock_irqrestore(&vchan->vc.lock, flags);
 	}
 
@@ -1067,10 +1076,10 @@ static irqreturn_t sun4i_dma_submit_work(int irq, void *dev_id)
 }
 
 #define SUN4I_DMA_BUSWIDTHS \
-        BIT(DMA_SLAVE_BUSWIDTH_UNDEFINED) | \
-        BIT(DMA_SLAVE_BUSWIDTH_1_BYTE) | \
-        BIT(DMA_SLAVE_BUSWIDTH_2_BYTES) | \
-        BIT(DMA_SLAVE_BUSWIDTH_4_BYTES)
+	BIT(DMA_SLAVE_BUSWIDTH_UNDEFINED) | \
+	BIT(DMA_SLAVE_BUSWIDTH_1_BYTE) | \
+	BIT(DMA_SLAVE_BUSWIDTH_2_BYTES) | \
+	BIT(DMA_SLAVE_BUSWIDTH_4_BYTES)
 
 static int sun4i_dma_device_slave_caps(struct dma_chan *dchan,
 				       struct dma_slave_caps *caps)

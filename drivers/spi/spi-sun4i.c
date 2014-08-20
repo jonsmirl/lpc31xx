@@ -89,9 +89,6 @@ struct sun4i_spi {
 	const u8		*tx_buf;
 	u8			*rx_buf;
 	int			len;
-
-	struct dma_chan		*rx_dma_chan;
-	struct dma_chan		*tx_dma_chan;
 };
 
 static inline u32 sun4i_spi_read(struct sun4i_spi *sspi, u32 reg)
@@ -145,17 +142,6 @@ static bool sun4i_spi_can_dma(struct spi_master *master,
 	return tfr->len >= SUN4I_FIFO_DEPTH;
 }
 
-static int sun4i_spi_prepare_message(struct spi_master *master,
-				     struct spi_message *msg)
-{
-	struct sun4i_spi *sspi = spi_master_get_devdata(master);
-
-	master->dma_rx = sspi->rx_dma_chan;
-	master->dma_tx = sspi->tx_dma_chan;
-
-	return 0;
-}
-
 static void sun4i_spi_set_cs(struct spi_device *spi, bool enable)
 {
 	struct sun4i_spi *sspi = spi_master_get_devdata(spi->master);
@@ -198,8 +184,8 @@ static int sun4i_spi_transfer_one(struct spi_master *master,
 	struct dma_async_tx_descriptor *desc_tx = NULL, *desc_rx = NULL;
 	unsigned int mclk_rate, div, timeout;
 	unsigned int tx_len = 0;
+	u32 reg, trigger = 0;
 	int ret = 0;
-	u32 reg;
 
 	reinit_completion(&sspi->done);
 	sspi->tx_buf = tfr->tx_buf;
@@ -298,7 +284,7 @@ static int sun4i_spi_transfer_one(struct spi_master *master,
 		dev_dbg(&sspi->master->dev, "Using DMA mode for transfer\n");
 
 		if (sspi->tx_buf) {
-			desc_tx = dmaengine_prep_slave_sg(sspi->tx_dma_chan,
+			desc_tx = dmaengine_prep_slave_sg(master->dma_tx,
 					tfr->tx_sg.sgl, tfr->tx_sg.nents,
 					DMA_TO_DEVICE,
 					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
@@ -308,11 +294,15 @@ static int sun4i_spi_transfer_one(struct spi_master *master,
 				return -EIO;
 			}
 
+			trigger |= SUN4I_DMA_CTL_TF_NOT_FULL;
+
 			dmaengine_submit(desc_tx);
+			dma_async_issue_pending(master->dma_tx);
+
 		}
 
 		if (sspi->rx_buf) {
-			desc_rx = dmaengine_prep_slave_sg(sspi->rx_dma_chan,
+			desc_rx = dmaengine_prep_slave_sg(master->dma_rx,
 					tfr->rx_sg.sgl, tfr->rx_sg.nents,
 					DMA_FROM_DEVICE,
 					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
@@ -322,19 +312,17 @@ static int sun4i_spi_transfer_one(struct spi_master *master,
 				return -EIO;
 			}
 
+			trigger |= SUN4I_DMA_CTL_RF_READY;
+
 			dmaengine_submit(desc_rx);
+			dma_async_issue_pending(master->dma_rx);
 		}
 
-		/* Enable DMA requests */
+		/* Enable Dedicated DMA requests */
 		reg = sun4i_spi_read(sspi, SUN4I_CTL_REG);
-		sun4i_spi_write(sspi, SUN4I_CTL_REG,
-				reg | SUN4I_CTL_DMAMC_DEDICATED);
-		sun4i_spi_write(sspi, SUN4I_DMA_CTL_REG,
-				SUN4I_DMA_CTL_TF_NOT_FULL |
-				SUN4I_DMA_CTL_RF_READY);
-
-		dma_async_issue_pending(sspi->rx_dma_chan);
-		dma_async_issue_pending(sspi->tx_dma_chan);
+		reg |= SUN4I_CTL_DMAMC_DEDICATED;
+		sun4i_spi_write(sspi, SUN4I_CTL_REG, reg);
+		sun4i_spi_write(sspi, SUN4I_DMA_CTL_REG, trigger);
 	} else {
 		dev_dbg(&sspi->master->dev, "Using PIO mode for transfer\n");
 
@@ -468,7 +456,6 @@ static int sun4i_spi_probe(struct platform_device *pdev)
 	init_completion(&sspi->done);
 	sspi->master = master;
 	master->can_dma = sun4i_spi_can_dma;
-	master->prepare_message = sun4i_spi_prepare_message;
 	master->set_cs = sun4i_spi_set_cs;
 	master->transfer_one = sun4i_spi_transfer_one;
 	master->num_chipselect = 4;
@@ -491,10 +478,10 @@ static int sun4i_spi_probe(struct platform_device *pdev)
 		goto err_free_master;
 	}
 
-	sspi->tx_dma_chan = dma_request_slave_channel_reason(&pdev->dev, "tx");
-	if (IS_ERR(sspi->tx_dma_chan)) {
+	master->dma_tx = dma_request_slave_channel_reason(&pdev->dev, "tx");
+	if (IS_ERR(master->dma_tx)) {
 		dev_err(&pdev->dev, "Unable to acquire DMA channel TX\n");
-		ret = PTR_ERR(sspi->tx_dma_chan);
+		ret = PTR_ERR(master->dma_tx);
 		goto err_free_master;
 	}
 
@@ -505,16 +492,16 @@ static int sun4i_spi_probe(struct platform_device *pdev)
 	dma_sconfig.src_maxburst = 1;
 	dma_sconfig.dst_maxburst = 1;
 
-	ret = dmaengine_slave_config(sspi->tx_dma_chan, &dma_sconfig);
+	ret = dmaengine_slave_config(master->dma_tx, &dma_sconfig);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to configure TX DMA slave\n");
 		goto err_tx_dma_release;
 	}
 
-	sspi->rx_dma_chan = dma_request_slave_channel_reason(&pdev->dev, "rx");
-	if (IS_ERR(sspi->rx_dma_chan)) {
+	master->dma_rx = dma_request_slave_channel_reason(&pdev->dev, "rx");
+	if (IS_ERR(master->dma_rx)) {
 		dev_err(&pdev->dev, "Unable to acquire DMA channel RX\n");
-		ret = PTR_ERR(sspi->rx_dma_chan);
+		ret = PTR_ERR(master->dma_rx);
 		goto err_tx_dma_release;
 	}
 
@@ -525,7 +512,7 @@ static int sun4i_spi_probe(struct platform_device *pdev)
 	dma_sconfig.src_maxburst = 1;
 	dma_sconfig.dst_maxburst = 1;
 
-	ret = dmaengine_slave_config(sspi->rx_dma_chan, &dma_sconfig);
+	ret = dmaengine_slave_config(master->dma_rx, &dma_sconfig);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to configure RX DMA slave\n");
 		goto err_rx_dma_release;
@@ -557,9 +544,9 @@ err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 	sun4i_spi_runtime_suspend(&pdev->dev);
 err_rx_dma_release:
-	dma_release_channel(sspi->rx_dma_chan);
+	dma_release_channel(master->dma_rx);
 err_tx_dma_release:
-	dma_release_channel(sspi->tx_dma_chan);
+	dma_release_channel(master->dma_tx);
 err_free_master:
 	spi_master_put(master);
 	return ret;
@@ -568,15 +555,11 @@ err_free_master:
 static int sun4i_spi_remove(struct platform_device *pdev)
 {
 	struct spi_master *master = platform_get_drvdata(pdev);
-	struct sun4i_spi *sspi = spi_master_get_devdata(master);
-
-	if (pm_runtime_active(&pdev->dev))
-		sun4i_spi_runtime_suspend(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 
-	dma_release_channel(sspi->rx_dma_chan);
-	dma_release_channel(sspi->tx_dma_chan);
+	dma_release_channel(master->dma_rx);
+	dma_release_channel(master->dma_tx);
 
 	return 0;
 }

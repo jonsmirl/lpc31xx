@@ -393,6 +393,7 @@ struct sunxi_priv {
 	struct clk *clk_apb, *clk_iis, *clk_mclk;
 	struct clk_divider mclk_div;
 	int master, sysclk;
+	struct device *dev;
 
 	struct snd_dmaengine_dai_dma_data playback_dma_data;
 	struct snd_dmaengine_dai_dma_data capture_dma_data;

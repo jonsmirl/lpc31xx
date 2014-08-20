@@ -736,25 +736,25 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	/* set i2s data format */
-	switch (params_format(params)) {
-	case SNDRV_PCM_FORMAT_S16_LE:
+	switch (params_width(params)) {
+	case 16:
 		if (sgtl5000->fmt == SND_SOC_DAIFMT_RIGHT_J)
 			return -EINVAL;
 		i2s_ctl |= SGTL5000_I2S_DLEN_16 << SGTL5000_I2S_DLEN_SHIFT;
 		i2s_ctl |= SGTL5000_I2S_SCLKFREQ_32FS <<
 		    SGTL5000_I2S_SCLKFREQ_SHIFT;
 		break;
-	case SNDRV_PCM_FORMAT_S20_3LE:
+	case 20:
 		i2s_ctl |= SGTL5000_I2S_DLEN_20 << SGTL5000_I2S_DLEN_SHIFT;
 		i2s_ctl |= SGTL5000_I2S_SCLKFREQ_64FS <<
 		    SGTL5000_I2S_SCLKFREQ_SHIFT;
 		break;
-	case SNDRV_PCM_FORMAT_S24_LE:
+	case 24:
 		i2s_ctl |= SGTL5000_I2S_DLEN_24 << SGTL5000_I2S_DLEN_SHIFT;
 		i2s_ctl |= SGTL5000_I2S_SCLKFREQ_64FS <<
 		    SGTL5000_I2S_SCLKFREQ_SHIFT;
 		break;
-	case SNDRV_PCM_FORMAT_S32_LE:
+	case 32:
 		if (sgtl5000->fmt == SND_SOC_DAIFMT_RIGHT_J)
 			return -EINVAL;
 		i2s_ctl |= SGTL5000_I2S_DLEN_32 << SGTL5000_I2S_DLEN_SHIFT;
@@ -856,10 +856,8 @@ static int ldo_regulator_register(struct snd_soc_codec *codec,
 
 	ldo = kzalloc(sizeof(struct ldo_regulator), GFP_KERNEL);
 
-	if (!ldo) {
-		dev_err(codec->dev, "failed to allocate ldo_regulator\n");
+	if (!ldo)
 		return -ENOMEM;
-	}
 
 	ldo->desc.name = kstrdup(dev_name(codec->dev), GFP_KERNEL);
 	if (!ldo->desc.name) {
@@ -1290,7 +1288,7 @@ static int sgtl5000_enable_regulators(struct snd_soc_codec *codec)
 			return ret;
 	}
 
-	ret = devm_regulator_bulk_get(codec->dev, ARRAY_SIZE(sgtl5000->supplies),
+	ret = regulator_bulk_get(codec->dev, ARRAY_SIZE(sgtl5000->supplies),
 				 sgtl5000->supplies);
 	if (ret)
 		goto err_ldo_remove;
@@ -1298,13 +1296,16 @@ static int sgtl5000_enable_regulators(struct snd_soc_codec *codec)
 	ret = regulator_bulk_enable(ARRAY_SIZE(sgtl5000->supplies),
 					sgtl5000->supplies);
 	if (ret)
-		goto err_ldo_remove;
+		goto err_regulator_free;
 
 	/* wait for all power rails bring up */
 	udelay(10);
 
 	return 0;
 
+err_regulator_free:
+	regulator_bulk_free(ARRAY_SIZE(sgtl5000->supplies),
+				sgtl5000->supplies);
 err_ldo_remove:
 	if (!external_vddd)
 		ldo_regulator_remove(codec);
@@ -1374,6 +1375,8 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 err:
 	regulator_bulk_disable(ARRAY_SIZE(sgtl5000->supplies),
 						sgtl5000->supplies);
+	regulator_bulk_free(ARRAY_SIZE(sgtl5000->supplies),
+				sgtl5000->supplies);
 	ldo_regulator_remove(codec);
 
 	return ret;
@@ -1387,6 +1390,8 @@ static int sgtl5000_remove(struct snd_soc_codec *codec)
 
 	regulator_bulk_disable(ARRAY_SIZE(sgtl5000->supplies),
 						sgtl5000->supplies);
+	regulator_bulk_free(ARRAY_SIZE(sgtl5000->supplies),
+				sgtl5000->supplies);
 	ldo_regulator_remove(codec);
 
 	return 0;
@@ -1487,15 +1492,15 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		if (ret)
 			return ret;
 	}
-	printk("JDS sgtl5000_i2c_probe 1\n");
 
 	/* read chip information */
 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
-	printk("JDS sgtl5000_i2c_probe 1a %d\n", ret);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev,
+			"Unable to read I2C %d\n", reg);
 		goto disable_clk;
+	}
 
-	printk("JDS sgtl5000_i2c_probe 2\n");
 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
 	    SGTL5000_PARTID_PART_ID) {
 		dev_err(&client->dev,
@@ -1504,12 +1509,10 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		goto disable_clk;
 	}
 
-	printk("JDS sgtl5000_i2c_probe 3\n");
 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
 	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
 	sgtl5000->revision = rev;
 
-	printk("JDS sgtl5000_i2c_probe 4\n");
 	i2c_set_clientdata(client, sgtl5000);
 
 	/* Ensure sgtl5000 will start with sane register values */

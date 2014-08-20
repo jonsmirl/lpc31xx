@@ -66,6 +66,18 @@
 			status = "okay";
 		};
 
+		spi2: spi@01c17000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi2_pins_a>;
+			status = "okay";
+
+			dac0: dh2228@2 {
+				compatible = "rohm,dh2228fv";
+				reg = <2>;
+				spi-max-frequency = <100000>;
+			};
+		};
+
 		pinctrl@01c20800 {
 			mmc3_pins_a: mmc3@0 {
 				/* AP6210 requires pull-up */
@@ -97,6 +109,13 @@
 		pwm: pwm@01c20e00 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&pwm0_pins_a>, <&pwm1_pins_a>;
+			status = "okay";
+		};
+
+		codec@01c22c00 {
+			routing =
+				"Headphone Jack", "HP Left",
+				"Headphone Jack", "HP Right";
 			status = "okay";
 		};
 
@@ -157,7 +176,7 @@
 			sgtl5000: sgtl5000@a {
 				compatible = "fsl,sgtl5000";
 				reg = <0x0a>;
-				pwms = <&pwm 0 200 0>;
+				pwms = <&pwm 0 40 0>;
 
 				#sound-dai-cells = <0>;
 				VDDA-supply = <&reg_vcc3v3>;
@@ -187,15 +206,13 @@
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
-		simple-audio-card,bitclock-master = <&dailink0_master>;
-		simple-audio-card,frame-master = <&dailink0_master>;
 
 		simple-audio-card,cpu {
 			sound-dai = <&iis0>;
 		};
 
-		dailink0_master: simple-audio-card,codec {
-			system-clock-frequency = <24000000>;
+		simple-audio-card,codec {
+			clock = <&iis0>;
 			sound-dai = <&sgtl5000>;
 		};
 	};
