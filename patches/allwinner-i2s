@@ -3,7 +3,7 @@ Top:    07bc5862ed6c2545c842cffec9d51bf25b79fb40
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-05 14:17:17 -0400
 
-TAS5716 support for Tyler
+Mainline I2S support for Allwinner
 
 
 ---
