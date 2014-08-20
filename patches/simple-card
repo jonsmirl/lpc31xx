@@ -1,5 +1,5 @@
 Bottom: 8b41e8f65ba5af14bbede3b0277127bcec8c0c2c
-Top:    8b41e8f65ba5af14bbede3b0277127bcec8c0c2c
+Top:    e1f1c6339770dccc366b5c6b86cf435bf9e86712
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-08-20 10:33:00 -0400
 
@@ -8,4 +8,47 @@ Mods to make simple card work with I2S master clock
 
 ---
 
-
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index 159e517f..c123fa7 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -8,6 +8,9 @@
+  * it under the terms of the GNU General Public License version 2 as
+  * published by the Free Software Foundation.
+  */
++
++#define DEBUG
++
+ #include <linux/clk.h>
+ #include <linux/device.h>
+ #include <linux/module.h>
+@@ -33,6 +36,7 @@ static int asoc_simple_card_hw_params(struct snd_pcm_substream *substream,
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+ 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+ 	struct simple_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
+ 	unsigned int mclk;
+ 	int ret = 0;
+@@ -41,6 +45,10 @@ static int asoc_simple_card_hw_params(struct snd_pcm_substream *substream,
+ 		mclk = params_rate(params) * priv->mclk_fs;
+ 		ret = snd_soc_dai_set_sysclk(codec_dai, 0, mclk,
+ 					     SND_SOC_CLOCK_IN);
++		if (ret)
++			return ret;
++		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk,
++					     SND_SOC_CLOCK_IN);
+ 	}
+ 
+ 	return ret;
+@@ -154,10 +162,6 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
+ 		dai->sysclk = clk_get_rate(clk);
+ 	} else if (!of_property_read_u32(np, "system-clock-frequency", &val)) {
+ 		dai->sysclk = val;
+-	} else {
+-		clk = of_clk_get(node, 0);
+-		if (!IS_ERR(clk))
+-			dai->sysclk = clk_get_rate(clk);
+ 	}
+ 
+ 	return 0;
