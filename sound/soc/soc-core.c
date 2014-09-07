@@ -4832,6 +4832,7 @@ unsigned int snd_soc_of_parse_daifmt(struct device_node *np,
 	if (frame && framemaster)
 		*framemaster = of_parse_phandle(np, prop, 0);
 
+	printk("JDS snd_soc_of_parse_daifmt bit %d frame %d\n", bit, frame);
 	switch ((bit << 4) + frame) {
 	case 0x11:
 		format |= SND_SOC_DAIFMT_CBM_CFM;
