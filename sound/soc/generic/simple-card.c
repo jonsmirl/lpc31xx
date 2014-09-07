@@ -188,6 +188,7 @@ static int simple_card_dai_link_of(struct device_node *node,
 	daifmt = snd_soc_of_parse_daifmt(node, prefix,
 					 &bitclkmaster, &framemaster);
 	daifmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
+	printk("JDS simple_card_dai_link_of bitclk %p frame %p\n", bitclkmaster, framemaster);
 
 	snprintf(prop, sizeof(prop), "%scpu", prefix);
 	np = of_get_child_by_name(node, prop);

@@ -1,1 +1,1 @@
-make uImage
+make uImage dtbs
