@@ -1,5 +1,5 @@
 Bottom: 07bc5862ed6c2545c842cffec9d51bf25b79fb40
-Top:    1b10902e7fa295ebd049a0b67cce04b6350ad096
+Top:    ed92cd15ea5784a8ce2c23cda3508c8d02b4b55b
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-09-06 23:09:35 -0400
 
@@ -8,10 +8,65 @@ build command
 
 ---
 
+diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+index 3cb91f2..50de4ce 100644
+--- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
++++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
+@@ -176,7 +176,7 @@
+ 			sgtl5000: sgtl5000@a {
+ 				compatible = "fsl,sgtl5000";
+ 				reg = <0x0a>;
+-				pwms = <&pwm 0 40 0>;
++				pwms = <&pwm 0 20 0>;
+ 
+ 				#sound-dai-cells = <0>;
+ 				VDDA-supply = <&reg_vcc3v3>;
+@@ -206,13 +206,15 @@
+ 	sound {
+ 		compatible = "simple-audio-card";
+ 		simple-audio-card,format = "i2s";
++		simple-audio-card,bitclock-master = <&dailink0_master>;
++		simple-audio-card,frame-master = <&dailink0_master>;
+ 
+ 		simple-audio-card,cpu {
+ 			sound-dai = <&iis0>;
+ 		};
+ 
+-		simple-audio-card,codec {
+-			clock = <&iis0>;
++		dailink0_master: simple-audio-card,codec {
++			clocks = <24000000>;
+ 			sound-dai = <&sgtl5000>;
+ 		};
+ 	};
 diff --git a/cop b/cop
 new file mode 100755
-index 0000000..6198c36
+index 0000000..8f2cbac
 --- /dev/null
 +++ b/cop
 @@ -0,0 +1 @@
-+make uImage
++make uImage dtbs
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index c123fa7..5720e32 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -188,6 +188,7 @@ static int simple_card_dai_link_of(struct device_node *node,
+ 	daifmt = snd_soc_of_parse_daifmt(node, prefix,
+ 					 &bitclkmaster, &framemaster);
+ 	daifmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
++	printk("JDS simple_card_dai_link_of bitclk %p frame %p\n", bitclkmaster, framemaster);
+ 
+ 	snprintf(prop, sizeof(prop), "%scpu", prefix);
+ 	np = of_get_child_by_name(node, prop);
+diff --git a/sound/soc/soc-core.c b/sound/soc/soc-core.c
+index e336b7d..da03d3f 100644
+--- a/sound/soc/soc-core.c
++++ b/sound/soc/soc-core.c
+@@ -4832,6 +4832,7 @@ unsigned int snd_soc_of_parse_daifmt(struct device_node *np,
+ 	if (frame && framemaster)
+ 		*framemaster = of_parse_phandle(np, prop, 0);
+ 
++	printk("JDS snd_soc_of_parse_daifmt bit %d frame %d\n", bit, frame);
+ 	switch ((bit << 4) + frame) {
+ 	case 0x11:
+ 		format |= SND_SOC_DAIFMT_CBM_CFM;
