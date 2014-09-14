@@ -1,5 +1,5 @@
 Bottom: 07bc5862ed6c2545c842cffec9d51bf25b79fb40
-Top:    ed92cd15ea5784a8ce2c23cda3508c8d02b4b55b
+Top:    e55e34e66f535e9125bfebecd1fe0b81d7283e70
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2014-09-06 23:09:35 -0400
 
@@ -9,7 +9,7 @@ build command
 ---
 
 diff --git a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
-index 3cb91f2..50de4ce 100644
+index 3cb91f2..7564345 100644
 --- a/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 +++ b/arch/arm/boot/dts/sun7i-a20-cubietruck.dts
 @@ -176,7 +176,7 @@
@@ -35,7 +35,7 @@ index 3cb91f2..50de4ce 100644
 -		simple-audio-card,codec {
 -			clock = <&iis0>;
 +		dailink0_master: simple-audio-card,codec {
-+			clocks = <24000000>;
++			system-clock-frequency = <24000000>;
  			sound-dai = <&sgtl5000>;
  		};
  	};
@@ -46,6 +46,19 @@ index 0000000..8f2cbac
 +++ b/cop
 @@ -0,0 +1 @@
 +make uImage dtbs
+diff --git a/sound/soc/codecs/sgtl5000.c b/sound/soc/codecs/sgtl5000.c
+index 8df83f9..c0abc3d 100644
+--- a/sound/soc/codecs/sgtl5000.c
++++ b/sound/soc/codecs/sgtl5000.c
+@@ -1350,7 +1350,7 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
+ 			SGTL5000_DAC_MUTE_RIGHT |
+ 			SGTL5000_DAC_MUTE_LEFT);
+ 
+-	snd_soc_write(codec, SGTL5000_CHIP_PAD_STRENGTH, 0x015f);
++	snd_soc_write(codec, SGTL5000_CHIP_PAD_STRENGTH, 0x02af);
+ 
+ 	snd_soc_write(codec, SGTL5000_CHIP_ANA_CTRL,
+ 			SGTL5000_HP_ZCD_EN |
 diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
 index c123fa7..5720e32 100644
 --- a/sound/soc/generic/simple-card.c
@@ -70,3 +83,79 @@ index e336b7d..da03d3f 100644
  	switch ((bit << 4) + frame) {
  	case 0x11:
  		format |= SND_SOC_DAIFMT_CBM_CFM;
+diff --git a/sound/soc/soc-dapm.c b/sound/soc/soc-dapm.c
+index 9e6c6a1..a17e130 100644
+--- a/sound/soc/soc-dapm.c
++++ b/sound/soc/soc-dapm.c
+@@ -23,6 +23,8 @@
+  *
+  */
+ 
++#define DEBUG
++
+ #include <linux/module.h>
+ #include <linux/moduleparam.h>
+ #include <linux/init.h>
+diff --git a/sound/soc/sunxi/sunxi-i2s.c b/sound/soc/sunxi/sunxi-i2s.c
+index 27505b8..9477dfb 100644
+--- a/sound/soc/sunxi/sunxi-i2s.c
++++ b/sound/soc/sunxi/sunxi-i2s.c
+@@ -241,16 +241,6 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
+ 		break;
+ 	}
+ 
+-	/* word select size */
+-	if(priv->ws_size == 16)
+-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_16BCLK);
+-	else if(priv->ws_size == 20)
+-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_20BCLK);
+-	else if(priv->ws_size == 24)
+-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_24BCLK);
+-	else
+-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_32BCLK);
+-
+ 	/* PCM REGISTER setup */
+ 	reg_val = priv->pcm_txtype & SUNXI_I2SFAT1_TXPDM_MASK;
+ 	reg_val |= priv->pcm_rxtype << SUNXI_I2SFAT1_RXPDM_SHIFT;
+@@ -294,24 +284,24 @@ static int sunxi_i2s_hw_params(struct snd_pcm_substream *substream,
+ 	/* set i2s data format */
+ 	switch (params_format(params)) {
+ 	case SNDRV_PCM_FORMAT_S16_LE:
+-		fmt = SUNXI_I2SFAT0_SR_16BIT;
++		fmt = SUNXI_I2SFAT0_SR_16BIT | SUNXI_I2SFAT0_WSS_16BCLK;
+ 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+ 			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+ 		break;
+ 	case SNDRV_PCM_FORMAT_S20_3LE:
+-		fmt = SUNXI_I2SFAT0_SR_20BIT;
++		fmt = SUNXI_I2SFAT0_SR_20BIT | SUNXI_I2SFAT0_WSS_20BCLK;
+ 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+ 			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+ 		break;
+ 	case SNDRV_PCM_FORMAT_S24_LE:
+-		fmt = SUNXI_I2SFAT0_SR_24BIT;
++		fmt = SUNXI_I2SFAT0_SR_24BIT | SUNXI_I2SFAT0_WSS_24BCLK;
+ 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+ 			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+ 		break;
+ 	default:
+ 		return -EINVAL;
+ 	}
+-	regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_SR_MASK, fmt);
++	regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_SR_MASK | SUNXI_I2SFAT0_WSS_MASK, fmt);
+ 
+ 	div  = SUNXI_I2SCLKD_MCLKDIV_1;
+ 	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, div);
+@@ -563,9 +553,10 @@ static const struct snd_soc_component_driver sunxi_i2s_component = {
+ };
+ 
+ static const struct regmap_range sunxi_i2s_volatile_regs_range[] = {
+-	regmap_reg_range(SUNXI_I2S_TXFIFO, SUNXI_I2S_FCTL),
++/*	regmap_reg_range(SUNXI_I2S_TXFIFO, SUNXI_I2S_FCTL),
+ 	regmap_reg_range(SUNXI_I2S_ISTA, SUNXI_I2S_ISTA),
+-	regmap_reg_range(SUNXI_I2S_TXCNT, SUNXI_I2S_RXCNT),
++	regmap_reg_range(SUNXI_I2S_TXCNT, SUNXI_I2S_RXCNT), */
++	regmap_reg_range(SUNXI_I2S_CTL, SUNXI_I2S_RXCHMAP),
+ };
+ 
+ static const struct regmap_access_table sunxi_i2s_volatile_regs = {
