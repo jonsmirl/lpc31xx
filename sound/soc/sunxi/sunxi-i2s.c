@@ -241,16 +241,6 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 		break;
 	}
 
-	/* word select size */
-	if(priv->ws_size == 16)
-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_16BCLK);
-	else if(priv->ws_size == 20)
-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_20BCLK);
-	else if(priv->ws_size == 24)
-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_24BCLK);
-	else
-		regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_WSS_MASK, SUNXI_I2SFAT0_WSS_32BCLK);
-
 	/* PCM REGISTER setup */
 	reg_val = priv->pcm_txtype & SUNXI_I2SFAT1_TXPDM_MASK;
 	reg_val |= priv->pcm_rxtype << SUNXI_I2SFAT1_RXPDM_SHIFT;
@@ -294,24 +284,24 @@ static int sunxi_i2s_hw_params(struct snd_pcm_substream *substream,
 	/* set i2s data format */
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
-		fmt = SUNXI_I2SFAT0_SR_16BIT;
+		fmt = SUNXI_I2SFAT0_SR_16BIT | SUNXI_I2SFAT0_WSS_16BCLK;
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		break;
 	case SNDRV_PCM_FORMAT_S20_3LE:
-		fmt = SUNXI_I2SFAT0_SR_20BIT;
+		fmt = SUNXI_I2SFAT0_SR_20BIT | SUNXI_I2SFAT0_WSS_20BCLK;
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
-		fmt = SUNXI_I2SFAT0_SR_24BIT;
+		fmt = SUNXI_I2SFAT0_SR_24BIT | SUNXI_I2SFAT0_WSS_24BCLK;
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			priv->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		break;
 	default:
 		return -EINVAL;
 	}
-	regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_SR_MASK, fmt);
+	regmap_update_bits(priv->regmap, SUNXI_I2S_FAT0, SUNXI_I2SFAT0_SR_MASK | SUNXI_I2SFAT0_WSS_MASK, fmt);
 
 	div  = SUNXI_I2SCLKD_MCLKDIV_1;
 	regmap_update_bits(priv->regmap, SUNXI_I2S_CLKD, SUNXI_I2SCLKD_MCLKDIV_MASK, div);
@@ -563,9 +553,10 @@ static const struct snd_soc_component_driver sunxi_i2s_component = {
 };
 
 static const struct regmap_range sunxi_i2s_volatile_regs_range[] = {
-	regmap_reg_range(SUNXI_I2S_TXFIFO, SUNXI_I2S_FCTL),
+/*	regmap_reg_range(SUNXI_I2S_TXFIFO, SUNXI_I2S_FCTL),
 	regmap_reg_range(SUNXI_I2S_ISTA, SUNXI_I2S_ISTA),
-	regmap_reg_range(SUNXI_I2S_TXCNT, SUNXI_I2S_RXCNT),
+	regmap_reg_range(SUNXI_I2S_TXCNT, SUNXI_I2S_RXCNT), */
+	regmap_reg_range(SUNXI_I2S_CTL, SUNXI_I2S_RXCHMAP),
 };
 
 static const struct regmap_access_table sunxi_i2s_volatile_regs = {

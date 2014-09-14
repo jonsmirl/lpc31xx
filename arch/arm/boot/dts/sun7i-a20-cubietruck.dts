@@ -214,7 +214,7 @@
 		};
 
 		dailink0_master: simple-audio-card,codec {
-			clocks = <24000000>;
+			system-clock-frequency = <24000000>;
 			sound-dai = <&sgtl5000>;
 		};
 	};
