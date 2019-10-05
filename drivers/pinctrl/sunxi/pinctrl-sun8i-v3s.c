@@ -116,35 +116,35 @@ static const struct sunxi_desc_pin sun8i_v3s_pins[] = {
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 3),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D0 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D0 */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 4),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D1 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D1 */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 4),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D2 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D2 */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 6),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D3 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D3 */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 7),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D4 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D4 */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 8),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D5 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D5 */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 9),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D6 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D6 */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(C, 10),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
 		  SUNXI_FUNCTION(0x1, "gpio_out"),
-		  SUNXI_FUNCTION(0x2, "mmc2"),		/* D7 */
+		  SUNXI_FUNCTION(0x2, "mmc2")),		/* D7 */
 	/* Hole */
 	SUNXI_PIN(SUNXI_PINCTRL_PIN(E, 0),
 		  SUNXI_FUNCTION(0x0, "gpio_in"),
