@@ -43,6 +43,7 @@
 /dts-v1/;
 #include "sun8i-v3s.dtsi"
 #include "sunxi-common-regulators.dtsi"
+#include <dt-bindings/input/input.h>
 
 / {
 	model = "Lichee Pi Zero";
@@ -58,27 +59,19 @@
 
 	leds {
 		compatible = "gpio-leds";
-
-		blue_led {
-			label = "licheepi:blue:usr";
-			gpios = <&pio 6 1 GPIO_ACTIVE_LOW>; /* PG1 */
-		};
-
-		green_led {
-			label = "licheepi:green:usr";
-			gpios = <&pio 6 0 GPIO_ACTIVE_LOW>; /* PG0 */
-			default-state = "on";
-		};
-
+		
 		red_led {
-			label = "licheepi:red:usr";
-			gpios = <&pio 6 2 GPIO_ACTIVE_LOW>; /* PG2 */
+			label = "led0";
+			gpios = <&pio 1 3 GPIO_ACTIVE_HIGH>; /* PB3 */
 		};
 	};
-};
 
-&ehci0 {
-	status = "okay";
+	wifi_reg_en: wifi_reg_en {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_en_pin>;
+		reset-gpios = <&pio 1 2 GPIO_ACTIVE_LOW>; /* PB2 */
+	};	
 };
 
 &mmc0 {
@@ -90,18 +83,95 @@
 	status = "okay";
 };
 
-&i2c0 {
+&mmc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc1_pins_a>;
+	vmmc-supply = <&reg_vcc3v3>;
+	vqmmc-supply = <&reg_vcc3v3>;
+	mmc-pwrseq = <&wifi_reg_en>;
+	bus-width = <4>;
+	non-removable;
 	status = "okay";
 
-	ns2009: ns2009@48 {
-		compatible = "nsiway,ns2009";
-		reg = <0x48>;
+	brcmf: wifi@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+    interrupt-parent = <&pio>;
+		interrupt-names = "host-wake";
+    interrupts = <1 10 IRQ_TYPE_LEVEL_LOW>;	/* PB10 / EINT10 */
 	};
 };
+
+
+&mmc2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc2_pins_a>;
+	vmmc-supply = <&reg_vcc3v3>;
+	vqmmc-supply = <&reg_vcc3v3>;
+	bus-width = <4>;
+	non-removable;
+	status = "okay";
+};
+
+&lradc {
+	vref-supply = <&reg_vcc3v0>;
+	status = "okay";
+
+	button@200 {
+		label = "Volume Down";
+		linux,code = <KEY_VOLUMEDOWN>;
+		channel = <0>;
+		voltage = <200000>;
+	};
+
+	button@400 {
+		label = "Volume Up";
+		linux,code = <KEY_VOLUMEUP>;
+		channel = <0>;
+		voltage = <400000>;
+	};
+
+	button@600 {
+		label = "Esc";
+		linux,code = <KEY_ESC>;
+		channel = <0>;
+		voltage = <600000>;
+	};
+
+	button@800 {
+		label = "Enter";
+		linux,code = <KEY_ENTER>;
+		channel = <0>;
+		voltage = <800000>;
+	};
+
+	button@1000 {
+		label = "Menu";
+		linux,code = <KEY_MENU>;
+		channel = <0>;
+		voltage = <1000000>;
+	};	
+};
+
+&ehci0 {
+	status = "okay";
+};
+
 
 &ohci0 {
 	status = "okay";
 };
+
+&usb_otg {
+	dr_mode = "host";
+	status = "okay";
+};
+
+&usbphy {
+	//usb0_id_det-gpio = <&pio 5 6 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
 
 &uart0 {
 	pinctrl-0 = <&uart0_pins_a>;
@@ -109,12 +179,55 @@
 	status = "okay";
 };
 
-&usb_otg {
-	dr_mode = "otg";
+&uart1 {
+	pinctrl-0 = <&uart1_pins_a>;
+	pinctrl-names = "default";
 	status = "okay";
 };
 
-&usbphy {
-	usb0_id_det-gpio = <&pio 5 6 GPIO_ACTIVE_HIGH>;
+&uart2 {
+	pinctrl-0 = <&uart2_pins_a>;
+	pinctrl-names = "default";
 	status = "okay";
 };
+
+&emac {
+       phy-handle = <&int_mii_phy>;
+       phy-mode = "mii";
+       allwinner,use-internal-phy;
+       allwinner,leds-active-low;
+       status = "okay";
+};
+ 
+&i2c0 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&i2c0_pins>;
+        status = "okay";
+
+        ft5x: touchscreen@38 {
+                compatible = "focaltech,ft6236";
+                reg = <0x38>;
+                interrupt-parent = <&pio>;
+                interrupts = <4 13 IRQ_TYPE_EDGE_FALLING>;	/* PE13 */
+                pinctrl-names = "default";
+                pinctrl-0 = <&touchscreen_wake_pin>;
+                wake-gpios = <&pio 4 12 GPIO_ACTIVE_HIGH>; /* PE12 */
+                touchscreen-size-x = <480>;
+                touchscreen-size-y = <854>;
+                //touchscreen-swapped-x-y;
+        };
+};
+
+&pio {
+    touchscreen_wake_pin: touchscreen_wake_pin@0 {
+            allwinner,pins = "PE12";
+            allwinner,function = "gpio_out";
+            //allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+            //allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+    };
+        
+	wifi_en_pin: wifi_en_pin {
+		pins = "PB2";		//PB2
+		function = "gpio_out";
+	};
+};	

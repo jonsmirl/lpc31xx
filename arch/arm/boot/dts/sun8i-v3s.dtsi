@@ -351,6 +351,18 @@
 				function = "uart0";
 			};
 
+			uart1_pins_a: uart1@0 {
+				pins = "PG6", "PG7", "PG8", "PG9";
+				function = "uart1";
+				bias-pull-up;
+			};
+
+			uart2_pins_a: uart2@0 {
+				pins = "PB0", "PB1";
+				function = "uart2";
+				bias-pull-up;
+			};
+			
 			lcd_rgb666_pins_a: lcd-rgb666-pe {
 				pins = "PE0", "PE1", "PE2", "PE3", "PE4", "PE5",
 				       "PE6", "PE7", "PE8", "PE9", "PE10", "PE11",
@@ -367,7 +379,7 @@
 				bias-pull-up;
 			};
 
-			mmc1_pins: mmc1 {
+			mmc1_pins_a: mmc1@0 {
 				pins = "PG0", "PG1", "PG2", "PG3",
 				       "PG4", "PG5";
 				function = "mmc1";
@@ -375,10 +387,19 @@
 				bias-pull-up;
 			};
 
+			mmc2_pins_a: mmc2@0 {
+				pins = "PC0", "PC1", "PC2", "PC3",
+				       "PC4", "PC5", "PC6", "PC7", "PC8", "PC9", "PC10";
+				function = "mmc2";
+				drive-strength = <30>;
+				bias-pull-up;
+			};
+			
 			spi0_pins: spi0 {
 				pins = "PC0", "PC1", "PC2", "PC3";
 				function = "spi0";
 			};
+					
 		};
 
 		timer@01c20c00 {
